@@ -77,6 +77,94 @@ $reports = $stmt->fetchAll();
 
     <link rel="stylesheet" href="css/style.css">
 
+    <style>
+        /*
+         * 操作列
+         */
+        .action-cell {
+            white-space: nowrap;
+        }
+
+        /*
+         * 操作ボタン共通
+         */
+        .action-button {
+            display: inline-block;
+            padding: 7px 14px;
+            margin: 2px;
+            border: 1px solid transparent;
+            border-radius: 5px;
+            font-size: 14px;
+            font-family: inherit;
+            line-height: 1.4;
+            text-align: center;
+            text-decoration: none;
+            cursor: pointer;
+            box-sizing: border-box;
+            transition:
+                background-color 0.2s,
+                transform 0.2s;
+        }
+
+        /*
+         * 編集ボタン：青色
+         */
+        .edit-button {
+            background-color: #1976d2;
+            border-color: #1976d2;
+            color: #fff;
+        }
+
+        .edit-button:hover {
+            background-color: #1565c0;
+            transform: translateY(-1px);
+        }
+
+        /*
+         * 詳細ボタン：緑色
+         */
+        .detail-button {
+            background-color: #2e7d32;
+            border-color: #2e7d32;
+            color: #fff;
+        }
+
+        .detail-button:hover {
+            background-color: #1b5e20;
+            transform: translateY(-1px);
+        }
+
+        /*
+         * 削除ボタン：赤色の枠線
+         */
+        .delete-button {
+            background-color: #fff;
+            border-color: #d32f2f;
+            color: #d32f2f;
+        }
+
+        .delete-button:hover {
+            background-color: #ffebee;
+            transform: translateY(-1px);
+        }
+
+        /*
+         * 削除フォーム
+         */
+        .delete-form {
+            display: inline;
+            margin: 0;
+        }
+
+        /*
+         * キーボード操作時のフォーカス
+         */
+        .action-button:focus-visible {
+            outline: 2px solid #1976d2;
+            outline-offset: 2px;
+        }
+    </style>
+
 </head>
 
 <body>
@@ -225,19 +313,34 @@ $reports = $stmt->fetchAll();
                         <?= h($report['subject']) ?>
                     </td>
 
-                    <td>
+                    <td class="action-cell">
+
+                        <!-- 編集ボタン -->
 
                         <a
                             href="edit.php?id=<?= h($report['id']) ?>"
+                            class="action-button edit-button"
                         >
                             編集
                         </a>
 
 
+                        <!-- 詳細ボタン -->
+
+                        <a
+                            href="detail.php?id=<?= h($report['id']) ?>"
+                            class="action-button detail-button"
+                        >
+                            詳細
+                        </a>
+
+
+                        <!-- 削除ボタン -->
+
                         <form
                             action="delete.php"
                             method="post"
-                            style="display:inline;"
+                            class="delete-form"
                             onsubmit="return confirm('このレポートを削除しますか？');"
                         >
 
@@ -247,7 +350,10 @@ $reports = $stmt->fetchAll();
                                 value="<?= h($report['id']) ?>"
                             >
 
-                            <button type="submit">
+                            <button
+                                type="submit"
+                                class="action-button delete-button"
+                            >
                                 削除
                             </button>
 
@@ -270,4 +376,3 @@ $reports = $stmt->fetchAll();
 </body>
 
 </html>
-
