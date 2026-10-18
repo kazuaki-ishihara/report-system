@@ -70,13 +70,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             // ユーザー名とパスワードのどちらが違うかは表示しない
             $errorMessage = 'ユーザー名またはパスワードが正しくありません。';
+
         }
     }
 }
 
 ?>
+
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -176,7 +179,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         button:hover {
             background: #1d4ed8;
         }
+
+        /* 画面操作説明へのリンク */
+        .manual-link-container {
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .manual-link {
+            display: inline-block;
+            padding: 10px 18px;
+            border: 1px solid #2563eb;
+            border-radius: 5px;
+            color: #2563eb;
+            background: #fff;
+            font-size: 14px;
+            text-decoration: none;
+            transition: background-color 0.2s, color 0.2s;
+        }
+
+        .manual-link:hover {
+            background: #eff6ff;
+            color: #1d4ed8;
+            text-decoration: underline;
+        }
+
+        .manual-link:focus-visible {
+            outline: 2px solid #2563eb;
+            outline-offset: 3px;
+        }
     </style>
+
 </head>
 
 <body>
@@ -199,7 +232,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         <div class="form-group">
             <label for="username">ユーザー名</label>
-
             <input
                 type="text"
                 id="username"
@@ -214,7 +246,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         <div class="form-group">
             <label for="password">パスワード</label>
-
             <input
                 type="password"
                 id="password"
@@ -227,6 +258,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <button type="submit">ログイン</button>
 
     </form>
+
+    <!-- 画面操作説明へのリンク -->
+    <div class="manual-link-container">
+        <a href="manual.php" class="manual-link">
+            画面操作説明
+        </a>
+    </div>
 
 </div>
 
