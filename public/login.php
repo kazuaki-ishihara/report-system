@@ -260,11 +260,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </form>
 
     <!-- 画面操作説明へのリンク -->
-    <div class="manual-link-container">
-        <a href="manual.php" class="manual-link">
-            画面操作説明
-        </a>
-    </div>
+<div class="manual-link-container">
+    <a href="manual.php" class="manual-link">
+        画面操作説明
+    </a>
+</div>
+
+<div class="manual-link-container">
+    <a href="design.php" class="manual-link">
+        システム設計書
+    </a>
+</div>
 
 </div>
 
