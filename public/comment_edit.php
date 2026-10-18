@@ -1,49 +1,150 @@
 <?php
 
-require_once '../config/database.php';
-require_once '../lib/functions.php';
+declare(strict_types=1);
 
-// コメントIDを取得
-$id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
+require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../lib/functions.php';
+require_once __DIR__ . '/../lib/auth.php';
 
-if (!$id || $id <= 0) {
+// ==================================================
+// 1. ログイン確認
+// ==================================================
+
+requireLogin();
+
+$loginUser = getLoginUser($pdo);
+
+if ($loginUser === null) {
+    header('Location: login.php');
+    exit;
+}
+
+$loginUserId = (int) $loginUser['id'];
+$isAdmin = (int) $loginUser['is_admin'] === 1;
+
+// ==================================================
+// 2. コメントIDの取得・チェック
+// ==================================================
+
+$commentId = filter_input(
+    INPUT_GET,
+    'id',
+    FILTER_VALIDATE_INT
+);
+
+if (
+    $commentId === false
+    || $commentId === null
+    || $commentId <= 0
+) {
     http_response_code(400);
     exit('コメントIDが正しくありません。');
 }
 
-// コメントを取得
-$stmt = $pdo->prepare("
+$commentId = (int) $commentId;
+
+// ==================================================
+// 3. コメントと対象レポートを取得
+// ==================================================
+
+$sql = '
     SELECT
         c.id,
         c.report_id,
+        c.user_id AS comment_user_id,
         c.field_name,
         c.comment,
         c.created_at,
-        c.updated_at
+        c.updated_at,
+        r.user_id AS report_user_id
     FROM comments c
-    INNER JOIN reports r ON r.id = c.report_id
+    INNER JOIN reports r
+        ON r.id = c.report_id
     WHERE c.id = :id
-");
+';
+
+$stmt = $pdo->prepare($sql);
 
 $stmt->execute([
-    ':id' => $id
+    ':id' => $commentId,
 ]);
 
-$comment = $stmt->fetch();
+$comment = $stmt->fetch(PDO::FETCH_ASSOC);
 
-if (!$comment) {
+if ($comment === false) {
     http_response_code(404);
     exit('指定されたコメントが見つかりません。');
 }
 
-// 項目名
+// ==================================================
+// 4. レポートの閲覧権限を確認
+//
+// システム管理者：すべてのレポート
+// 一般ユーザー：自分と配下のユーザーのレポート
+// ==================================================
+
+if (!$isAdmin) {
+    $sql = '
+        WITH RECURSIVE subordinate_users(id) AS (
+            SELECT id
+            FROM users
+            WHERE id = :user_id
+
+            UNION
+
+            SELECT u.id
+            FROM users u
+            INNER JOIN subordinate_users s
+                ON u.manager_id = s.id
+        )
+        SELECT id
+        FROM subordinate_users
+    ';
+
+    $stmt = $pdo->prepare($sql);
+
+    $stmt->execute([
+        ':user_id' => $loginUserId,
+    ]);
+
+    $allowedUserIds = array_map(
+        'intval',
+        $stmt->fetchAll(PDO::FETCH_COLUMN)
+    );
+
+    $reportUserId = (int) $comment['report_user_id'];
+
+    if (!in_array($reportUserId, $allowedUserIds, true)) {
+        http_response_code(403);
+        exit('このレポートのコメントを編集する権限がありません。');
+    }
+}
+
+// ==================================================
+// 5. コメント編集権限を確認
+//
+// 自分が登録したコメントのみ編集可能。
+// システム管理者はすべてのコメントを編集可能。
+// ==================================================
+
+$commentUserId = (int) $comment['comment_user_id'];
+
+if (!$isAdmin && $commentUserId !== $loginUserId) {
+    http_response_code(403);
+    exit('このコメントを編集する権限がありません。');
+}
+
+// ==================================================
+// 6. コメント対象の項目名
+// ==================================================
+
 $fields = [
     'report_date' => '日付',
     'name'        => '氏名',
     'subject'     => '件名',
     'content'     => '内容',
     'issues'      => '課題',
-    'remarks'     => '備考'
+    'remarks'     => '備考',
 ];
 
 $fieldName = $comment['field_name'];
@@ -61,7 +162,6 @@ $label = $fields[$fieldName];
 <html lang="ja">
 
 <head>
-
     <meta charset="UTF-8">
 
     <meta
@@ -117,7 +217,6 @@ $label = $fields[$fieldName];
             background-color: #1565c0;
         }
     </style>
-
 </head>
 
 <body>
@@ -177,5 +276,4 @@ $label = $fields[$fieldName];
 </div>
 
 </body>
-
 </html>

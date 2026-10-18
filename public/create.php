@@ -1,9 +1,18 @@
 <?php
 
-require_once '../lib/functions.php';
+declare(strict_types=1);
+
+require_once __DIR__ . '/../lib/functions.php';
+require_once __DIR__ . '/../lib/auth.php';
+
+// ========================================
+// ログインチェック
+// ========================================
+
+// ログインしていない場合はログイン画面へ移動
+requireLogin();
 
 ?>
-
 <!DOCTYPE html>
 <html lang="ja">
 
@@ -11,12 +20,14 @@ require_once '../lib/functions.php';
 
     <meta charset="UTF-8">
 
-    <meta name="viewport"
-          content="width=device-width, initial-scale=1.0">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
 
     <title>レポート登録</title>
 
-<link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/style.css">
 
 </head>
 
@@ -29,6 +40,10 @@ require_once '../lib/functions.php';
     <div class="form-container">
 
         <form action="store.php" method="post">
+
+            <!-- ========================================
+                 日付
+            ========================================= -->
 
             <div class="form-group">
 
@@ -47,6 +62,10 @@ require_once '../lib/functions.php';
             </div>
 
 
+            <!-- ========================================
+                 氏名
+            ========================================= -->
+
             <div class="form-group">
 
                 <label for="name">
@@ -63,6 +82,10 @@ require_once '../lib/functions.php';
 
             </div>
 
+
+            <!-- ========================================
+                 件名
+            ========================================= -->
 
             <div class="form-group">
 
@@ -81,6 +104,10 @@ require_once '../lib/functions.php';
             </div>
 
 
+            <!-- ========================================
+                 内容
+            ========================================= -->
+
             <div class="form-group">
 
                 <label for="content">
@@ -94,6 +121,10 @@ require_once '../lib/functions.php';
 
             </div>
 
+
+            <!-- ========================================
+                 課題
+            ========================================= -->
 
             <div class="form-group">
 
@@ -109,6 +140,10 @@ require_once '../lib/functions.php';
             </div>
 
 
+            <!-- ========================================
+                 備考
+            ========================================= -->
+
             <div class="form-group">
 
                 <label for="remarks">
@@ -122,6 +157,10 @@ require_once '../lib/functions.php';
 
             </div>
 
+
+            <!-- ========================================
+                 ボタン
+            ========================================= -->
 
             <div class="buttons">
 
@@ -147,4 +186,3 @@ require_once '../lib/functions.php';
 </body>
 
 </html>
-

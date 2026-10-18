@@ -1,54 +1,130 @@
 <?php
 
-require_once '../config/database.php';
-require_once '../lib/functions.php';
+declare(strict_types=1);
 
-// レポートIDを取得
+require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../lib/functions.php';
+require_once __DIR__ . '/../lib/auth.php';
+
+// ========================================
+// 1. ログインチェック
+// ========================================
+
+requireLogin();
+
+// ログインユーザー情報を取得
+$loginUser = getLoginUser($pdo);
+
+if ($loginUser === null) {
+    header('Location: login.php');
+    exit;
+}
+
+$loginUserId = (int) $loginUser['id'];
+$isAdmin = (int) $loginUser['is_admin'] === 1;
+
+// ========================================
+// 2. レポートIDを取得
+// ========================================
+
 $id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
 
-if (!$id || $id <= 0) {
+if ($id === false || $id === null || $id <= 0) {
     http_response_code(400);
     exit('レポートIDが正しくありません。');
 }
 
-// レポートを取得
-$stmt = $pdo->prepare("
-    SELECT *
-    FROM reports
-    WHERE id = :id
-");
+// ========================================
+// 3. レポートを取得
+// ========================================
+
+$stmt = $pdo->prepare(
+    'SELECT *
+     FROM reports
+     WHERE id = :id'
+);
 
 $stmt->execute([
-    ':id' => $id
+    ':id' => $id,
 ]);
 
 $report = $stmt->fetch();
 
-if (!$report) {
+if ($report === false) {
     http_response_code(404);
     exit('指定されたレポートが見つかりません。');
 }
 
-// コメント対象の項目
+// ========================================
+// 4. レポートの参照権限を確認
+// ========================================
+
+// 管理者はすべてのレポートを参照できる
+if (!$isAdmin) {
+
+    // ログインユーザー自身と配下のユーザーIDを取得
+    $stmt = $pdo->prepare(
+        'WITH RECURSIVE subordinate_users(id) AS (
+            SELECT id
+            FROM users
+            WHERE id = :user_id
+
+            UNION
+
+            SELECT u.id
+            FROM users u
+            INNER JOIN subordinate_users s
+                ON u.manager_id = s.id
+        )
+        SELECT id
+        FROM subordinate_users'
+    );
+
+    $stmt->execute([
+        ':user_id' => $loginUserId,
+    ]);
+
+    $allowedUserIds = array_map(
+        'intval',
+        $stmt->fetchAll(PDO::FETCH_COLUMN)
+    );
+
+    // レポートの登録者ID
+    $reportUserId = (int) $report['user_id'];
+
+    // 自分および配下のレポート以外は拒否
+    if (!in_array($reportUserId, $allowedUserIds, true)) {
+        http_response_code(403);
+        exit('このレポートを参照する権限がありません。');
+    }
+}
+
+// ========================================
+// 5. コメント対象の項目
+// ========================================
+
 $fields = [
     'report_date' => '日付',
     'name'        => '氏名',
     'subject'     => '件名',
     'content'     => '内容',
     'issues'      => '課題',
-    'remarks'     => '備考'
+    'remarks'     => '備考',
 ];
 
-// コメントを取得
-$stmt = $pdo->prepare("
-    SELECT *
-    FROM comments
-    WHERE report_id = :report_id
-    ORDER BY created_at ASC, id ASC
-");
+// ========================================
+// 6. コメントを取得
+// ========================================
+
+$stmt = $pdo->prepare(
+    'SELECT *
+     FROM comments
+     WHERE report_id = :report_id
+     ORDER BY created_at ASC, id ASC'
+);
 
 $stmt->execute([
-    ':report_id' => $id
+    ':report_id' => $id,
 ]);
 
 $allComments = $stmt->fetchAll();
@@ -69,12 +145,10 @@ foreach ($allComments as $comment) {
 }
 
 ?>
-
 <!DOCTYPE html>
 <html lang="ja">
 
 <head>
-
     <meta charset="UTF-8">
 
     <meta
@@ -88,24 +162,21 @@ foreach ($allComments as $comment) {
 
     <style>
         /*
-         * レポート詳細の行
+         * レポート詳細
          *
          * 1列目：コメントアイコン
          * 2列目：項目名
          * 3列目：内容
          */
+
         .detail-row {
             display: grid;
             grid-template-columns: 64px 220px minmax(0, 1fr);
             align-items: stretch;
-            gap: 0;
             padding: 8px 0;
             border-bottom: 1px solid #e5edf7;
         }
 
-        /*
-         * コメントアイコン列
-         */
         .detail-icon-column {
             display: flex;
             align-items: center;
@@ -113,9 +184,6 @@ foreach ($allComments as $comment) {
             min-width: 0;
         }
 
-        /*
-         * 項目名列
-         */
         .detail-title-column {
             display: flex;
             align-items: center;
@@ -125,28 +193,21 @@ foreach ($allComments as $comment) {
             color: #172b4d;
         }
 
-        /*
-         * 内容列
-         */
         .detail-content-column {
             min-width: 0;
         }
 
         /*
-         * コメントアイコンと吹き出し
+         * コメントアイコン
          */
+
         .comment-wrapper {
             position: relative;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            flex-shrink: 0;
         }
 
-        /*
-         * コメントアイコン
-         * 丸い枠や背景をなくす
-         */
         button.comment-icon {
             display: inline-flex;
             align-items: center;
@@ -158,25 +219,28 @@ foreach ($allComments as $comment) {
             padding: 0 2px;
             border: none;
             border-radius: 0;
-            background-color: transparent;
+            background: transparent;
             color: #9aa5b1;
             font-size: 25px;
             line-height: 1;
             cursor: pointer;
         }
 
-        /* コメントが登録されているアイコン */
         button.comment-icon.has-comments {
             color: #0783ef;
         }
 
         button.comment-icon:hover {
-            background-color: transparent;
+            background: transparent;
             color: #005fbd;
             transform: scale(1.1);
         }
 
-        /* コメント件数 */
+        button.comment-icon:focus-visible {
+            outline: 2px solid #1976d2;
+            outline-offset: 2px;
+        }
+
         .comment-count {
             display: inline-flex;
             align-items: center;
@@ -186,25 +250,17 @@ foreach ($allComments as $comment) {
             padding: 0 4px;
             box-sizing: border-box;
             border-radius: 9px;
-            background-color: #0783ef;
+            background: #0783ef;
             color: #fff;
             font-size: 11px;
             font-weight: bold;
             line-height: 1;
         }
 
-        button.comment-icon:not(.has-comments) .comment-count {
-            display: none;
-        }
-
-        button.comment-icon:focus-visible {
-            outline: 2px solid #1976d2;
-            outline-offset: 2px;
-        }
-
         /*
          * コメント吹き出し
          */
+
         .comment-popover {
             position: absolute;
             top: calc(100% + 8px);
@@ -217,7 +273,7 @@ foreach ($allComments as $comment) {
             padding: 16px;
             border: 1px solid #cbd9e8;
             border-radius: 8px;
-            background-color: #fff;
+            background: #fff;
             box-shadow: 0 4px 14px rgba(0, 0, 0, 0.16);
             box-sizing: border-box;
         }
@@ -226,9 +282,6 @@ foreach ($allComments as $comment) {
             display: none;
         }
 
-        /*
-         * 吹き出し上部の三角形
-         */
         .comment-popover::before {
             content: "";
             position: absolute;
@@ -238,13 +291,10 @@ foreach ($allComments as $comment) {
             height: 14px;
             border-top: 1px solid #cbd9e8;
             border-left: 1px solid #cbd9e8;
-            background-color: #fff;
+            background: #fff;
             transform: rotate(45deg);
         }
 
-        /*
-         * 吹き出しのタイトル
-         */
         .comment-popover-title {
             margin: 0 0 12px;
             padding-bottom: 10px;
@@ -257,15 +307,13 @@ foreach ($allComments as $comment) {
         /*
          * コメント一覧
          */
+
         .comment-list {
             margin: 0;
             padding: 0;
             list-style: none;
         }
 
-        /*
-         * コメント1件分
-         */
         .comment-item {
             padding: 10px 0;
             border-bottom: 1px solid #e5edf7;
@@ -285,9 +333,6 @@ foreach ($allComments as $comment) {
             font-size: 12px;
         }
 
-        /*
-         * コメントがない場合
-         */
         .no-comment {
             margin: 0 0 12px;
             color: #718096;
@@ -295,8 +340,9 @@ foreach ($allComments as $comment) {
         }
 
         /*
-         * コメント操作ボタン
+         * コメント編集・削除
          */
+
         .comment-actions {
             display: flex;
             justify-content: flex-end;
@@ -315,22 +361,16 @@ foreach ($allComments as $comment) {
             cursor: pointer;
         }
 
-        /*
-         * 編集ボタン
-         */
         .comment-edit-button {
             border: 1px solid #1976d2;
-            background-color: #fff;
+            background: #fff;
             color: #1976d2;
         }
 
         .comment-edit-button:hover {
-            background-color: #e3f2fd;
+            background: #e3f2fd;
         }
 
-        /*
-         * 削除ボタン
-         */
         .comment-delete-form {
             display: inline;
             margin: 0;
@@ -338,17 +378,18 @@ foreach ($allComments as $comment) {
 
         .comment-delete-button {
             border: 1px solid #d32f2f;
-            background-color: #fff;
+            background: #fff;
             color: #d32f2f;
         }
 
         .comment-delete-button:hover {
-            background-color: #ffebee;
+            background: #ffebee;
         }
 
         /*
          * コメント登録フォーム
          */
+
         .comment-form {
             margin-top: 14px;
         }
@@ -385,19 +426,20 @@ foreach ($allComments as $comment) {
             padding: 8px 18px;
             border: none;
             border-radius: 5px;
-            background-color: #087bea;
+            background: #087bea;
             color: #fff;
             font-size: 14px;
             cursor: pointer;
         }
 
         .comment-form button:hover {
-            background-color: #005fbd;
+            background: #005fbd;
         }
 
         /*
-         * レポートの内容
+         * レポート内容
          */
+
         .detail-value {
             box-sizing: border-box;
             width: 100%;
@@ -405,16 +447,13 @@ foreach ($allComments as $comment) {
             padding: 10px 12px;
             border: 1px solid #dce7f3;
             border-radius: 5px;
-            background-color: #f4f7fb;
+            background: #f4f7fb;
             overflow-wrap: anywhere;
             white-space: pre-wrap;
             color: #172b4d;
             line-height: 1.6;
         }
 
-        /*
-         * 文章が長い項目
-         */
         .detail-value.multiline {
             min-height: 80px;
         }
@@ -422,6 +461,7 @@ foreach ($allComments as $comment) {
         /*
          * 操作ボタン
          */
+
         .detail-actions {
             display: flex;
             justify-content: flex-end;
@@ -433,8 +473,8 @@ foreach ($allComments as $comment) {
         /*
          * スマートフォン向け
          */
-        @media (max-width: 700px) {
 
+        @media (max-width: 700px) {
             .detail-row {
                 grid-template-columns: 44px 100px minmax(0, 1fr);
                 padding: 8px 0;
@@ -455,11 +495,9 @@ foreach ($allComments as $comment) {
                 width: 300px;
                 max-width: calc(100vw - 40px);
             }
-
         }
 
         @media (max-width: 400px) {
-
             .detail-row {
                 grid-template-columns: 38px 72px minmax(0, 1fr);
             }
@@ -473,10 +511,8 @@ foreach ($allComments as $comment) {
                 padding: 8px;
                 font-size: 14px;
             }
-
         }
     </style>
-
 </head>
 
 <body>
@@ -490,11 +526,11 @@ foreach ($allComments as $comment) {
         <?php foreach ($fields as $fieldName => $label): ?>
 
             <?php
-            // 文章が長い項目
+            // 長文項目
             $multilineFields = [
                 'content',
                 'issues',
-                'remarks'
+                'remarks',
             ];
 
             $valueClass = in_array(
@@ -504,10 +540,8 @@ foreach ($allComments as $comment) {
             )
                 ? 'detail-value multiline'
                 : 'detail-value';
-            ?>
 
-            <?php
-            // この項目に登録されているコメント数
+            // この項目のコメント数
             $commentCount = count($commentsByField[$fieldName]);
             $hasComments = $commentCount > 0;
             ?>
@@ -515,6 +549,7 @@ foreach ($allComments as $comment) {
             <div class="detail-row">
 
                 <!-- 1列目：コメントアイコン -->
+
                 <div class="detail-icon-column">
 
                     <div class="comment-wrapper">
@@ -528,12 +563,17 @@ foreach ($allComments as $comment) {
                             aria-label="<?= h($label) ?>のコメント<?= $hasComments ? ' ' . $commentCount . '件' : 'なし' ?>"
                             title="<?= h($label) ?>のコメント<?= $hasComments ? '：' . $commentCount . '件' : '（なし）' ?>"
                         >
-                            💬<?php if ($hasComments): ?>
-                                <span class="comment-count"><?= h($commentCount) ?></span>
+                            💬
+
+                            <?php if ($hasComments): ?>
+                                <span class="comment-count">
+                                    <?= h($commentCount) ?>
+                                </span>
                             <?php endif; ?>
                         </button>
 
                         <!-- コメント吹き出し -->
+
                         <div
                             class="comment-popover"
                             id="comments-<?= h($fieldName) ?>"
@@ -545,6 +585,7 @@ foreach ($allComments as $comment) {
                             </p>
 
                             <!-- 登録済みコメント -->
+
                             <?php if (empty($commentsByField[$fieldName])): ?>
 
                                 <p class="no-comment">
@@ -562,26 +603,23 @@ foreach ($allComments as $comment) {
                                             <p class="comment-text"><?= h($comment['comment']) ?></p>
 
                                             <p class="comment-date">
-                                                登録：
-                                                <?= h($comment['created_at']) ?>
+                                                登録：<?= h($comment['created_at']) ?>
                                             </p>
 
                                             <?php
                                             // 更新済みの場合は更新日時も表示
                                             if (
-                                                !empty($comment['updated_at']) &&
-                                                $comment['updated_at'] !== $comment['created_at']
+                                                !empty($comment['updated_at'])
+                                                && $comment['updated_at'] !== $comment['created_at']
                                             ):
                                             ?>
-
                                                 <p class="comment-date">
-                                                    更新：
-                                                    <?= h($comment['updated_at']) ?>
+                                                    更新：<?= h($comment['updated_at']) ?>
                                                 </p>
-
                                             <?php endif; ?>
 
-                                            <!-- 編集・削除ボタン -->
+                                            <!-- コメント編集・削除 -->
+
                                             <div class="comment-actions">
 
                                                 <a
@@ -636,6 +674,7 @@ foreach ($allComments as $comment) {
                             <?php endif; ?>
 
                             <!-- コメント登録フォーム -->
+
                             <form
                                 action="comment_store.php"
                                 method="post"
@@ -679,11 +718,13 @@ foreach ($allComments as $comment) {
                 </div>
 
                 <!-- 2列目：項目名 -->
+
                 <div class="detail-title-column">
                     <?= h($label) ?>
                 </div>
 
                 <!-- 3列目：内容 -->
+
                 <div class="detail-content-column">
 
                     <div class="<?= h($valueClass) ?>"><?= h($report[$fieldName] ?? '') ?></div>
@@ -695,14 +736,8 @@ foreach ($allComments as $comment) {
         <?php endforeach; ?>
 
         <!-- 操作ボタン -->
-        <div class="detail-actions">
 
-            <a
-                href="edit.php?id=<?= h($report['id']) ?>"
-                class="button"
-            >
-                編集
-            </a>
+        <div class="detail-actions">
 
             <a
                 href="index.php"
@@ -815,5 +850,4 @@ document.addEventListener('DOMContentLoaded', function () {
 </script>
 
 </body>
-
 </html>
