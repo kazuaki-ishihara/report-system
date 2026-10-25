@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
-require_once __DIR__ . '/../lib/functions.php';
-require_once __DIR__ . '/../lib/auth.php';
+require_once __DIR__ . '/../../lib/functions.php';
+require_once __DIR__ . '/../../lib/auth.php';
 
 // ========================================
 // ログインチェック
@@ -27,7 +27,7 @@ requireLogin();
 
     <title>レポート登録</title>
 
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="../css/style.css">
 
 </head>
 
@@ -169,7 +169,7 @@ requireLogin();
                 </button>
 
                 <a
-                    href="index.php"
+                    href="../index.php"
                     class="back-button"
                 >
                     戻る

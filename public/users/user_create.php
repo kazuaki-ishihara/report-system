@@ -2,46 +2,14 @@
 
 declare(strict_types=1);
 
-require_once __DIR__ . '/../config/database.php';
-require_once __DIR__ . '/../lib/functions.php';
-require_once __DIR__ . '/../lib/auth.php';
+require_once __DIR__ . '/../../config/database.php';
+require_once __DIR__ . '/../../lib/functions.php';
+require_once __DIR__ . '/../../lib/auth.php';
 
 requireAdmin($pdo);
 startSession();
 
-// ユーザーIDを検証
-$idInput = $_GET['id'] ?? '';
-
-if (
-    !is_string($idInput)
-    || !ctype_digit($idInput)
-    || (int) $idInput <= 0
-) {
-    header('Location: users.php?error=' . rawurlencode('ユーザーIDが正しくありません。'));
-    exit;
-}
-
-$userId = (int) $idInput;
-
-// 編集対象ユーザーを取得
-$stmt = $pdo->prepare(
-    'SELECT id, username, role_title, manager_id, is_admin, created_at
-     FROM users
-     WHERE id = :id'
-);
-
-$stmt->execute([
-    ':id' => $userId,
-]);
-
-$user = $stmt->fetch();
-
-if ($user === false) {
-    header('Location: users.php?error=' . rawurlencode('ユーザーが見つかりません。'));
-    exit;
-}
-
-// CSRFトークン
+// CSRF対策用トークン
 if (empty($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
@@ -57,36 +25,13 @@ $roleTitles = [
     '部長',
 ];
 
-// 編集対象ユーザー本人と、その配下のユーザーを
-// 上司候補から除外する
-$managerSql = '
-    WITH RECURSIVE descendants(id) AS (
-        SELECT id
-        FROM users
-        WHERE manager_id = :user_id
-
-        UNION
-
-        SELECT u.id
-        FROM users u
-        INNER JOIN descendants d
-            ON u.manager_id = d.id
-    )
-    SELECT id, username, role_title
-    FROM users
-    WHERE id <> :exclude_id
-      AND id NOT IN (SELECT id FROM descendants)
-    ORDER BY id ASC
-';
-
-$managerStmt = $pdo->prepare($managerSql);
-
-$managerStmt->execute([
-    ':user_id' => $userId,
-    ':exclude_id' => $userId,
-]);
-
-$managers = $managerStmt->fetchAll();
+// 上司候補一覧
+$stmt = $pdo->query(
+    'SELECT id, username, role_title
+     FROM users
+     ORDER BY id ASC'
+);
+$managers = $stmt->fetchAll();
 
 $error = trim($_GET['error'] ?? '');
 
@@ -96,8 +41,7 @@ $error = trim($_GET['error'] ?? '');
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <title>ユーザー編集</title>
+    <title>ユーザー登録</title>
 
     <style>
         body {
@@ -159,7 +103,6 @@ $error = trim($_GET['error'] ?? '');
             margin-top: 6px;
             color: #666;
             font-size: 13px;
-            line-height: 1.6;
         }
 
         .error-message {
@@ -196,13 +139,6 @@ $error = trim($_GET['error'] ?? '');
             background: #e0e0e0;
             color: #333;
         }
-
-        .user-info {
-            margin-bottom: 20px;
-            padding: 12px;
-            background: #f2f4f7;
-            border-radius: 5px;
-        }
     </style>
 </head>
 
@@ -210,12 +146,7 @@ $error = trim($_GET['error'] ?? '');
 
 <div class="container">
 
-    <h1>ユーザー編集</h1>
-
-    <div class="user-info">
-        ユーザーID：<?= (int) $user['id'] ?><br>
-        作成日時：<?= h($user['created_at']) ?>
-    </div>
+    <h1>新規ユーザー登録</h1>
 
     <?php if ($error !== ''): ?>
         <div class="error-message">
@@ -223,7 +154,7 @@ $error = trim($_GET['error'] ?? '');
         </div>
     <?php endif; ?>
 
-    <form action="user_update.php" method="post">
+    <form action="user_store.php" method="post">
 
         <input
             type="hidden"
@@ -231,57 +162,41 @@ $error = trim($_GET['error'] ?? '');
             value="<?= h($csrfToken) ?>"
         >
 
-        <input
-            type="hidden"
-            name="id"
-            value="<?= (int) $user['id'] ?>"
-        >
-
         <div class="form-group">
-            <label for="username">ユーザー名</label>
-
+            <label for="username">ユーザー名 <span>必須</span></label>
             <input
                 type="text"
                 id="username"
                 name="username"
-                value="<?= h($user['username']) ?>"
                 maxlength="100"
                 required
                 autocomplete="off"
             >
+            <div class="help">
+                他のユーザーと重複しない名前を入力してください。
+            </div>
         </div>
 
         <div class="form-group">
-            <label for="password">新しいパスワード</label>
-
+            <label for="password">初期パスワード <span>必須</span></label>
             <input
                 type="password"
                 id="password"
                 name="password"
                 minlength="8"
+                required
                 autocomplete="new-password"
             >
-
             <div class="help">
-                パスワードを変更する場合のみ入力してください。<br>
-                空欄の場合、現在のパスワードは変更されません。<br>
-                変更する場合は8文字以上で入力してください。
+                8文字以上で設定してください。
             </div>
         </div>
 
         <div class="form-group">
-            <label for="role_title">役職</label>
-
-            <select
-                id="role_title"
-                name="role_title"
-                required
-            >
+            <label for="role_title">役職 <span>必須</span></label>
+            <select id="role_title" name="role_title" required>
                 <?php foreach ($roleTitles as $roleTitle): ?>
-                    <option
-                        value="<?= h($roleTitle) ?>"
-                        <?= $user['role_title'] === $roleTitle ? 'selected' : '' ?>
-                    >
+                    <option value="<?= h($roleTitle) ?>">
                         <?= h($roleTitle) ?>
                     </option>
                 <?php endforeach; ?>
@@ -290,24 +205,16 @@ $error = trim($_GET['error'] ?? '');
 
         <div class="form-group">
             <label for="manager_id">上司</label>
-
             <select id="manager_id" name="manager_id">
                 <option value="">上司を設定しない</option>
 
                 <?php foreach ($managers as $manager): ?>
-                    <option
-                        value="<?= (int) $manager['id'] ?>"
-                        <?= (int) ($user['manager_id'] ?? 0) === (int) $manager['id'] ? 'selected' : '' ?>
-                    >
+                    <option value="<?= (int) $manager['id'] ?>">
                         <?= h($manager['username']) ?>
                         （<?= h($manager['role_title']) ?>）
                     </option>
                 <?php endforeach; ?>
             </select>
-
-            <div class="help">
-                自分自身および自分の配下のユーザーは、上司に指定できません。
-            </div>
         </div>
 
         <div class="form-group">
@@ -317,33 +224,23 @@ $error = trim($_GET['error'] ?? '');
                     id="is_admin"
                     name="is_admin"
                     value="1"
-                    <?= (int) $user['is_admin'] === 1 ? 'checked' : '' ?>
                 >
                 管理者権限を付与する
             </label>
 
             <div class="help">
-                管理者権限を外すと、ユーザー管理機能を利用できなくなります。
-                最後の管理者から権限を外すことはできません。
+                管理者にはユーザー管理機能へのアクセス権が付与されます。
             </div>
         </div>
 
         <div class="buttons">
-
-            <button
-                type="submit"
-                class="button submit-button"
-            >
-                更新する
+            <button type="submit" class="button submit-button">
+                登録する
             </button>
 
-            <a
-                href="users.php"
-                class="button back-button"
-            >
+            <a href="users.php" class="button back-button">
                 キャンセル
             </a>
-
         </div>
 
     </form>

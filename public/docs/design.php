@@ -395,7 +395,7 @@ users.manager_id ── users.id（上司・部下の自己参照）</pre>
                     <li>PHP、SQLite、Webサーバーのバージョンや設定は、実際の稼働環境を別途記録する。</li>
                 </ul>
                 <p class="small">文書の更新日：2026年10月25日</p>
-                <a class="back" href="login.php">ログイン画面へ戻る</a>
+                <a class="back" href="../login.php">ログイン画面へ戻る</a>
             </section>
         </main>
     </div>

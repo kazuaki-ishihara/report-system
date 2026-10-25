@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-require_once __DIR__ . '/../config/database.php';
-require_once __DIR__ . '/../lib/functions.php';
-require_once __DIR__ . '/../lib/auth.php';
+require_once __DIR__ . '/../../config/database.php';
+require_once __DIR__ . '/../../lib/functions.php';
+require_once __DIR__ . '/../../lib/auth.php';
 
 // POST以外のアクセスは一覧画面へ戻す
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    header('Location: index.php');
+    header('Location: ../index.php');
     exit;
 }
 
@@ -19,7 +19,7 @@ requireLogin();
 $loginUser = getLoginUser($pdo);
 
 if ($loginUser === null) {
-    header('Location: login.php');
+    header('Location: ../login.php');
     exit;
 }
 
@@ -79,5 +79,5 @@ $stmt->execute([
 ]);
 
 // 一覧画面へ戻る
-header('Location: index.php');
+header('Location: ../index.php');
 exit;

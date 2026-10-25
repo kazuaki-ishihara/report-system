@@ -261,13 +261,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     <!-- 画面操作説明へのリンク -->
 <div class="manual-link-container">
-    <a href="manual.php" class="manual-link">
+    <a href="docs/manual.php" class="manual-link">
         画面操作説明
     </a>
 </div>
 
 <div class="manual-link-container">
-    <a href="design.php" class="manual-link">
+    <a href="docs/design.php" class="manual-link">
         システム設計書
     </a>
 </div>

@@ -558,12 +558,12 @@ $reports = $stmt->fetchAll(PDO::FETCH_ASSOC);
             </span>
 <?php if ($isAdmin): ?>
 
-<a href="users.php" class="button">
+<a href="users/users.php" class="button">
     ユーザー管理
 </a>
 
 <?php endif; ?>
-            <a href="create.php" class="button new-button">
+            <a href="reports/create.php" class="button new-button">
                 新規登録
             </a>
 
@@ -714,7 +714,7 @@ $reports = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                     <?php if ($canEdit): ?>
 
                                         <a
-                                            href="edit.php?id=<?= (int) $report['id'] ?>"
+                                            href="reports/edit.php?id=<?= (int) $report['id'] ?>"
                                             class="action-button edit-button"
                                         >
                                             編集
@@ -735,7 +735,7 @@ $reports = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
                                     <!-- コメントボタン -->
                                     <a
-                                        href="detail.php?id=<?= (int) $report['id'] ?>"
+                                        href="reports/detail.php?id=<?= (int) $report['id'] ?>"
                                         class="action-button detail-button"
                                     >
                                         コメント
@@ -746,7 +746,7 @@ $reports = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
                                         <form
                                             method="post"
-                                            action="delete.php"
+                                            action="reports/delete.php"
                                             class="delete-form"
                                             onsubmit="return confirm('このレポートを削除しますか？');"
                                         >

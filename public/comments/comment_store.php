@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-require_once __DIR__ . '/../config/database.php';
-require_once __DIR__ . '/../lib/functions.php';
-require_once __DIR__ . '/../lib/auth.php';
+require_once __DIR__ . '/../../config/database.php';
+require_once __DIR__ . '/../../lib/functions.php';
+require_once __DIR__ . '/../../lib/auth.php';
 
 // ========================================
 // 1. ログインチェック
@@ -16,7 +16,7 @@ requireLogin();
 $loginUser = getLoginUser($pdo);
 
 if ($loginUser === null) {
-    header('Location: login.php');
+    header('Location: ../login.php');
     exit;
 }
 
@@ -28,7 +28,7 @@ $isAdmin = (int) $loginUser['is_admin'] === 1;
 // ========================================
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    header('Location: index.php');
+    header('Location: ../index.php');
     exit;
 }
 
@@ -199,7 +199,7 @@ $stmt->execute([
 // ========================================
 
 header(
-    'Location: detail.php?id=' . $reportId
+    'Location: ../reports/detail.php?id=' . $reportId
     . '#comments-' . rawurlencode($fieldName)
 );
 

@@ -72,7 +72,7 @@ declare(strict_types=1);
         <h1>レポート管理システム</h1>
         <p>画面操作説明です。各機能の操作方法を説明します。</p>
         <div class="manual-actions">
-            <a href="login.php" class="button">ログイン画面へ戻る</a>
+            <a href="../login.php" class="button">ログイン画面へ戻る</a>
         </div>
     </header>
 

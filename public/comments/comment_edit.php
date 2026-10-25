@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-require_once __DIR__ . '/../config/database.php';
-require_once __DIR__ . '/../lib/functions.php';
-require_once __DIR__ . '/../lib/auth.php';
+require_once __DIR__ . '/../../config/database.php';
+require_once __DIR__ . '/../../lib/functions.php';
+require_once __DIR__ . '/../../lib/auth.php';
 
 // ==================================================
 // 1. ログイン確認
@@ -15,7 +15,7 @@ requireLogin();
 $loginUser = getLoginUser($pdo);
 
 if ($loginUser === null) {
-    header('Location: login.php');
+    header('Location: ../login.php');
     exit;
 }
 
@@ -171,7 +171,7 @@ $label = $fields[$fieldName];
 
     <title>コメント編集</title>
 
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="../css/style.css">
 
     <style>
         .comment-edit-info {
@@ -261,7 +261,7 @@ $label = $fields[$fieldName];
                 </button>
 
                 <a
-                    href="detail.php?id=<?= h($comment['report_id']) ?>#comments-<?= h($fieldName) ?>"
+                    href="../reports/detail.php?id=<?= h($comment['report_id']) ?>#comments-<?= h($fieldName) ?>"
                     class="back-button"
                 >
                     キャンセル

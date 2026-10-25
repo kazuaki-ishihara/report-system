@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-require_once '../config/database.php';
-require_once '../lib/functions.php';
-require_once '../lib/auth.php';
+require_once __DIR__ . '/../../config/database.php';
+require_once __DIR__ . '/../../lib/functions.php';
+require_once __DIR__ . '/../../lib/auth.php';
 
 // 管理者以外は利用不可
 requireAdmin($pdo);
@@ -76,7 +76,7 @@ $users = $stmt->fetchAll();
 
     <title>ユーザー管理</title>
 
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="../css/style.css">
 
     <style>
         .user-management-container {
@@ -263,7 +263,7 @@ $users = $stmt->fetchAll();
         </a>
 
         <a
-            href="index.php"
+            href="../index.php"
             class="back-button"
         >
             レポート一覧へ戻る

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-require_once __DIR__ . '/../config/database.php';
-require_once __DIR__ . '/../lib/functions.php';
-require_once __DIR__ . '/../lib/auth.php';
+require_once __DIR__ . '/../../config/database.php';
+require_once __DIR__ . '/../../lib/functions.php';
+require_once __DIR__ . '/../../lib/auth.php';
 
 // ========================================
 // ログインチェック
@@ -33,7 +33,7 @@ $userId = getLoginUserId();
 
 // ログインユーザーIDを取得できない場合
 if ($userId === null) {
-    header('Location: login.php');
+    header('Location: ../login.php');
     exit;
 }
 
@@ -149,5 +149,5 @@ $stmt->execute([
 // 登録完了後、一覧へ戻る
 // ========================================
 
-header('Location: index.php');
+header('Location: ../index.php');
 exit;

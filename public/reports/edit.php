@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-require_once __DIR__ . '/../config/database.php';
-require_once __DIR__ . '/../lib/functions.php';
-require_once __DIR__ . '/../lib/auth.php';
+require_once __DIR__ . '/../../config/database.php';
+require_once __DIR__ . '/../../lib/functions.php';
+require_once __DIR__ . '/../../lib/auth.php';
 
 // ==================================================
 // 1. ログイン確認
@@ -15,7 +15,7 @@ requireLogin();
 $loginUser = getLoginUser($pdo);
 
 if ($loginUser === null) {
-    header('Location: login.php');
+    header('Location: ../login.php');
     exit;
 }
 
@@ -96,7 +96,7 @@ if (!$isAdmin && $reportUserId !== $loginUserId) {
 
     <title>レポート編集</title>
 
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="../css/style.css">
 
 </head>
 
@@ -212,7 +212,7 @@ if (!$isAdmin && $reportUserId !== $loginUserId) {
                 </button>
 
                 <a
-                    href="index.php"
+                    href="../index.php"
                     class="back-button"
                 >
                     戻る

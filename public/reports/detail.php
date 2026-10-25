@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-require_once __DIR__ . '/../config/database.php';
-require_once __DIR__ . '/../lib/functions.php';
-require_once __DIR__ . '/../lib/auth.php';
+require_once __DIR__ . '/../../config/database.php';
+require_once __DIR__ . '/../../lib/functions.php';
+require_once __DIR__ . '/../../lib/auth.php';
 
 // ========================================
 // 1. ログインチェック
@@ -16,7 +16,7 @@ requireLogin();
 $loginUser = getLoginUser($pdo);
 
 if ($loginUser === null) {
-    header('Location: login.php');
+    header('Location: ../login.php');
     exit;
 }
 
@@ -158,7 +158,7 @@ foreach ($allComments as $comment) {
 
     <title>レポート詳細</title>
 
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="../css/style.css">
 
     <style>
         /*
@@ -623,14 +623,14 @@ foreach ($allComments as $comment) {
                                             <div class="comment-actions">
 
                                                 <a
-                                                    href="comment_edit.php?id=<?= h($comment['id']) ?>"
+                                                    href="../comments/comment_edit.php?id=<?= h($comment['id']) ?>"
                                                     class="comment-edit-button"
                                                 >
                                                     編集
                                                 </a>
 
                                                 <form
-                                                    action="comment_delete.php"
+                                                    action="../comments/comment_delete.php"
                                                     method="post"
                                                     class="comment-delete-form"
                                                     onsubmit="return confirm('このコメントを削除しますか？');"
@@ -676,7 +676,7 @@ foreach ($allComments as $comment) {
                             <!-- コメント登録フォーム -->
 
                             <form
-                                action="comment_store.php"
+                                action="../comments/comment_store.php"
                                 method="post"
                                 class="comment-form"
                             >
@@ -740,7 +740,7 @@ foreach ($allComments as $comment) {
         <div class="detail-actions">
 
             <a
-                href="index.php"
+                href="../index.php"
                 class="back-button"
             >
                 一覧に戻る
