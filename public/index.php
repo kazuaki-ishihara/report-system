@@ -556,7 +556,13 @@ $reports = $stmt->fetchAll(PDO::FETCH_ASSOC);
             <span class="login-user">
                 <?= h($loginUser['username']) ?> さん
             </span>
+<?php if ($isAdmin): ?>
 
+<a href="users.php" class="button">
+    ユーザー管理
+</a>
+
+<?php endif; ?>
             <a href="create.php" class="button new-button">
                 新規登録
             </a>
