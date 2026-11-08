@@ -53,31 +53,67 @@ $csrfToken = reportFieldCsrfToken();
     <div class="table-wrap">
         <table>
             <caption>レポート項目一覧</caption>
-            <thead><tr><th scope="col">表示名</th><th scope="col">内部コード</th><th scope="col">種類</th><th scope="col">必須</th><th scope="col">表示順</th><th scope="col">状態</th><th scope="col">操作</th></tr></thead>
+            <thead>
+                <tr>
+                    <th scope="col">表示名</th>
+                    <th scope="col">内部コード</th>
+                    <th scope="col">種類</th>
+                    <th scope="col">必須</th>
+                    <th scope="col">表示順</th>
+                    <th scope="col">状態</th>
+                    <th scope="col">操作</th>
+                </tr>
+            </thead>
             <tbody>
             <?php if (!$fields): ?>
                 <tr><td colspan="7">項目はありません。</td></tr>
             <?php else: foreach ($fields as $field): ?>
-                <tr class="<?= (int) $field['is_active'] === 1 ? '' : 'inactive' ?>">
+                <?php $isActive = (int) $field['is_active'] === 1; ?>
+                <tr class="<?= $isActive ? '' : 'inactive' ?>">
                     <td><?= h($field['label']) ?></td>
                     <td><code><?= h($field['code']) ?></code></td>
                     <td><?= h(reportFieldLabel($field)) ?></td>
                     <td><?= (int) $field['is_required'] === 1 ? '必須' : '任意' ?></td>
                     <td><?= (int) $field['sort_order'] ?></td>
-                    <td><?= (int) $field['is_active'] === 1 ? '表示中' : '非表示' ?></td>
-                    <td><div class="actions">
-                        <a class="button-link" href="edit.php?id=<?= (int) $field['id'] ?>">編集</a>
-                        <form class="small-form" method="post" action="toggle.php" onsubmit="return confirm('項目「<?= h($field['label']) ?>」の表示状態を切り替えますか？');">
-                            <input type="hidden" name="csrf_token" value="<?= h($csrfToken) ?>">
-                            <input type="hidden" name="id" value="<?= (int) $field['id'] ?>">
-                            <button class="secondary" type="submit" aria-label="<?= (int) $field['is_active'] === 1 ? '項目を非表示にする' : '項目を再表示する' ?>: <?= h($field['label']) ?>"><?= (int) $field['is_active'] === 1 ? '非表示にする' : '再表示する' ?></button>
-                        </form>
-                    </div></td>
+                    <td><?= $isActive ? '表示中' : '非表示' ?></td>
+                    <td>
+                        <div class="actions">
+                            <a class="button-link" href="edit.php?id=<?= (int) $field['id'] ?>">編集</a>
+                            <form
+                                class="small-form field-toggle-form"
+                                method="post"
+                                action="toggle.php"
+                                data-field-label="<?= h($field['label']) ?>"
+                                data-action-label="<?= $isActive ? '非表示にする' : '再表示する' ?>"
+                            >
+                                <input type="hidden" name="csrf_token" value="<?= h($csrfToken) ?>">
+                                <input type="hidden" name="id" value="<?= (int) $field['id'] ?>">
+                                <button
+                                    class="secondary"
+                                    type="submit"
+                                    aria-label="<?= $isActive ? '項目を非表示にする' : '項目を再表示する' ?>: <?= h($field['label']) ?>"
+                                >
+                                    <?= $isActive ? '非表示にする' : '再表示する' ?>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
                 </tr>
             <?php endforeach; endif; ?>
             </tbody>
         </table>
     </div>
 </main>
+<script>
+document.querySelectorAll('.field-toggle-form').forEach(function (form) {
+    form.addEventListener('submit', function (event) {
+        const fieldLabel = form.dataset.fieldLabel || '';
+        const actionLabel = form.dataset.actionLabel || '変更';
+        if (!window.confirm('項目「' + fieldLabel + '」を' + actionLabel + 'しますか？')) {
+            event.preventDefault();
+        }
+    });
+});
+</script>
 </body>
 </html>

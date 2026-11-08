@@ -223,6 +223,7 @@ $reports = $stmt->fetchAll(PDO::FETCH_ASSOC);
             display: flex;
             align-items: center;
             gap: 10px;
+            flex-wrap: wrap;
         }
 
         .login-user {
@@ -422,11 +423,6 @@ $reports = $stmt->fetchAll(PDO::FETCH_ASSOC);
             flex-shrink: 0;
         }
 
-        /*
-         * 編集ボタンと空白の幅を統一する。
-         * 編集ボタンが非表示の場合でも、
-         * コメント・削除ボタンの位置を揃える。
-         */
         .edit-button,
         .edit-button-space {
             width: 60px;
@@ -460,7 +456,6 @@ $reports = $stmt->fetchAll(PDO::FETCH_ASSOC);
             flex-shrink: 0;
         }
 
-        /* 削除ボタンと空白の幅を統一する */
         .delete-button,
         .delete-button-space {
             width: 60px;
@@ -476,7 +471,6 @@ $reports = $stmt->fetchAll(PDO::FETCH_ASSOC);
             background-color: #bb2d3b;
         }
 
-        /* 削除ボタンが非表示の場合も位置を確保する */
         .delete-button-space {
             visibility: hidden;
             pointer-events: none;
@@ -519,10 +513,7 @@ $reports = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 flex-direction: column;
             }
 
-            .search-item input {
-                width: 100%;
-            }
-
+            .search-item input,
             .search-item {
                 width: 100%;
             }
@@ -535,7 +526,6 @@ $reports = $stmt->fetchAll(PDO::FETCH_ASSOC);
             td {
                 padding: 9px 8px;
             }
-
         }
 
     </style>
@@ -546,254 +536,84 @@ $reports = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 <div class="container">
 
-    <!-- ヘッダー -->
     <div class="header">
-
         <h1>レポート一覧</h1>
-
         <div class="header-actions">
-
-            <span class="login-user">
-                <?= h($loginUser['username']) ?> さん
-            </span>
-<?php if ($isAdmin): ?>
-
-<a href="users/users.php" class="button">
-    ユーザー管理
-</a>
-
-<?php endif; ?>
-            <a href="reports/create.php" class="button new-button">
-                新規登録
-            </a>
-
-            <a href="logout.php" class="button logout-button">
-                ログアウト
-            </a>
-
+            <span class="login-user"><?= h($loginUser['username']) ?> さん</span>
+            <?php if ($isAdmin): ?>
+                <a href="users/users.php" class="button">ユーザー管理</a>
+                <a href="report_fields/index.php" class="button">レポート項目管理</a>
+            <?php endif; ?>
+            <a href="reports/create.php" class="button new-button">新規登録</a>
+            <a href="logout.php" class="button logout-button">ログアウト</a>
         </div>
-
     </div>
 
-    <!-- 検索フォーム -->
     <div class="search-container">
-
         <form method="get" action="index.php" class="search-form">
-
             <div class="search-item">
-
-                <label for="name">
-                    氏名
-                </label>
-
-                <input
-                    type="text"
-                    id="name"
-                    name="name"
-                    value="<?= h($name) ?>"
-                    placeholder="氏名を入力"
-                >
-
+                <label for="name">氏名</label>
+                <input type="text" id="name" name="name" value="<?= h($name) ?>" placeholder="氏名を入力">
             </div>
-
             <div class="search-item">
-
-                <label for="keyword">
-                    キーワード
-                </label>
-
-                <input
-                    type="text"
-                    id="keyword"
-                    name="keyword"
-                    value="<?= h($keyword) ?>"
-                    placeholder="件名・内容・課題・備考"
-                >
-
+                <label for="keyword">キーワード</label>
+                <input type="text" id="keyword" name="keyword" value="<?= h($keyword) ?>" placeholder="件名・内容・課題・備考">
             </div>
-
-            <button type="submit" class="button search-button">
-                検索
-            </button>
-
-            <a href="index.php" class="button clear-button">
-                クリア
-            </a>
-
+            <button type="submit" class="button search-button">検索</button>
+            <a href="index.php" class="button clear-button">クリア</a>
         </form>
-
     </div>
 
-    <!-- レポート件数 -->
     <div class="list-header">
-
-        <div class="report-count">
-            レポート件数：<?= count($reports) ?> 件
-        </div>
-
+        <div class="report-count">レポート件数：<?= count($reports) ?> 件</div>
     </div>
 
-    <!-- レポート一覧 -->
     <div class="table-container">
-
         <table>
-
             <thead>
-
                 <tr>
-
-                    <th class="id-column">
-                        ID
-                    </th>
-
-                    <th class="date-column">
-                        日付
-                    </th>
-
-                    <th class="name-column">
-                        氏名
-                    </th>
-
-                    <th class="subject-column">
-                        件名
-                    </th>
-
-                    <th class="action-column">
-                        操作
-                    </th>
-
+                    <th class="id-column">ID</th>
+                    <th class="date-column">日付</th>
+                    <th class="name-column">氏名</th>
+                    <th class="subject-column">件名</th>
+                    <th class="action-column">操作</th>
                 </tr>
-
             </thead>
-
             <tbody>
-
                 <?php if (empty($reports)): ?>
-
-                    <tr>
-
-                        <td colspan="5" class="no-data">
-                            該当するレポートはありません。
-                        </td>
-
-                    </tr>
-
+                    <tr><td colspan="5" class="no-data">該当するレポートはありません。</td></tr>
                 <?php else: ?>
-
                     <?php foreach ($reports as $report): ?>
-
-                        <?php
-                        // 編集できるのは管理者または本人のレポート
-                        $canEdit = $isAdmin
-                            || (int) $report['user_id'] === $loginUserId;
-                        ?>
-
+                        <?php $canEdit = $isAdmin || (int) $report['user_id'] === $loginUserId; ?>
                         <tr>
-
-                            <td class="id-column">
-                                <?= h($report['id']) ?>
-                            </td>
-
-                            <td class="date-column">
-                                <?= h($report['report_date']) ?>
-                            </td>
-
-                            <td class="name-column">
-                                <?= h($report['name']) ?>
-                            </td>
-
-                            <td class="subject-column">
-                                <?= h($report['subject']) ?>
-                            </td>
-
+                            <td class="id-column"><?= h($report['id']) ?></td>
+                            <td class="date-column"><?= h($report['report_date']) ?></td>
+                            <td class="name-column"><?= h($report['name']) ?></td>
+                            <td class="subject-column"><?= h($report['subject']) ?></td>
                             <td class="action-column">
-
                                 <div class="action-cell">
-
-                                    <!-- 編集ボタン -->
                                     <?php if ($canEdit): ?>
-
-                                        <a
-                                            href="reports/edit.php?id=<?= (int) $report['id'] ?>"
-                                            class="action-button edit-button"
-                                        >
-                                            編集
-                                        </a>
-
+                                        <a href="reports/edit.php?id=<?= (int) $report['id'] ?>" class="action-button edit-button">編集</a>
                                     <?php else: ?>
-
-                                        <!--
-                                            編集ボタンが非表示でも
-                                            同じ幅の空白を確保する
-                                        -->
-                                        <span
-                                            class="edit-button-space"
-                                            aria-hidden="true"
-                                        ></span>
-
+                                        <span class="edit-button-space" aria-hidden="true"></span>
                                     <?php endif; ?>
-
-                                    <!-- コメントボタン -->
-                                    <a
-                                        href="reports/detail.php?id=<?= (int) $report['id'] ?>"
-                                        class="action-button detail-button"
-                                    >
-                                        コメント
-                                    </a>
-
-                                    <!-- 削除ボタン -->
+                                    <a href="reports/detail.php?id=<?= (int) $report['id'] ?>" class="action-button detail-button">コメント</a>
                                     <?php if ($canEdit): ?>
-
-                                        <form
-                                            method="post"
-                                            action="reports/delete.php"
-                                            class="delete-form"
-                                            onsubmit="return confirm('このレポートを削除しますか？');"
-                                        >
-
-                                            <input
-                                                type="hidden"
-                                                name="id"
-                                                value="<?= (int) $report['id'] ?>"
-                                            >
-
-                                            <button
-                                                type="submit"
-                                                class="action-button delete-button"
-                                            >
-                                                削除
-                                            </button>
-
+                                        <form method="post" action="reports/delete.php" class="delete-form" onsubmit="return confirm('このレポートを削除しますか？');">
+                                            <input type="hidden" name="id" value="<?= (int) $report['id'] ?>">
+                                            <button type="submit" class="action-button delete-button">削除</button>
                                         </form>
-
                                     <?php else: ?>
-
-                                        <!-- 削除ボタンが非表示でも同じ幅の空白を確保する -->
-                                        <span
-                                            class="delete-button-space"
-                                            aria-hidden="true"
-                                        ></span>
-
+                                        <span class="delete-button-space" aria-hidden="true"></span>
                                     <?php endif; ?>
-
                                 </div>
-
                             </td>
-
                         </tr>
-
                     <?php endforeach; ?>
-
                 <?php endif; ?>
-
             </tbody>
-
         </table>
-
     </div>
-
 </div>
-
 </body>
-
 </html>
