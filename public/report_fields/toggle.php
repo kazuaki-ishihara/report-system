@@ -1,0 +1,29 @@
+<?php
+
+declare(strict_types=1);
+
+require_once __DIR__ . '/_common.php';
+requireAdmin($pdo);
+
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    http_response_code(405);
+    header('Allow: POST');
+    exit('許可されていないアクセスです。');
+}
+verifyReportFieldCsrf();
+$id = reportFieldIdFromRequest('id');
+$stmt = $pdo->prepare('SELECT is_active FROM report_fields WHERE id = :id');
+$stmt->execute([':id' => $id]);
+$field = $stmt->fetch(PDO::FETCH_ASSOC);
+if ($field === false) {
+    http_response_code(404);
+    exit('指定された項目が見つかりません。');
+}
+$newState = (int) $field['is_active'] === 1 ? 0 : 1;
+$update = $pdo->prepare('UPDATE report_fields SET is_active = :is_active, updated_at = :updated_at WHERE id = :id');
+$update->execute([
+    ':is_active' => $newState,
+    ':updated_at' => date('Y-m-d H:i:s'),
+    ':id' => $id,
+]);
+redirectReportFields('message', $newState === 1 ? '項目を再表示しました。' : '項目を非表示にしました。');
