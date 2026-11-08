@@ -31,12 +31,12 @@ $csrfToken = reportFieldCsrfToken();
         th, td { padding: 10px; border: 1px solid #ddd; text-align: left; }
         th { background: #f2f4f7; white-space: nowrap; }
         .inactive { color: #777; }
-        .notice { margin: 12px 0; padding: 12px; background: #eef7fc; }
         .message { padding: 12px; background: #e8f5e9; color: #1b5e20; }
         .error { padding: 12px; background: #ffebee; color: #b71c1c; }
-        .small-form { display: inline; }
-        .button-link, .actions button { display: inline-block; padding: 7px 12px; border: 0; border-radius: 4px; background: #1976d2; color: #fff; text-decoration: none; cursor: pointer; }
+        .small-form { display: inline; margin: 0; }
+        .button-link, .actions button { display: inline-block; padding: 7px 12px; border: 0; border-radius: 4px; background: #1976d2; color: #fff; text-decoration: none; cursor: pointer; font: inherit; }
         .secondary { background: #666 !important; }
+        .actions button:focus-visible, .button-link:focus-visible { outline: 3px solid #ffbf47; outline-offset: 2px; }
         @media (max-width: 700px) { .page { margin: 10px; padding: 12px; } }
     </style>
 </head>
@@ -46,13 +46,14 @@ $csrfToken = reportFieldCsrfToken();
     <p>項目を非表示にしても、登録済みの値やコメントは保持されます。項目は物理削除できません。</p>
     <?php if ($message !== ''): ?><p class="message" role="status"><?= h($message) ?></p><?php endif; ?>
     <?php if ($error !== ''): ?><p class="error" role="alert"><?= h($error) ?></p><?php endif; ?>
-    <nav class="toolbar">
+    <nav class="toolbar" aria-label="項目管理の操作">
         <a class="button-link" href="create.php">項目を追加</a>
         <a class="button-link secondary" href="../index.php">レポート一覧へ戻る</a>
     </nav>
     <div class="table-wrap">
         <table>
-            <thead><tr><th>表示名</th><th>内部コード</th><th>種類</th><th>必須</th><th>表示順</th><th>状態</th><th>操作</th></tr></thead>
+            <caption>レポート項目一覧</caption>
+            <thead><tr><th scope="col">表示名</th><th scope="col">内部コード</th><th scope="col">種類</th><th scope="col">必須</th><th scope="col">表示順</th><th scope="col">状態</th><th scope="col">操作</th></tr></thead>
             <tbody>
             <?php if (!$fields): ?>
                 <tr><td colspan="7">項目はありません。</td></tr>
@@ -66,10 +67,10 @@ $csrfToken = reportFieldCsrfToken();
                     <td><?= (int) $field['is_active'] === 1 ? '表示中' : '非表示' ?></td>
                     <td><div class="actions">
                         <a class="button-link" href="edit.php?id=<?= (int) $field['id'] ?>">編集</a>
-                        <form class="small-form" method="post" action="toggle.php" onsubmit="return confirm('項目の表示状態を切り替えますか？');">
+                        <form class="small-form" method="post" action="toggle.php" onsubmit="return confirm('項目「<?= h($field['label']) ?>」の表示状態を切り替えますか？');">
                             <input type="hidden" name="csrf_token" value="<?= h($csrfToken) ?>">
                             <input type="hidden" name="id" value="<?= (int) $field['id'] ?>">
-                            <button class="secondary" type="submit"><?= (int) $field['is_active'] === 1 ? '非表示にする' : '再表示する' ?></button>
+                            <button class="secondary" type="submit" aria-label="<?= (int) $field['is_active'] === 1 ? '項目を非表示にする' : '項目を再表示する' ?>: <?= h($field['label']) ?>"><?= (int) $field['is_active'] === 1 ? '非表示にする' : '再表示する' ?></button>
                         </form>
                     </div></td>
                 </tr>

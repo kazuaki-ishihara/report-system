@@ -12,18 +12,36 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 verifyReportFieldCsrf();
 $id = reportFieldIdFromRequest('id');
-$stmt = $pdo->prepare('SELECT is_active FROM report_fields WHERE id = :id');
-$stmt->execute([':id' => $id]);
-$field = $stmt->fetch(PDO::FETCH_ASSOC);
-if ($field === false) {
-    http_response_code(404);
-    exit('指定された項目が見つかりません。');
+
+try {
+    $pdo->beginTransaction();
+    $stmt = $pdo->prepare('SELECT is_active FROM report_fields WHERE id = :id');
+    $stmt->execute([':id' => $id]);
+    $field = $stmt->fetch(PDO::FETCH_ASSOC);
+    if ($field === false) {
+        $pdo->rollBack();
+        http_response_code(404);
+        exit('指定された項目が見つかりません。');
+    }
+
+    $newState = (int) $field['is_active'] === 1 ? 0 : 1;
+    $update = $pdo->prepare(
+        'UPDATE report_fields
+         SET is_active = :is_active, updated_at = :updated_at
+         WHERE id = :id'
+    );
+    $update->execute([
+        ':is_active' => $newState,
+        ':updated_at' => date('Y-m-d H:i:s'),
+        ':id' => $id,
+    ]);
+    $pdo->commit();
+} catch (PDOException $e) {
+    if ($pdo->inTransaction()) {
+        $pdo->rollBack();
+    }
+    error_log('レポート項目表示切替エラー: ' . $e->getMessage());
+    redirectReportFields('error', '表示状態を変更できませんでした。');
 }
-$newState = (int) $field['is_active'] === 1 ? 0 : 1;
-$update = $pdo->prepare('UPDATE report_fields SET is_active = :is_active, updated_at = :updated_at WHERE id = :id');
-$update->execute([
-    ':is_active' => $newState,
-    ':updated_at' => date('Y-m-d H:i:s'),
-    ':id' => $id,
-]);
+
 redirectReportFields('message', $newState === 1 ? '項目を再表示しました。' : '項目を非表示にしました。');
