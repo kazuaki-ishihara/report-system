@@ -11,3 +11,4 @@
 
 # 検証の出力
 /tools/test/output/
+/tools/test/output_*.json

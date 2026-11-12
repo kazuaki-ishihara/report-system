@@ -29,5 +29,7 @@ require_once APP_DIR . '/lib/auth.php';
 require_once APP_DIR . '/lib/session.php';
 require_once APP_DIR . '/lib/perm.php';
 require_once APP_DIR . '/lib/report.php';
+require_once APP_DIR . '/lib/admin.php';
+require_once APP_DIR . '/lib/form.php';
 
 app_init_error_handling();

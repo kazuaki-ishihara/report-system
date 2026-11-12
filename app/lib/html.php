@@ -61,6 +61,15 @@ function error_page(int $code, ?string $message = null): void
     if (!headers_sent()) {
         http_response_code($code);
     }
+    // 処理の途中で止まったときは、送信の番号の控え（処理中）を消す。直して送り直せば処理できるように
+    if (!empty($GLOBALS['RK_CURRENT']) && $code !== 409) {
+        try {
+            db_exec("DELETE FROM request_keys WHERE request_key = ? AND status = 'processing'", [$GLOBALS['RK_CURRENT']]);
+        } catch (Throwable $e) {
+            // DB に届かないときは何もしない（控えは 1 日で消える）
+        }
+        $GLOBALS['RK_CURRENT'] = null;
+    }
     $msg = $message ?? ($messages[$code] ?? $messages[500]);
     while (ob_get_level() > 0) {
         ob_end_clean();

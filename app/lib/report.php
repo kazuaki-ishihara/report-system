@@ -55,6 +55,150 @@ function report_close_date(array $user, string $period): ?string
     return $next . '-' . str_pad((string) min((int) $closeDay, $last), 2, '0', STR_PAD_LEFT);
 }
 
+function report_find(int $id): ?array
+{
+    return db_one('SELECT * FROM report_records WHERE id = ?', [$id]);
+}
+
+function report_find_own(int $userId, string $period): ?array
+{
+    return db_one('SELECT * FROM report_records WHERE user_id = ? AND period = ? AND is_legacy = 0 AND deleted_at IS NULL', [$userId, $period]);
+}
+
+/** 報告の案件ブロック（並び順） */
+function report_blocks(int $reportId): array
+{
+    return db_all(
+        'SELECT rp.id, rp.project_id, rp.sort_order, p.code, p.alias, p.is_active
+           FROM report_projects rp JOIN projects p ON p.id = rp.project_id
+          WHERE rp.report_id = ? ORDER BY rp.sort_order, rp.id',
+        [$reportId]
+    );
+}
+
+/**
+ * 報告の値を復号して返す: [report_project_id][field_id] => ['value' => string|null, 'warning' => bool]
+ * 復号できない値は 'value' => null。
+ */
+function report_values(int $reportId): array
+{
+    $out = [];
+    foreach (db_all('SELECT * FROM report_field_values WHERE report_id = ?', [$reportId]) as $v) {
+        $rp = (int) $v['report_project_id'];
+        $fid = (int) $v['field_id'];
+        $val = (string) $v['value_text'];
+        if ((int) $v['is_encrypted'] === 1) {
+            $val = dec($val, form_aad($reportId, $fid, $rp));
+        }
+        $out[$rp][$fid] = ['value' => $val, 'warning' => (int) $v['has_warning'] === 1];
+    }
+    return $out;
+}
+
+/** 利用者が選べる案件（有効、かつ課の指定がないか同じ課） */
+function selectable_projects(?int $deptId): array
+{
+    return db_all(
+        'SELECT id, code, alias FROM projects WHERE is_active = 1 AND (department_id IS NULL OR department_id = ?) ORDER BY code',
+        [$deptId ?? 0]
+    );
+}
+
+/**
+ * 前月からの引き継ぎ（G-04 §4.3）。まだ報告がない月の入力画面の初期値を作る。
+ * 返り値: ['from' => 報告ID|null, 'blocks' => [project_id...], 'values' => [project_id(0=全体)][field_id] => 値, 'notices' => [...]]
+ */
+function report_carry_over(int $userId, string $period, array $fields): array
+{
+    $result = ['from' => null, 'blocks' => [], 'values' => [], 'notices' => []];
+    $prev = db_one(
+        'SELECT * FROM report_records WHERE user_id = ? AND period < ? AND is_legacy = 0 AND deleted_at IS NULL ORDER BY period DESC LIMIT 1',
+        [$userId, $period]
+    );
+    if ($prev === null) {
+        return $result;
+    }
+    $result['from'] = (int) $prev['id'];
+    $prevFields = [];
+    foreach (form_snapshot_fields((int) $prev['id']) as $pf) {
+        $prevFields[$pf['id']] = $pf;
+    }
+    $prevValues = report_values((int) $prev['id']);
+    $rpToProject = [0 => 0];
+    foreach (report_blocks((int) $prev['id']) as $b) {
+        if ((int) $b['is_active'] !== 1) {
+            $result['notices'][] = '前月の案件 ' . $b['code'] . ' は終了したため外しました';
+            continue;
+        }
+        $rpToProject[(int) $b['id']] = (int) $b['project_id'];
+        $result['blocks'][] = (int) $b['project_id'];
+    }
+    foreach ($fields as $f) {
+        if (!$f['carry'] || $f['type'] === 'project' || !isset($prevFields[$f['id']])) {
+            continue;
+        }
+        $pf = $prevFields[$f['id']];
+        if ($pf['type'] !== $f['type'] && !($pf['type'] === 'single_text' && $f['type'] === 'multi_text')
+            && !(in_array($pf['type'], ['select', 'radio'], true) && in_array($f['type'], ['select', 'radio'], true))) {
+            continue;
+        }
+        foreach ($rpToProject as $rpId => $projectId) {
+            if (($f['scope'] === 'report') !== ($rpId === 0)) {
+                continue;
+            }
+            $v = $prevValues[$rpId][$f['id']]['value'] ?? '';
+            if ($v === null || $v === '') {
+                continue;
+            }
+            if (in_array($f['type'], ['select', 'radio'], true) && !in_array($v, form_option_codes($f), true)) {
+                continue;
+            }
+            if ($f['type'] === 'multi_check') {
+                $arr = json_decode($v, true);
+                $arr = array_values(array_intersect(is_array($arr) ? $arr : [], form_option_codes($f)));
+                if (!$arr) {
+                    continue;
+                }
+                $v = json_encode($arr, JSON_UNESCAPED_UNICODE);
+            }
+            $result['values'][$projectId][$f['id']] = $v;
+        }
+    }
+    return $result;
+}
+
+/** G-04 の画面を出す（画面を開いたときと、入力エラーで戻すときに使う） */
+function report_edit_render(array $user, string $period, ?array $report, array $fields, array $state, array $errors, array $notices = []): void
+{
+    $deptId = $report !== null ? ($report['department_id'] === null ? null : (int) $report['department_id']) : (int) $user['department_id'];
+    $projects = [];
+    foreach (selectable_projects($deptId) as $p) {
+        $projects[(int) $p['id']] = $p;
+    }
+    // 報告にすでにある案件は、終了していても選べるようにする
+    foreach ($state['blocks'] as $b) {
+        $pid = (int) $b['project_id'];
+        if ($pid > 0 && !isset($projects[$pid])) {
+            $p = db_one('SELECT id, code, alias FROM projects WHERE id = ?', [$pid]);
+            if ($p !== null) {
+                $projects[$pid] = $p;
+            }
+        }
+    }
+    render('report_edit', [
+        'title'    => period_label($period) . 'の報告',
+        'user'     => $user,
+        'period'   => $period,
+        'report'   => $report,
+        'fields'   => $fields,
+        'state'    => $state,
+        'errors'   => $errors,
+        'notices'  => $notices,
+        'projects' => $projects,
+        'words'    => warning_words(),
+    ]);
+}
+
 function report_status_label(?string $status): string
 {
     $map = ['draft' => '下書き', 'submitted' => '提出済み', 'confirmed' => '確認完了'];

@@ -95,6 +95,7 @@ def main():
     ap.add_argument("--temp-password", required=True)
     ap.add_argument("--new-password", default="test-pass-phrase-123")
     ap.add_argument("--lock-user", default="")
+    ap.add_argument("--admin", action="store_true", help="ログインする利用者が管理者のとき")
     a = ap.parse_args()
 
     if "127.0.0.1" not in a.base and "localhost" not in a.base:
@@ -155,7 +156,10 @@ def main():
     check("パスワードを変更できる", s == 303 and "/index.php" in loc, (s, loc))
     s, _, body, _ = c.get("/index.php")
     check("ホームが表示される", s == 200 and "さん" in body and "の報告" in body, s)
-    check("管理者のメニューが出る", "組織・ユーザー" in body)
+    if a.admin:
+        check("管理者のメニューが出る", "組織・ユーザー" in body)
+    else:
+        check("管理者でなければ管理者のメニューが出ない", "組織・ユーザー" not in body)
 
     # ---- ログアウト → 記憶した端末では 2 段階認証なしで入れる ----
     s, loc, _, _ = c.post("/logout.php", {"csrf_token": csrf(body)})

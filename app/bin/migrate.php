@@ -14,6 +14,11 @@ if (PHP_SAPI !== 'cli') {
 }
 require __DIR__ . '/../bootstrap.php';
 
+$opt = getopt('', ['db:']);
+if (isset($opt['db'])) {
+    $GLOBALS['APP_CONFIG']['db_path'] = (string) $opt['db'];
+}
+
 $keyFile = crypto_generate_key();
 echo "暗号化の鍵: {$keyFile}\n";
 

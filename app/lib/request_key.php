@@ -18,8 +18,6 @@ function rk_begin(string $action, int $userId): void
     if (!is_string($key) || preg_match('/^[0-9a-f]{32}$/', $key) !== 1) {
         error_page(400);
     }
-    $GLOBALS['RK_CURRENT'] = $key;
-
     $row = db_one('SELECT * FROM request_keys WHERE request_key = ?', [$key]);
     if ($row !== null) {
         if ((int) $row['user_id'] !== $userId || $row['action'] !== $action) {
@@ -40,6 +38,8 @@ function rk_begin(string $action, int $userId): void
         // 同時に同じ番号が来た
         error_page(409, '前の送信をまだ処理しています。しばらく待ってから画面を読み直してください。');
     }
+    // 自分が登録した控えだけを、完了・取り消しの対象にする
+    $GLOBALS['RK_CURRENT'] = $key;
 }
 
 function rk_done(string $resultUrl): void
