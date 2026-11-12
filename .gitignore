@@ -1,0 +1,13 @@
+# 実データ・鍵・ログ・バックアップはリポジトリに入れない（基本設計書 §11.1.2）
+/app/data/
+/app/keys/
+/app/logs/
+/app/backups/
+/app/config/config.local.php
+*.sqlite
+*.sqlite-*
+*.sqlite.backup
+*.key
+
+# 検証の出力
+/tools/test/output/

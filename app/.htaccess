@@ -1,0 +1,6 @@
+# app/ は Web に公開しない（本番では公開ディレクトリの外に置く。念のため拒否する）
+Require all denied
+<IfModule !mod_authz_core.c>
+    Order allow,deny
+    Deny from all
+</IfModule>

@@ -1,0 +1,21 @@
+# 公開ディレクトリの設定（さくらのレンタルサーバー / Apache 2.4）
+Options -Indexes
+DirectoryIndex index.php
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    # HTTPS へ転送（さくらは SSL をプロキシで終端するため X-Sakura-Forwarded-For で判定する）
+    RewriteCond %{HTTPS} off
+    RewriteCond %{HTTP:X-Sakura-Forwarded-For} ^$
+    RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
+</IfModule>
+
+# 入り口の補助ファイルは直接開かせない
+<Files "_boot.php">
+    Require all denied
+</Files>
+
+# 念のため、DB・鍵・バックアップなどの拡張子を拒否する
+<FilesMatch "\.(sqlite|sqlite3|db|key|bak|backup|log|md|sql|json|ini|sh|py)$">
+    Require all denied
+</FilesMatch>
