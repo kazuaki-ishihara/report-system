@@ -50,12 +50,7 @@ C:\ReportSystem\
 | `app/bin/` | `migrate.php`（テーブルと鍵の作成）、`seed_template.php`（初期の様式）、`create_user.php`（利用者の作成）、`migrate_legacy.php`（既存データの移行） |
 | `tools/test/` | 検証の道具（Python 3 標準ライブラリ） |
 
-### 詳細設計書と違うところ（設計書は未更新）
-
-- 出力は `export/index.php` 1 つ（GET で条件の画面、POST で印刷用画面・xlsx・CSV）。
-- 移行前の 6 項目は、すべて無効の共通項目として登録（移行データの表示だけに使う）。
-- 列・表の追加: `adhoc_requests.target_type`、`users.totp_last_step`、`login_throttle`（存在しない ID のログイン失敗を IP アドレスごとに数える）、`app_state`。
-- 項目マスタの並べ替えは ↑↓ のボタン。表の列と表示の条件は文字で入力する。
+詳細設計書（共通編・DB 編・G-01〜G-16）は実装に合わせて更新済み。まだ作っていないもの（自由記述の検索、`Strict-Transport-Security`、鍵の入れ替え、記録の削除）は、設計書にその旨を書いてある。
 
 ## 5. ローカルで動かす
 
@@ -102,7 +97,6 @@ python tools\test\verify_all.py --ui     # 画面の自動操作検証も行う�
 | 未検証 | PHP 7.4 での実際の動作（書き方の確認のみ）。本番の PHP のバージョンは未確認 |
 | 未検証 | さくらのレンタルサーバーへの配置（`app/` を公開ディレクトリの外に置けるか、`.htaccess`、zip 機能の有無） |
 | 未検証 | 通常の端末で `--ui` が自分でブラウザーを起動できるか |
-| 未対応 | 詳細設計書を実装に合わせて更新する（§4 の違い） |
 | 未決 | 会社として判断が必要な事項（記録してよい範囲、閲覧の範囲、保管期限）、締め日、課と所属、リーダーの閲覧範囲、お知らせの方法、案件コードの付け方（`docs/redesign_plan.md` の未決事項） |
 | push | `dev_ono_check` の手元のコミットは GitHub に未反映（GitHub 上の版と分かれているため、push するときは強制 push） |
 | 移行 | 本番では移行後に `legacy_reports`・`legacy_comments`（平文）を確認して削除する |

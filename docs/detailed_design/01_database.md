@@ -1,6 +1,10 @@
 # 詳細設計書 DB 編
 
-SQLite 3。テーブルを作る SQL は `app/sql/schema.sql` に置き、何度流しても同じ結果になるように書く（`CREATE TABLE IF NOT EXISTS` など）。
+SQLite 3。テーブルは `app/lib/schema.php` の `schema_ensure()` で作る。コマンドラインで `php app/bin/migrate.php [--db=<DB>]` を実行する。
+
+- 1 つのトランザクションで行い、何度流しても同じ結果になる（`CREATE TABLE IF NOT EXISTS` など）。
+- `users` がなければ、既存の Web 版と同じ形で作る。`users` に足りない列は `PRAGMA table_info` で調べて足す。
+- `migrate.php` は、暗号化の鍵のファイルがなければ作る（共通編 §8.2）。
 
 テーブル名と列名は、依頼元の課長が開発中の項目マスタ（`feature/dynamic-report-fields`）の `report_fields`・`report_records`・`report_field_values`・`report_field_comments` に合わせ、列を足す形にする。
 
@@ -14,7 +18,7 @@ SQLite 3。テーブルを作る SQL は `app/sql/schema.sql` に置き、何度
 | 日時 | `TEXT`、日本時間の `YYYY-MM-DD HH:MM:SS` |
 | 日付・年月 | `YYYY-MM-DD`・`YYYY-MM` |
 | 真偽 | `INTEGER` の 0／1 に `CHECK` を付ける |
-| 削除 | 業務のデータは `deleted_at` を入れる（論理削除）。`trash_days` を過ぎたら物理削除する |
+| 削除 | `report_records`・`report_field_comments`・`adhoc_requests` は `deleted_at` を入れる（論理削除）。`trash_days` を過ぎたら物理削除する（§5） |
 | 暗号化した列 | 名前の末尾を `_enc` にするか、`is_encrypted` の列を持つ。保存の形は共通編 §8.2 |
 | 物理削除の禁止 | 項目と選択肢はトリガーで物理削除を禁止する（無効化で扱う） |
 
@@ -49,6 +53,9 @@ SQLite 3。テーブルを作る SQL は `app/sql/schema.sql` に置き、何度
 | | `adhoc_response_values` | 回答の値 |
 | 仕組み | `request_keys` | 送信の番号 |
 | | `access_logs` | 記録 |
+| | `login_throttle` | 存在しない ID でのログインの失敗を、IP アドレスごとに数える |
+| | `app_state` | 仕組みの状態（名前と値） |
+| 移行 | `legacy_reports`・`legacy_comments` | 移行前の `reports`・`comments` の名前を変えて残したもの（§6。`schema_ensure()` では作らない） |
 
 ---
 
@@ -57,13 +64,16 @@ SQLite 3。テーブルを作る SQL は `app/sql/schema.sql` に置き、何度
 ### 3.1 利用者
 
 ```sql
--- 既存の users に列を足す（ALTER TABLE ADD COLUMN）。既存の列: id, username, password_hash, role_title, manager_id, is_admin, created_at
--- username（メールアドレス）は移行で login_id に置き換え、移行後は使わない
-ALTER TABLE users ADD COLUMN login_id         TEXT;              -- 社内の ID（英数字 3〜32 文字）。一意の索引を別に作る
+-- 既存の users に列を足す（ALTER TABLE ADD COLUMN）。既存の列:
+--   id, username（NOT NULL UNIQUE）, password_hash,
+--   role_title（CHECK: '一般','主任','課長代理','課長','部長'）, manager_id, is_admin, created_at
+-- username には login_id と同じ値を入れる（移行でメールアドレスを置き換える。新しく作る人も同じ）
+ALTER TABLE users ADD COLUMN login_id         TEXT;              -- 社内の ID。一意の索引を別に作る
 ALTER TABLE users ADD COLUMN display_name     TEXT NOT NULL DEFAULT '';
 ALTER TABLE users ADD COLUMN department_id    INTEGER REFERENCES departments(id);
 ALTER TABLE users ADD COLUMN totp_secret_enc  TEXT;              -- 2 段階認証の秘密の値（暗号化）
 ALTER TABLE users ADD COLUMN totp_enabled_at  TEXT;              -- 設定が済んだ日時（NULL = 未設定）
+ALTER TABLE users ADD COLUMN totp_last_step   INTEGER;           -- 最後に使った 2 段階認証の区間（同じコードの 2 回目を断る）
 ALTER TABLE users ADD COLUMN session_version  INTEGER NOT NULL DEFAULT 1;
 ALTER TABLE users ADD COLUMN failed_count     INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE users ADD COLUMN locked_until     TEXT;
@@ -92,6 +102,7 @@ CREATE TABLE IF NOT EXISTS remembered_devices (
 );
 ```
 
+- `login_id` は英小文字・数字・`.`・`_`・`-` の 3〜32 文字で、先頭は英小文字か数字（`^[a-z0-9][a-z0-9._-]{2,31}$`）。入力は前後の空白を除き、小文字にそろえる。
 - `role_title`（役職）は表示だけに使う。権限には使わない。
 - `manager_id` は移行のあとは使わない（確認者は課ごとに設定する）。
 
@@ -130,7 +141,7 @@ CREATE TABLE IF NOT EXISTS department_admins (
 ```sql
 CREATE TABLE IF NOT EXISTS report_fields (
     id              INTEGER PRIMARY KEY AUTOINCREMENT,
-    code            TEXT NOT NULL UNIQUE,     -- 英小文字・数字・_、3〜40 文字。作成後は変更不可
+    code            TEXT NOT NULL UNIQUE,     -- 英小文字で始まる英小文字・数字・_、3〜40 文字（^[a-z][a-z0-9_]{2,39}$）。作成後は変更不可
     label           TEXT NOT NULL,
     field_type      TEXT NOT NULL CHECK (field_type IN (
                         'single_text', 'multi_text', 'date', 'month', 'number',
@@ -159,7 +170,7 @@ BEGIN SELECT RAISE(ABORT, 'report_fields cannot be deleted; deactivate the field
 CREATE TABLE IF NOT EXISTS report_field_options (
     id         INTEGER PRIMARY KEY AUTOINCREMENT,
     field_id   INTEGER NOT NULL REFERENCES report_fields(id),
-    code       TEXT NOT NULL,        -- 保存される値。作成後は変更不可
+    code       TEXT NOT NULL,        -- 保存される値。^[a-z0-9_]{1,40}$、項目の中で重複なし。作成後は変更不可
     label      TEXT NOT NULL,        -- 表示名。変えても保存済みの値は変わらない
     sort_order INTEGER NOT NULL DEFAULT 0,
     is_active  INTEGER NOT NULL DEFAULT 1 CHECK (is_active IN (0, 1)),
@@ -175,7 +186,15 @@ CREATE TABLE IF NOT EXISTS warning_words (
 );
 ```
 
-`field_scope = 'project'` の項目は案件ブロックの中に、`'report'` の項目は報告全体に出る。`field_type = 'project'` の項目は、共通項目に 1 つだけ置く（案件ブロックの見出しになる）。
+- `field_scope = 'project'` の項目は案件ブロックの中に、`'report'` の項目は報告全体に出る。
+- `field_type = 'project'` の項目は、全体で 1 つだけ置ける（案件ブロックの見出しになる）。`field_scope` は `project` に固定し、無効にはできない。
+- `settings_json` の中身:
+  - `columns`: `[{key, label, type, options?}]`。`key` は `^[a-z][a-z0-9_]{0,29}$`、`type` は `single_text`・`multi_text`・`number`・`date`・`select`。
+  - `max_rows`: 1〜50（既定 20）。
+  - `show_when`: `{field: <項目のコード>, values: [...]}`。
+  - 画面では、表の列を 1 行に 1 列ずつ `キー|名前|種類|選択肢1,選択肢2` の文字で入れ、表示の条件は項目のコードとカンマ区切りの値で入れる（G-12）。
+- `is_searchable` は保存するだけで、まだ使っていない（共通編 §8.3）。
+- `sort_order`: G-12 の ↑↓ のボタンで、同じ `field_scope`・同じ適用（共通か、その課か）の中で隣と入れ替え、そのまとまりを 10, 20, 30… で振り直す。
 
 ### 3.4 案件
 
@@ -317,6 +336,8 @@ CREATE TABLE IF NOT EXISTS adhoc_requests (
     requester         TEXT NOT NULL DEFAULT '',
     purpose           TEXT NOT NULL DEFAULT '',
     result_visibility TEXT NOT NULL DEFAULT 'summary' CHECK (result_visibility IN ('summary', 'detail')),
+    target_type       TEXT NOT NULL DEFAULT 'all' CHECK (target_type IN ('all', 'users')),
+                      -- all = 課の全員（公開の時点で adhoc_request_targets に展開）、users = 選んだ人（保存のときに入れる）
     is_template       INTEGER NOT NULL DEFAULT 0 CHECK (is_template IN (0, 1)),
     status            TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'open', 'closed')),
     due_at            TEXT,
@@ -344,7 +365,7 @@ CREATE TABLE IF NOT EXISTS adhoc_request_fields (
 
 CREATE TABLE IF NOT EXISTS adhoc_request_targets (
     request_id INTEGER NOT NULL REFERENCES adhoc_requests(id) ON DELETE CASCADE,
-    user_id    INTEGER NOT NULL REFERENCES users(id),     -- 公開の時点で対象者を人に展開して保存する
+    user_id    INTEGER NOT NULL REFERENCES users(id),     -- 対象者を人で保存する（target_type を参照）
     PRIMARY KEY (request_id, user_id)
 );
 
@@ -368,6 +389,8 @@ CREATE TABLE IF NOT EXISTS adhoc_response_values (
 );
 ```
 
+質問の種類（`adhoc_request_fields.field_type`）は `single_text`・`multi_text`・`number`・`date`・`month`・`select`・`radio`・`checkbox`・`multi_check`。`table` と `project` は使わない。
+
 ### 3.8 仕組み
 
 ```sql
@@ -390,7 +413,22 @@ CREATE TABLE IF NOT EXISTS access_logs (
 );
 CREATE INDEX IF NOT EXISTS ix_access_logs_created ON access_logs (created_at);
 CREATE INDEX IF NOT EXISTS ix_access_logs_target ON access_logs (target);
+
+CREATE TABLE IF NOT EXISTS login_throttle (
+    throttle_key TEXT PRIMARY KEY,      -- ip:<IP アドレス>
+    failures     INTEGER NOT NULL DEFAULT 0,
+    locked_until TEXT,
+    updated_at   TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS app_state (
+    name  TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+);
 ```
+
+- `login_throttle`: 存在しない ID・無効の ID でログインに失敗したとき、IP アドレスごとに数える。ロックまでの回数と時間は利用者と同じ（`login_max_failures`・`login_lock_minutes`）。
+- `app_state`: 今使う名前は `housekeeping`（1 日 1 回の後片付けを最後に行った日）と `project_seq`（案件コードの最後の番号。G-13）。
 
 ---
 
@@ -399,41 +437,67 @@ CREATE INDEX IF NOT EXISTS ix_access_logs_target ON access_logs (target);
 | テーブル | 列 | 条件 |
 |---|---|---|
 | `users` | `totp_secret_enc` | 常に |
-| `report_field_values` | `value_text` | 自由記述の項目、または「限定」の項目（`is_encrypted = 1`） |
+| `report_field_values` | `value_text` | 自由記述の項目（`table` を含む）、または「限定」の項目（`is_encrypted = 1`） |
 | `report_value_history` | `old_value`、`new_value` | 同上 |
 | `report_field_comments` | `comment_enc` | 常に |
 | `adhoc_response_values` | `value_text` | 自由記述の質問、または「限定」の質問 |
 
-付加データ（共通編 §8.2）は、`rfv:<report_id>:<field_id>:<report_project_id>`、`rvh:<id>`、`cmt:<id>`、`arv:<response_id>:<request_field_id>`、`totp:<user_id>` とする。
+付加データ（共通編 §8.2）は次のとおり。
+
+| データ | 付加データ |
+|---|---|
+| 値 | `rfv:<report_id>:<field_id>:<report_project_id>` |
+| 変更履歴 | `rvh:<report_id>:<field_id>:<report_project_id>:<revision>:old`（変更後は `:new`） |
+| コメント | `cmt:<report_id>:<コメントの id>` |
+| 臨時の調査の回答 | `arv:<response_id>:<request_field_id>` |
+| 2 段階認証 | `totp:<user_id>` |
+
+- 移行した報告の `report_date`（日付）は暗号化しない。
+- 選択式などの項目に「限定」を付け外したときは、既存の `report_field_values` を暗号化し直すか復号し、`report_record_fields.confidentiality` も書き換える。変更履歴は暗号化し直さない。
 
 ---
 
 ## 5. 保管期限と後片付け
 
-管理者のログイン時と、1 日 1 回の後片付け（最初の要求のときに実行し、最後の実行日時を記録する）で行う。
+1 日 1 回、ログイン画面を開いたとき（GET を含む、だれでも）に `housekeeping_daily()` で行う。最後に行った日は `app_state` の `housekeeping` に入れ、同じ日には 2 回行わない。
 
 | 対象 | 条件 | 処理 |
 |---|---|---|
-| 自由記述 | 確認完了から `free_text_retention_months` を過ぎた報告 | 暗号化した値を空にし、`free_text_purged_at` を入れる。選択式の値は残す |
-| 報告 | 対象月から `report_retention_years` を過ぎた | 物理削除（コメント・チェック・履歴も） |
-| 削除したデータ | `deleted_at` から `trash_days` を過ぎた | 物理削除 |
+| 自由記述 | 確認完了から `free_text_retention_months` を過ぎた報告 | 自由記述（`single_text`・`multi_text`・`table`）の値と、その変更履歴の変更前・変更後を空にする（`is_encrypted = 0`、`has_warning = 0`）。報告のコメントの本文もすべて空にする。`free_text_purged_at` を入れる。選択式の値は残す（「限定」の値は暗号化のまま残る） |
+| 報告 | 対象月（年月）が今日から `report_retention_years` より前（移行した報告も含む） | 物理削除（コメント・チェック・履歴も）。その報告を指す `copied_from_id` は先に NULL にする |
+| 削除した報告 | `deleted_at` から `trash_days` を過ぎた | 物理削除 |
+| 削除したコメント | 同上 | 本文を空にする。返信のないものは物理削除し、返信のあるものは本文が空のまま残す |
+| 削除した臨時の調査 | 同上 | 物理削除 |
 | 送信の番号 | `request_key_hours` を過ぎた | 削除 |
 | 端末の記憶 | `expires_at` を過ぎた | 削除 |
-| 記録 | 会社が決める期間（未決） | 削除 |
+| `login_throttle` | ロック中でなく、最後の更新から `request_key_hours` を過ぎた | 削除 |
+| 記録 | 会社が決める期間（未決） | 削除はまだ作っていない |
 
 ---
 
 ## 6. 既存データの移行
 
-`app/sql/migrate_from_legacy.php` で行う。基本設計書 §13。
+`php app/bin/migrate_legacy.php [--db=<DB>] [--dry-run]` で行う。基本設計書 §13。先に `app/bin/migrate.php` でテーブルを作っておく。`--dry-run` は確認と、割り当てる予定のログイン ID を出すだけで、何も変えない。
 
-1. DB のコピーを取る（移行前の控え）。
-2. 全件を確かめる（ユーザーの `login_id` の割り当て、報告の日付の形式、コメントの `field_name` が 6 項目のどれか）。1 件でも問題があれば何もせずに、問題の一覧を出して終わる。
+1. WAL を書き戻してから、DB のコピーを `app/backups/before_legacy_migration_<YYYYmmdd_HHMMSS>.sqlite`（権限 600）に取る（`--dry-run` では取らない）。
+2. 全件を確かめる（ユーザーの `login_id` の割り当て、報告の日付の形式、報告を書いた人がいるか、コメントの `field_name` が 6 項目のどれか）。1 件でも問題があれば何もせずに、問題の一覧を出して終わる。
+   - ログイン ID は、メールアドレスの `@` より前から作る。使えない文字は `_` にし、3 文字に満たなければ `user<id>` にする。重複すれば番号を足す。
 3. 1 つのトランザクションで次を行う。
-   - 初期の課、6 項目（`report_date`, `name`, `subject`, `content`, `issues`, `remarks`）を `report_fields` に登録する（`report_date`・`name` は無効の状態で登録する）。
-   - `reports` の各行を `report_records`（`is_legacy = 1`、`period` は日付の年月、`status = 'confirmed'`）と `report_field_values` に移す。自由記述は暗号化する。
-   - `comments` を `report_field_comments`（`comment_type = 'note'`、返信なし）に移す。本文は暗号化する。
-4. 件数を突き合わせる（移行元と移行先の報告・コメントの件数）。
-5. 元の `reports`・`comments` は `legacy_reports`・`legacy_comments` に名前を変えて残す。確認が終わったら消す。
+   - 利用者: `login_id` と、同じ値を `username` に入れる。`must_change_password = 1` にする。`display_name` が空なら、その人の最新の報告の `name`（20 文字以内のとき）か `login_id` を入れる。
+   - 6 項目（`report_date`, `name`, `subject`, `content`, `issues`, `remarks`）を、共通（`department_id` が NULL）・報告全体（`field_scope = 'report'`）・社外秘・**無効**の項目として `report_fields` に登録する。移行した報告の表示だけに使う。並び順は 910〜960。種類は `report_date` が `date`、`name`・`subject` が `single_text`（最大 400 文字）、`content`・`issues`・`remarks` が `multi_text`（最大 20,000 文字）。課は作らない（`create_user.php --dept` か G-14 で作る）。
+   - `reports` の各行を `report_records`（`is_legacy = 1`、`period` は日付の年月、`status = 'confirmed'`、`submitted_at` は元の `created_at`、`confirmed_at` は元の `updated_at`、`confirmed_by` は NULL、`department_id` は書いた人の今の課）と `report_record_fields`・`report_field_values` に移す。`report_date` は暗号化せず、ほかの 5 項目は暗号化する。`has_warning` も計算する。空の値は入れない。
+   - `comments` を `report_field_comments`（`comment_type = 'note'`、返信なし）に移す。本文は暗号化する。報告がなくなっているコメントは飛ばす。同じ報告・同じ人・同じ作成日時・同じ項目のものは移行済みとみなす。
+   - 元の `reports`・`comments` を `legacy_reports`・`legacy_comments` に名前を変えて残す。
+4. コミットのあと、報告の件数（移行元の件数と `is_legacy = 1` の件数）を比べて「OK」か「不一致」を出す。不一致でも元には戻さない。コメントの件数は比べない。
+5. 確認が終わったら、本番では `legacy_reports`・`legacy_comments`（平文）を消す。
 
-何度流しても同じ結果になるよう、`legacy_report_id` で移行済みかを判定する。
+何度流しても同じ結果になるよう、`legacy_report_id` で移行済みかを判定する。`legacy_reports`・`legacy_comments` があれば、それを移行元にする。
+
+## 7. そのほかのコマンドラインの道具
+
+ブラウザーから開くと 404 を返す。
+
+| 道具 | 内容 |
+|---|---|
+| `php app/bin/seed_template.php [--dept-a=<課ID>] [--dept-b=<課ID>]` | 初期の様式を登録する。共通項目（案件、担当内容、作業フェーズ、進捗、進捗の補足（表示の条件あり）、案件の継続見込み、終了予定、人員の動き、人員の動きの詳細（限定））は常に、課別項目は課の ID を渡したときだけ（A課 3 項目、B課 1 項目）。同じコードがあれば飛ばす |
+| `php app/bin/create_user.php --login=<ID> --name=<表示名> [--admin] [--dept=<課名>] [--reviewer｜--final]` | 利用者を作る（最初の管理者など）。課がなければ作る。12 文字の仮のパスワードを一度だけ出し、`must_change_password = 1` にする |
