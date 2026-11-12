@@ -130,8 +130,8 @@ switch ($action) {
         if ((int) $c['user_id'] !== $uid && !is_admin($user)) {
             error_page(403);
         }
-        // 本文を消して「（削除されました）」として残す（返信のつながりを保つ）
-        db_exec("UPDATE report_field_comments SET deleted_at = ?, comment_enc = '', updated_at = ? WHERE id = ?", [now(), now(), $cid]);
+        // 「（削除されました）」として表示する（返信のつながりを保つ）。本文は暗号化のまま 30 日残し、管理者が戻せる
+        db_exec('UPDATE report_field_comments SET deleted_at = ?, updated_at = ? WHERE id = ?', [now(), now(), $cid]);
         if ((int) $c['user_id'] !== $uid) {
             audit_log('admin', 'comment:' . $cid . ':delete');
         }

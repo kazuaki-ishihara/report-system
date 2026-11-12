@@ -29,21 +29,22 @@ function send_security_headers(): void
  * テンプレートを出力する。$vars はテンプレートの中で変数として使える。
  * テンプレートの中の値は必ず h() を通す。
  */
-function render(string $view, array $vars = [], bool $withLayout = true): void
+function render(string $__template, array $__vars = [], bool $__withLayout = true): void
 {
+    // テンプレートに渡す値の名前（view、content など）とぶつからないよう、ここの変数名には __ を付ける
     send_security_headers();
     header('Content-Type: text/html; charset=UTF-8');
-    $file = APP_DIR . '/views/' . $view . '.php';
-    extract($vars, EXTR_SKIP);
+    extract($__vars, EXTR_SKIP);
     ob_start();
-    require $file;
-    $content = ob_get_clean();
-    if ($withLayout) {
-        $title = $vars['title'] ?? '月次報告';
-        $user = $vars['user'] ?? null;
+    require APP_DIR . '/views/' . $__template . '.php';
+    $__content = (string) ob_get_clean();
+    if ($__withLayout) {
+        $title = $__vars['title'] ?? '月次報告';
+        $user = $__vars['user'] ?? null;
+        $content = $__content;
         require APP_DIR . '/views/layout.php';
     } else {
-        echo $content;
+        echo $__content;
     }
     exit;
 }

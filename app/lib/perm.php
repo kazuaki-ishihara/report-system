@@ -73,6 +73,38 @@ function can_view_restricted(array $user, array $report): bool
     return $report['department_id'] !== null && is_final_reviewer_of($uid, (int) $report['department_id']);
 }
 
+/** 提出状況などを見られる課（課ID => 課の行）。確認者の課、管理者は全課 */
+function reviewable_departments(array $user): array
+{
+    $out = [];
+    if (is_admin($user)) {
+        foreach (db_all('SELECT * FROM departments WHERE is_active = 1 ORDER BY sort_order, id') as $d) {
+            $out[(int) $d['id']] = $d;
+        }
+        return $out;
+    }
+    foreach (db_all(
+        'SELECT d.* FROM departments d JOIN department_reviewers r ON r.department_id = d.id
+          WHERE r.user_id = ? AND d.is_active = 1 ORDER BY d.sort_order, d.id',
+        [(int) $user['id']]
+    ) as $d) {
+        $out[(int) $d['id']] = $d;
+    }
+    return $out;
+}
+
+/** 課長として扱う課（課ID => 課の行）。管理者は全課 */
+function final_departments(array $user): array
+{
+    $out = [];
+    foreach (reviewable_departments($user) as $id => $d) {
+        if (is_admin($user) || is_final_reviewer_of((int) $user['id'], $id)) {
+            $out[$id] = $d;
+        }
+    }
+    return $out;
+}
+
 /** メニューに出す項目 */
 function menu_items(array $user): array
 {

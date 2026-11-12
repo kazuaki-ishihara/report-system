@@ -254,6 +254,7 @@ function schema_ensure(PDO $pdo): array
             requester TEXT NOT NULL DEFAULT '',
             purpose TEXT NOT NULL DEFAULT '',
             result_visibility TEXT NOT NULL DEFAULT 'summary' CHECK (result_visibility IN ('summary', 'detail')),
+            target_type TEXT NOT NULL DEFAULT 'all' CHECK (target_type IN ('all', 'users')),
             is_template INTEGER NOT NULL DEFAULT 0 CHECK (is_template IN (0, 1)),
             status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'open', 'closed')),
             due_at TEXT,

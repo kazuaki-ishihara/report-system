@@ -266,4 +266,11 @@ function housekeeping_daily(): void
     db_exec('DELETE FROM request_keys WHERE created_at < ?', [$rkLimit]);
     db_exec('DELETE FROM remembered_devices WHERE expires_at < ?', [now()]);
     db_exec('DELETE FROM login_throttle WHERE (locked_until IS NULL OR locked_until < ?) AND updated_at < ?', [now(), $rkLimit]);
+    try {
+        foreach (retention_run() as $line) {
+            app_log('housekeeping: ' . $line);
+        }
+    } catch (Throwable $e) {
+        app_log('housekeeping failed: ' . $e->getMessage());
+    }
 }

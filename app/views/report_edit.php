@@ -24,6 +24,15 @@ $err = function (string $k) use ($errors): ?string { return $errors[$k] ?? null;
   <?php if ($errors): ?>
     <div class="flash flash-error" role="alert"><?= h($errors['general'] ?? '入力が必要な項目か、直す必要がある項目があります。') ?></div>
   <?php endif; ?>
+  <?php if ($isDraft && !empty($state['carry_from'])): ?>
+    <form method="post" action="<?= h(url('/reports/save.php')) ?>" class="unchanged-box"
+          data-confirm="前月と同じ内容で提出します。<?= $status === 'draft' ? 'この下書きの内容は前月の内容に置き換わります。' : '' ?>よろしいですか？">
+      <?= form_hidden() ?>
+      <input type="hidden" name="period" value="<?= h($period) ?>">
+      <p>先月から変わったことがなければ、このボタンだけで提出できます。</p>
+      <button type="submit" name="action" value="unchanged" class="primary big">先月から変更なしで提出</button>
+    </form>
+  <?php endif; ?>
   <?php if ($status === 'submitted'): ?>
     <p class="note">提出済みです。直して「保存」すると、変更の履歴が残り、確認者に「更新あり」と知らせます。出し直しの操作はいりません。</p>
   <?php endif; ?>

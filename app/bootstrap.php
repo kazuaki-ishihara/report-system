@@ -31,5 +31,8 @@ require_once APP_DIR . '/lib/perm.php';
 require_once APP_DIR . '/lib/report.php';
 require_once APP_DIR . '/lib/admin.php';
 require_once APP_DIR . '/lib/form.php';
+require_once APP_DIR . '/lib/survey.php';
+require_once APP_DIR . '/lib/export.php';
+require_once APP_DIR . '/lib/retention.php';
 
 app_init_error_handling();

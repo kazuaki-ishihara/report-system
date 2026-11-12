@@ -142,3 +142,17 @@ fieldset.block-new { border-style: dashed; background: var(--bg); }
 details.comment-form, details.reply-form { margin: 6px 0 0 8px; }
 details summary { cursor: pointer; color: var(--primary); }
 .list.compact li { padding: 4px 0; }
+
+/* ---- 横並び・出力 ---- */
+.table.compare td.changed { background: #ddf4ff; }
+.unchanged-box { background: var(--ok-bg); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px; margin-bottom: 16px; }
+.print-page { background: #fff; padding: 16px; }
+.print-table { font-size: 10pt; }
+@media print {
+  @page { size: A4 landscape; margin: 12mm; }
+  .app-main { max-width: none; padding: 0; }
+  .print-page { padding: 0; }
+  .print-table { font-size: 9pt; }
+  .print-table tr { page-break-inside: avoid; }
+  .print-table thead { display: table-header-group; }
+}

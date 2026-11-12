@@ -293,6 +293,22 @@ if (is_post()) {
     rk_cancel();
 }
 
+// 臨時の調査の質問を、月次の項目へ移すときの初期値（G-11）
+$prefill = null;
+if (!is_post() && $field === null && isset($_GET['from_q'])) {
+    $q = db_one('SELECT f.*, r.department_id FROM adhoc_request_fields f JOIN adhoc_requests r ON r.id = f.request_id WHERE f.id = ?', [input_id('from_q')]);
+    if ($q !== null && $deptId !== null && (int) $q['department_id'] === $deptId) {
+        $prefill = ['label' => (string) $q['label'], 'field_type' => (string) $q['field_type'], 'field_scope' => 'report',
+            'confidentiality' => (string) $q['confidentiality'], 'help_text' => (string) $q['help_text'], 'carry_over' => '1', 'include_in_export' => '1',
+            'opt_code' => [], 'opt_label' => [], 'opt_active' => []];
+        foreach ((array) json_decode((string) $q['options_json'], true) as $i => $o) {
+            $prefill['opt_code'][$i] = (string) $o['code'];
+            $prefill['opt_label'][$i] = (string) $o['label'];
+            $prefill['opt_active'][$i] = '1';
+        }
+    }
+}
+
 $options = $field === null ? [] : form_field_options((int) $field['id'], false);
 $settings = $field === null ? [] : (json_decode((string) $field['settings_json'], true) ?: []);
 $columnsText = '';
@@ -309,7 +325,7 @@ render('admin_field_edit', [
     'deptParam'   => $deptParam,
     'used'        => $used,
     'errors'      => $errors,
-    'post'        => is_post() ? $_POST : null,
+    'post'        => is_post() ? $_POST : $prefill,
     'options'     => $options,
     'settings'    => $settings,
     'columnsText' => $columnsText,

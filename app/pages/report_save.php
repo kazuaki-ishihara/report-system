@@ -13,7 +13,7 @@ if (!is_post()) {
 }
 
 $action = post_str('action');
-if (!in_array($action, ['draft', 'submit', 'save', 'withdraw', 'delete', 'autosave'], true)) {
+if (!in_array($action, ['draft', 'submit', 'save', 'withdraw', 'delete', 'autosave', 'unchanged'], true)) {
     error_page(400);
 }
 $period = post_str('period');
@@ -64,6 +64,44 @@ if ($report === null && $user['department_id'] === null) {
 }
 $deptId = $report !== null ? ($report['department_id'] === null ? null : (int) $report['department_id']) : (int) $user['department_id'];
 $fields = $report !== null ? form_snapshot_fields((int) $report['id']) : form_template_fields($deptId);
+
+// 「前月から変更なし」: 送られた入力は使わず、前月の内容で提出する（F-20）
+$unchanged = false;
+if ($action === 'unchanged') {
+    if ($report !== null && $report['status'] !== 'draft') {
+        error_page(400);
+    }
+    $carry = report_carry_over($uid, $period, $fields);
+    if ($carry['from'] === null) {
+        rk_cancel();
+        error_page(400, '前月の報告がないため、「変更なし」では提出できません。');
+    }
+    $toRaw = function (array $f, string $v) {
+        if ($f['type'] === 'multi_check' || $f['type'] === 'table') {
+            $d = json_decode($v, true);
+            return is_array($d) ? $d : [];
+        }
+        return $v;
+    };
+    $_POST['b'] = [];
+    foreach ($carry['blocks'] as $pid) {
+        $rf = [];
+        foreach ($fields as $f) {
+            if (isset($carry['values'][$pid][$f['id']])) {
+                $rf[$f['id']] = $toRaw($f, $carry['values'][$pid][$f['id']]);
+            }
+        }
+        $_POST['b'][] = ['project' => (string) $pid, 'f' => $rf];
+    }
+    $_POST['r'] = [];
+    foreach ($fields as $f) {
+        if (isset($carry['values'][0][$f['id']])) {
+            $_POST['r'][$f['id']] = $toRaw($f, $carry['values'][0][$f['id']]);
+        }
+    }
+    $action = 'submit';
+    $unchanged = true;
+}
 $checkRequired = $action === 'submit' || ($action === 'save' && $report !== null && $report['status'] === 'submitted');
 if ($action === 'save' && ($report === null || $report['status'] !== 'submitted')) {
     error_page(400);
@@ -152,8 +190,9 @@ if ($errors) {
     if ($isJson) {
         json_response(['ok' => false, 'reason' => 'invalid']);
     }
-    $state = ['blocks' => $stateBlocks, 'report' => $reportVals, 'warnings' => []];
-    report_edit_render($user, $period, $report, $fields, $state, $errors);
+    $state = ['blocks' => $stateBlocks, 'report' => $reportVals, 'warnings' => [], 'carry_from' => null];
+    $notices = $unchanged ? ['前月の内容に入力が必要な項目があります。入力して「提出する」を押してください。'] : [];
+    report_edit_render($user, $period, $report, $fields, $state, $errors, $notices);
 }
 
 // ---- 保存 ----
@@ -162,7 +201,7 @@ foreach ($fields as $f) {
     $fieldsById[$f['id']] = $f;
 }
 
-$reportId = tx(function () use ($report, $uid, $deptId, $period, $fields, $fieldsById, $blocks, $reportVals, $rpByProject, $oldValues, $action) {
+$reportId = tx(function () use ($report, $uid, $deptId, $period, $fields, $fieldsById, $blocks, $reportVals, $rpByProject, $oldValues, $action, $unchanged) {
     $now = now();
     if ($report === null) {
         $carry = report_carry_over($uid, $period, $fields);
@@ -256,7 +295,7 @@ $reportId = tx(function () use ($report, $uid, $deptId, $period, $fields, $field
     }
 
     if ($action === 'submit') {
-        db_exec("UPDATE report_records SET status = 'submitted', submitted_at = ?, updated_at = ? WHERE id = ?", [$now, $now, $rid]);
+        db_exec("UPDATE report_records SET status = 'submitted', submitted_at = ?, unchanged = ?, updated_at = ? WHERE id = ?", [$now, $unchanged ? 1 : 0, $now, $rid]);
         db_exec('INSERT INTO report_status_history (report_id, from_status, to_status, user_id, created_at) VALUES (?, ?, ?, ?, ?)', [$rid, $status, 'submitted', $uid, $now]);
     } elseif ($track && $changed) {
         db_exec('UPDATE report_records SET revision = ?, updated_at = ? WHERE id = ?', [$nextRevision, $now, $rid]);

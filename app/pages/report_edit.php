@@ -30,7 +30,7 @@ if ($report === null && $user['department_id'] === null) {
 $notices = [];
 if ($report !== null) {
     $fields = form_snapshot_fields((int) $report['id']);
-    $state = ['blocks' => [], 'report' => [], 'warnings' => []];
+    $state = ['blocks' => [], 'report' => [], 'warnings' => [], 'carry_from' => $report['copied_from_id'] ?? null];
     $values = report_values((int) $report['id']);
     foreach ($values[0] ?? [] as $fid => $v) {
         $state['report'][$fid] = (string) ($v['value'] ?? '');
@@ -51,7 +51,7 @@ if ($report !== null) {
     if ($carry['from'] !== null) {
         $notices[] = '前月の内容を入れてあります。変わったところだけ直してください。';
     }
-    $state = ['blocks' => [], 'report' => $carry['values'][0] ?? [], 'warnings' => []];
+    $state = ['blocks' => [], 'report' => $carry['values'][0] ?? [], 'warnings' => [], 'carry_from' => $carry['from']];
     foreach ($carry['blocks'] as $pid) {
         $state['blocks'][] = ['project_id' => $pid, 'values' => $carry['values'][$pid] ?? []];
     }

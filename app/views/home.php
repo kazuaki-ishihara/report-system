@@ -66,7 +66,7 @@ $editUrl = url('/reports/edit.php?period=' . rawurlencode($period));
   <p>未チェック <strong><?= (int) $r['unchecked'] ?></strong>件 ／ 回答あり <strong><?= (int) $r['answered'] ?></strong>件
     <?php if ($r['notSubmitted'] !== null): ?> ／ 未提出 <strong><?= (int) $r['notSubmitted'] ?></strong>人<?php endif; ?></p>
   <?php if ($r['unchecked'] > 0): ?>
-    <a class="button primary" href="<?= h(url('/status/index.php?period=' . rawurlencode($period) . '&dept=' . (int) $r['dept']['id'] . '&filter=unchecked')) ?>">未チェックを順に見る</a>
+    <a class="button primary" href="<?= h(url('/status/index.php?period=' . rawurlencode($period) . '&dept=' . (int) $r['dept']['id'] . '&filter=unchecked&go=1')) ?>">未チェックを順に見る</a>
   <?php endif; ?>
   <a class="button" href="<?= h(url('/status/index.php?period=' . rawurlencode($period) . '&dept=' . (int) $r['dept']['id'])) ?>">提出状況</a>
 </section>

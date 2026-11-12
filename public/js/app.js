@@ -100,6 +100,27 @@
     window.setTimeout(function () { f.dataset.submitting = '0'; }, 30000);
   });
 
+  // ---- 印刷用画面（G-10） ----
+  document.addEventListener('click', function (e) {
+    if (e.target.closest && e.target.closest('.print-button')) { window.print(); }
+  });
+
+  // ---- 横並び表示: 自由記述のセルを開く（G-09） ----
+  document.addEventListener('click', function (e) {
+    var btn = e.target.closest && e.target.closest('.open-cell');
+    if (!btn || !window.fetch) { return; }
+    var u = new URL(window.location.href);
+    u.search = '?cell=' + encodeURIComponent(btn.getAttribute('data-cell'));
+    fetch(u.toString(), { credentials: 'same-origin' })
+      .then(function (r) { return r.json(); })
+      .then(function (j) {
+        var span = btn.nextElementSibling;
+        span.textContent = j.ok ? j.text : '表示できません';
+        btn.hidden = true;
+      })
+      .catch(function () { btn.textContent = '通信エラー'; });
+  });
+
   // ---- 下書きの自動保存（入力が変わったときだけ、60 秒ごと） ----
   if (form && form.getAttribute('data-autosave') === '1' && window.fetch && window.FormData) {
     var dirty = false;

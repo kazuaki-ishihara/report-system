@@ -36,18 +36,22 @@ class Client:
         self.base = base.rstrip("/")
         self.jar = http.cookiejar.CookieJar()
         self.opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(self.jar), NoRedirect)
+        self.headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) test"}
 
     def req(self, method, path, data=None):
         url = path if path.startswith("http") else self.base + path
         body = None
         if data is not None:
             body = urllib.parse.urlencode(data, doseq=True).encode()
-        r = urllib.request.Request(url, data=body, method=method)
+        r = urllib.request.Request(url, data=body, method=method, headers=self.headers)
         try:
             resp = self.opener.open(r, timeout=20)
         except urllib.error.HTTPError as e:
             resp = e
-        text = resp.read().decode("utf-8", "replace")
+        raw = resp.read()
+        self.last_raw = raw
+        self.last_headers = resp.headers
+        text = raw.decode("utf-8", "replace")
         status = getattr(resp, "status", None) or resp.code
         return status, resp.headers.get("Location", ""), text
 
