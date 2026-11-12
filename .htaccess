@@ -1,0 +1,84 @@
+# ============================================================
+# レポート管理システム ルート .htaccess（案）
+#
+# 監査（tools/audit）の指摘に対する対策:
+#   H-04  data/reports.sqlite が Web から取得できる
+#   H-04b public/ 外の PHP（config/, lib/）が Web から実行できる
+#   H-03  HTTP（平文）でアクセスできる
+#   H-02a/H-02b セキュリティヘッダーがない
+#
+# data/, config/, lib/ には個別の .htaccess（Require all denied）も置いている。
+# このファイルの mod_rewrite が使えない環境でも、DB の保護はそちらで効く。
+# ============================================================
+
+# ディレクトリ一覧を表示しない
+Options -Indexes
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # --------------------------------------------------------
+    # HTTP → HTTPS へリダイレクト
+    #
+    # さくらのレンタルサーバでは SSL をプロキシで終端するため %{HTTPS} は
+    # 常に off になる（%{HTTPS} で判定するとリダイレクトがループする）。
+    # HTTPS 経由のアクセスにだけ付く X-Sakura-Forwarded-For ヘッダーで判定する。
+    # 他のサーバーへ移す場合は、この条件を環境に合わせて変更すること。
+    # --------------------------------------------------------
+    RewriteCond %{HTTP:X-Sakura-Forwarded-For} ^$
+    RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
+
+    # --------------------------------------------------------
+    # 公開しないディレクトリ・ファイル（403 Forbidden）
+    # --------------------------------------------------------
+    # アプリ内部のディレクトリ（public/ 以外）
+    RewriteRule ^(data|config|lib|tools|docs)(/|$) - [F,L]
+
+    # バージョン管理・セットアップ用ファイル
+    RewriteRule (^|/)\.git(/|$) - [F,L]
+    RewriteRule ^setup_admin\.php$ - [F,L]
+    RewriteRule ^public/setup\.php$ - [F,L]
+
+    # DB・バックアップ・ドキュメント等の拡張子（どの階層でも拒否）
+    RewriteRule \.(sqlite|sqlite3|db|backup|bak|md|ps1|psd1|bat|log)$ - [F,L,NC]
+</IfModule>
+
+# mod_rewrite が無い場合でも、拡張子での拒否は効かせる
+<IfModule !mod_rewrite.c>
+    <FilesMatch "\.(sqlite|sqlite3|db|backup|bak|md|ps1|psd1|bat|log)$">
+        <IfModule mod_authz_core.c>
+            Require all denied
+        </IfModule>
+        <IfModule !mod_authz_core.c>
+            Order allow,deny
+            Deny from all
+        </IfModule>
+    </FilesMatch>
+</IfModule>
+
+# ------------------------------------------------------------
+# セキュリティヘッダー
+# ------------------------------------------------------------
+<IfModule mod_headers.c>
+    # 他サイトの iframe への埋め込みを禁止（クリックジャッキング対策）
+    Header always set X-Frame-Options "SAMEORIGIN"
+
+    # MIME タイプの推測を禁止
+    Header always set X-Content-Type-Options "nosniff"
+
+    # リファラーで URL のパラメータを外部へ送らない
+    Header always set Referrer-Policy "same-origin"
+
+    # HSTS（ブラウザに今後 HTTPS のみで接続させる）
+    # 一度配信するとブラウザ側で max-age の間取り消せないため、
+    # HTTPS リダイレクトの動作確認が済んでから有効にすること。
+    # Header always set Strict-Transport-Security "max-age=31536000"
+</IfModule>
+
+# ------------------------------------------------------------
+# 対象外（PHP 側で対応が必要なもの）
+#   H-02e セッション Cookie の HttpOnly / Secure / SameSite
+#         → lib/auth.php の session_start() 前に session_set_cookie_params() で設定する
+#   H-06b 未ログイン時の転送先が存在しない
+#         → lib/auth.php の requireLogin() のリダイレクト先を修正する
+# ------------------------------------------------------------

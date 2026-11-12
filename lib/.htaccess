@@ -1,0 +1,9 @@
+# lib/ : 共通関数。Web からのアクセスをすべて拒否する。
+# （PHP は require_once で読み込むため、Web アクセスは不要）
+<IfModule mod_authz_core.c>
+    Require all denied
+</IfModule>
+<IfModule !mod_authz_core.c>
+    Order allow,deny
+    Deny from all
+</IfModule>
