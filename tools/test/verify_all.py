@@ -177,7 +177,7 @@ def main():
     ap.add_argument("--ui", action="store_true", help="画面の自動操作検証も行う")
     ap.add_argument("--show", action="store_true", help="自動操作検証でブラウザーを表示する")
     ap.add_argument("--browser-port", type=int, default=0, help="起動済みのブラウザーにつなぐ（--remote-debugging-port の番号）")
-    ap.add_argument("--skip", default="", help="省く工程（カンマ区切り）: auth,reports,more,retention")
+    ap.add_argument("--skip", default="", help="省く工程（カンマ区切り）: auth,reports,fields,more,retention")
     a = ap.parse_args()
     skip = set(x for x in a.skip.split(",") if x)
 
@@ -218,6 +218,10 @@ def main():
                 r.run("テストデータの作成（報告）", seed)
                 r.run("報告の作成・提出・閲覧の権限・コメント・チェック・確認完了・管理画面", [py, "-I", os.path.join(HERE, "smoke_reports.py"), "--base", base, "--db", db])
                 r.run("DB に平文の秘密がない（報告）", [py, "-I", os.path.join(HERE, "check_db_secrets.py"), db])
+            if "fields" not in skip:
+                r.run("テストデータの作成（項目マスタ）", seed)
+                r.run("項目マスタの追加・編集・権限・変更の決まり・限定の付け外し・並べ替え・有効/無効", [py, "-I", os.path.join(HERE, "smoke_fields.py"), "--base", base, "--db", db])
+                r.run("DB に平文の秘密がない（項目マスタ）", [py, "-I", os.path.join(HERE, "check_db_secrets.py"), db])
             if "more" not in skip:
                 r.run("テストデータの作成（段階 2・3）", seed)
                 r.run("変更なし・提出状況・横並び・臨時の調査・出力・記録・削除データ", [py, "-I", os.path.join(HERE, "smoke_more.py"), "--base", base, "--db", db])
