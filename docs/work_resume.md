@@ -37,19 +37,32 @@ git checkout dev_check_report
 - push には `kazuaki-ishihara/report-system` のコラボレーター権限が必要（招待を承認済みの GitHub アカウントでログインする）。
 - `git checkout -b dev_check_report origin/main` のように **main を追跡する設定にしない**。誤って main へ push しないため、追跡先は `origin/dev_check_report` にする。
 
+### 作業端末のフォルダ構成（2026-11-12 から）
+
+```text
+C:\ReportSystem\
+├── dev\     リポジトリ（dev_check_report）。作業・コミットはここ
+├── main\    origin/main の参照用（git worktree、detached。編集・コミットしない）
+├── check\   ローカル検証環境（tools/verify/setup_devenv.bat が作成。DB はコピー）
+└── 石原さん依頼.txt / 依頼書.txt   Git 管理外
+```
+
+- `main\` の更新: `git -C C:\ReportSystem\dev fetch` のあと `git -C C:\ReportSystem\main checkout --detach origin/main`
+- 検証サーバー: `C:\ReportSystem\check\start_server.bat` → `http://localhost:8000/public/login.php`
+
 ### 必要なもの
 
 | 用途 | 必要なもの |
 |---|---|
 | 設計書・コードを読む | なし |
 | 監査ツール | Python 3.8 以上（標準ライブラリのみ） |
-| PHP の動作確認 | PHP（この端末には未導入。ローカルでの実行確認はまだしていない） |
+| PHP の動作確認 | PHP 8.3（`tools/verify/setup_devenv.bat` で導入。作業端末は導入済み） |
 
 ### リポジトリ外にあるファイル（必要なら手で持ってくる）
 
 | ファイル | 内容 | 備考 |
 |---|---|---|
-| `石原さん依頼.txt` | 課長からの依頼メモ（開発サーバーURL、テストユーザー一覧、**共通パスワード**、リポジトリURL） | **パスワードを含むため、コミットしない** |
+| `石原さん依頼.txt` | 課長からの依頼メモ（サーバーURL、テストユーザー一覧、**共通パスワード**、リポジトリURL） | **パスワードを含むため、コミットしない** |
 | `依頼書.txt` | 課長への送り状（調査報告・至急対応のお願い・確認事項） | 社内連絡文のため、コミットしない |
 
 どちらも `.git/info/exclude` で Git の管理対象から外していた。新しい端末で同じ場所に置く場合は、`.git/info/exclude` に次を追記する。
@@ -136,7 +149,8 @@ git checkout dev_check_report
 
 ## 6. メモ
 
-- 開発サーバー: `https://toyama-mai.sakura.ne.jp/report-system/public/login.php`
+- サーバー: `https://toyama-mai.sakura.ne.jp/report-system/public/login.php`（**本番環境になる予定**。いまは検証にも使っているが、改修の動作確認はローカルの検証環境で行い、本番になってからは HTTP監査も実施のタイミングを課長と相談する）
+- 本番化の前に、テストユーザー（共通パスワード）の削除またはパスワード変更、`data/` 等の `.htaccess` 反映、HTTPS 転送が必要
 - テストユーザー: 7 名（ユーザー名は `tools/audit/audit_config.json` を参照。パスワードは依頼メモを参照）
 - サーバー上のレポートは 8 件、管理者は 1 名（2026-11-12 時点）
 - リポジトリ同梱の `data/reports.sqlite` は、サーバーの DB とは内容が異なる（同梱はレポート 9 件）
