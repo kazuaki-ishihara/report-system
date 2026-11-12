@@ -1,0 +1,14 @@
+{
+  "base_url": "https://toyama-mai.sakura.ne.jp/report-system/public/",
+  "users": [
+    "k.ishihara@kk-artech.co.jp",
+    "test_bucho@example.com",
+    "test_kacho-dairi-a@example.com",
+    "test_kacho-dairi-b@example.com",
+    "test_shunin@example.com",
+    "test_ippan-a@example.com",
+    "test_ippan-b@example.com"
+  ],
+  "request_delay_ms": 300,
+  "max_probe_per_user": 5
+}

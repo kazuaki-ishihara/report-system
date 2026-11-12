@@ -40,12 +40,12 @@ Options -Indexes
     RewriteRule ^public/setup\.php$ - [F,L]
 
     # DB・バックアップ・ドキュメント等の拡張子（どの階層でも拒否）
-    RewriteRule \.(sqlite|sqlite3|db|backup|bak|md|ps1|psd1|bat|log)$ - [F,L,NC]
+    RewriteRule \.(sqlite|sqlite3|db|backup|bak|md|py|sh|log)$ - [F,L,NC]
 </IfModule>
 
 # mod_rewrite が無い場合でも、拡張子での拒否は効かせる
 <IfModule !mod_rewrite.c>
-    <FilesMatch "\.(sqlite|sqlite3|db|backup|bak|md|ps1|psd1|bat|log)$">
+    <FilesMatch "\.(sqlite|sqlite3|db|backup|bak|md|py|sh|log)$">
         <IfModule mod_authz_core.c>
             Require all denied
         </IfModule>

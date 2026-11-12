@@ -1,4 +1,4 @@
-# 監査スクリプト（Invoke-ReportAudit.ps1）
+# 監査スクリプト（audit.py）
 
 レポート管理システムを次の3つの観点で監査し、結果を画面と HTML レポートに出力します。
 
@@ -6,57 +6,65 @@
 |---|---|---|
 | 1. 静的監査 | リポジトリの PHP ソースから既知の問題パターンを検出（CSRF、リダイレクト、外部キー、項目定義の重複 など） | リポジトリ |
 | 2. HTTP監査 | 稼働サイトで、未ログイン時の制御、公開ディレクトリ外ファイルの到達可否、セキュリティヘッダー、ユーザーごとの閲覧・編集権限を確認 | ネットワーク接続、テストユーザーのパスワード |
-| 3. DB監査 | SQLite ファイルを読み取り専用で解析し、孤立データ・上司の循環・管理者数・パスワード形式などを確認 | `data/reports.sqlite` |
+| 3. DB監査 | SQLite ファイルを読み取り専用で開き、破損・孤立データ・上司の循環・管理者数・パスワード形式などを確認 | `data/reports.sqlite` |
 
 ## 動作環境
 
-- Windows 10 / 11 標準の **Windows PowerShell 5.1** のみで動作します。
-- PHP、SQLite、Python、追加モジュールは**不要**です。
+- **Python 3.8 以上**（標準ライブラリのみ。`pip install` は不要）
+- Ubuntu 20.04 以降には `python3` が標準で入っています。確認するには次を実行します。
+
+  ```sh
+  python3 --version
+  ```
+
+- Windows / macOS でも Python 3.8 以上があれば動きます。
 
 ## 使い方
 
-### いちばん簡単な方法
+```sh
+cd tools/audit
 
-`run_audit.bat` をダブルクリックします。
-
-1. 静的監査と DB監査を実行します。
-2. HTTP監査に進み、テストユーザー共通パスワードの入力を求められます。
-   - 入力すると、テストユーザーでログインして権限を確認します。
-   - 空欄のまま Enter を押すと、ログイン後の確認だけを省略します。
-3. 終了すると HTML レポートがブラウザで開きます（`reports\audit-report_日時.html`）。
-
-### コマンドで実行する場合
-
-```powershell
-# 全部実行
-powershell -NoProfile -ExecutionPolicy Bypass -File .\Invoke-ReportAudit.ps1
+# 全部実行（途中でテストユーザー共通パスワードを聞かれる。空欄なら権限確認を省略）
+./run_audit.sh
 
 # サーバーにアクセスしない（静的監査 + DB監査のみ）
-.\Invoke-ReportAudit.ps1 -SkipHttp
+./run_audit.sh --skip-http
 
 # サーバーからダウンロードした DB を監査する
-.\Invoke-ReportAudit.ps1 -SkipHttp -SkipStatic -DbPath 'D:\work\reports.sqlite'
+./run_audit.sh --skip-http --skip-static --db-path ~/work/reports.sqlite
+
+# 終了後にブラウザでレポートを開く
+./run_audit.sh --open
 ```
 
-| パラメーター | 説明 |
+`./run_audit.sh` が `Permission denied` になる場合は、`python3 audit.py` で直接実行するか、`chmod +x run_audit.sh` を実行してください。
+
+レポートは `tools/audit/reports/audit-report_日時.html` に出力されます。
+
+### オプション
+
+| オプション | 説明 |
 |---|---|
-| `-SkipStatic` / `-SkipHttp` / `-SkipDb` | 指定した監査を省略 |
-| `-BaseUrl` | 監査する URL（`.../public/`）。設定ファイルより優先 |
-| `-DbPath` | 監査する DB ファイル（既定: `<リポジトリ>\data\reports.sqlite`） |
-| `-Password` | テストユーザー共通パスワード（省略時は実行中に入力） |
-| `-OutputDir` | レポートの出力先（既定: `tools\audit\reports\`） |
-| `-NoOpen` | 終了後にレポートを開かない |
+| `--skip-static` / `--skip-http` / `--skip-db` | 指定した監査を省略 |
+| `--base-url URL` | 監査する URL（`.../public/`）。設定ファイルより優先 |
+| `--db-path FILE` | 監査する DB ファイル（既定: `<リポジトリ>/data/reports.sqlite`） |
+| `--password PW` | テストユーザー共通パスワード。省略時は環境変数 `AUDIT_PASSWORD`、それもなければ実行中に入力 |
+| `--output-dir DIR` | レポートの出力先（既定: `tools/audit/reports/`） |
+| `--open` | 終了後にレポートをブラウザで開く |
+| `--config FILE` | 設定ファイル（既定: `tools/audit/audit_config.json`） |
 
-終了コードは、重要度「高」の指摘があれば 1、なければ 0 です。
+パスワードを `--password` で渡すとシェルの履歴に残ります。実行中の入力か、環境変数を使ってください。
 
-## 設定ファイル（audit-config.psd1）
+終了コードは、重要度「高」の指摘があれば 1、なければ 0 です（cron や CI での判定に使えます）。
+
+## 設定ファイル（audit_config.json）
 
 | 設定 | 説明 |
 |---|---|
-| `BaseUrl` | 稼働サイトの `public/` の URL |
-| `Users` | 権限確認に使うテストユーザー（パスワードは保存しません） |
-| `RequestDelayMs` | HTTP リクエストの間隔（ミリ秒） |
-| `MaxProbePerUser` | ユーザーごとに確認する「閲覧範囲外」レポートの最大件数 |
+| `base_url` | 稼働サイトの `public/` の URL |
+| `users` | 権限確認に使うテストユーザー（パスワードは保存しません） |
+| `request_delay_ms` | HTTP リクエストの間隔（ミリ秒） |
+| `max_probe_per_user` | ユーザーごとに確認する「閲覧範囲外」レポートの最大件数 |
 
 ## サーバーへの影響
 
@@ -65,6 +73,13 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\Invoke-ReportAudit.ps1
 - `public/setup.php`（アクセスするとテーブル作成処理が動く）にはアクセスしません。
 - DB ファイルが Web から取得できるかの確認では、先頭 16 バイトだけを読みます（中身はダウンロードしません）。
 - 実行時には、テストユーザーごとにログインとログアウトが記録されます。
+- レポートに出力するセッション Cookie の値は伏せ字にしています。
+
+## DB監査について
+
+- DB は読み取り専用（`mode=ro`）で開くので、ファイルは変更しません。
+- アプリが稼働中の DB を直接監査する場合は、念のためコピーを取ってから `--db-path` で指定してください。
+- リポジトリに同梱された DB とサーバーの DB は内容が異なる場合があります。
 
 ## 指摘 ID と重要度
 
@@ -80,5 +95,4 @@ ID の先頭は監査の種類を表します（S = 静的、H = HTTP、D = DB�
 ## 注意
 
 - 静的監査はパターン検出です。「要確認」と書かれた指摘は、該当箇所を目で見て判断してください。
-- DB監査は、指定した DB ファイルの内容だけを対象にします。リポジトリに同梱された DB とサーバーの DB は内容が異なる場合があります。
-- スクリプトを編集した場合は、**UTF-8（BOM 付き）**で保存してください。BOM がないと Windows PowerShell 5.1 で日本語が文字化けします。
+- スクリプトは UTF-8・改行 LF で保存してください（`.gitattributes` で LF に固定しています）。

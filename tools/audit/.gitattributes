@@ -1,0 +1,5 @@
+# Ubuntu で実行するため、改行コードを LF に固定する
+*.py   text eol=lf
+*.sh   text eol=lf
+*.json text eol=lf
+*.md   text eol=lf
