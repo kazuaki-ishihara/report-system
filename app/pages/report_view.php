@@ -17,8 +17,9 @@ if ($report === null || !can_view_report($user, $report)) {
 $owner = db_one('SELECT id, display_name, login_id FROM users WHERE id = ?', [(int) $report['user_id']]);
 $isOwner = (int) $report['user_id'] === $uid;
 $deptId = $report['department_id'] === null ? 0 : (int) $report['department_id'];
-$isReviewer = !$isOwner && is_reviewer_of($uid, $deptId);
-$isFinal = is_final_reviewer_of($uid, $deptId) || is_admin($user);
+$isReviewer = !$isOwner && reviewer_can_see_report($uid, $report, false);
+$isExpectedReviewer = !$isOwner && in_array($uid, report_expected_reviewer_ids($report), true);
+$isFinal = reviewer_can_see_report($uid, $report, true, false);
 $canRestricted = can_view_restricted($user, $report);
 
 if (!$isOwner) {
@@ -34,10 +35,15 @@ $reviewers = db_all(
     'SELECT r.user_id, r.is_final, u.display_name, v.checked_revision, v.checked_at
        FROM department_reviewers r JOIN users u ON u.id = r.user_id
        LEFT JOIN report_reviews v ON v.report_id = ? AND v.user_id = r.user_id
-      WHERE r.department_id = ? AND r.user_id <> ?
+      WHERE r.department_id = ? AND r.user_id <> ? AND u.is_active = 1
       ORDER BY r.is_final DESC, r.sort_order',
     [$id, $deptId, (int) $report['user_id']]
 );
+// チェックを求める確認者だけを出す（班ごとの課では、担当の班の確認者と課全体の確認者・課長）
+$expectedReviewerIdSet = array_fill_keys(report_expected_reviewer_ids($report), true);
+$reviewers = array_values(array_filter($reviewers, function (array $reviewerRow) use ($expectedReviewerIdSet): bool {
+    return isset($expectedReviewerIdSet[(int) $reviewerRow['user_id']]);
+}));
 $myCheck = db_one('SELECT checked_revision FROM report_reviews WHERE report_id = ? AND user_id = ?', [$id, $uid]);
 
 // 自分が最後にチェックしたあとに変わった値
@@ -95,13 +101,24 @@ foreach (db_all('SELECT h.*, u.display_name AS author FROM report_value_history 
     $history[] = $hrow;
 }
 
+// 前月との比べ（G-05 §4.2）。移行データの報告では比べない
+$previousComparison = (int) $report['is_legacy'] === 1
+    ? report_no_previous_comparison()
+    : report_previous_comparison($user, (int) $report['user_id'], (string) $report['period']);
+
+$canComment = !$isOwner && $isReviewer && $report['status'] !== 'draft';
+
 render('report_view', [
+    'commentTemplateList' => $canComment && $deptId > 0 ? comment_templates_of($deptId) : [],
+    'personalCommentTemplateList' => $canComment ? comment_template_rows('mine', $uid) : [],
+    'previousComparison' => $previousComparison,
     'title'         => period_label((string) $report['period']) . 'の報告',
     'user'          => $user,
     'report'        => $report,
     'owner'         => $owner,
     'isOwner'       => $isOwner,
     'isReviewer'    => $isReviewer,
+    'isExpectedReviewer' => $isExpectedReviewer,
     'isFinal'       => $isFinal,
     'canRestricted' => $canRestricted,
     'fields'        => $fields,
@@ -112,6 +129,6 @@ render('report_view', [
     'changedKeys'   => $changedKeys,
     'threads'       => $threads,
     'history'       => $history,
-    'canComment'    => ($isReviewer || is_admin($user)) && $report['status'] !== 'draft',
+    'canComment'    => $canComment,
     'next'          => isset($_GET['seq']) && $_GET['seq'] === '1',
 ]);

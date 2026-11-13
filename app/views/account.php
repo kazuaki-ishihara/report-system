@@ -13,11 +13,12 @@ $full = $stage === 'full' && (int) $user['must_change_password'] !== 1;
     <a href="<?= h(url('/account.php?tab=codes')) ?>" class="<?= $tab === 'codes' ? 'active' : '' ?>">予備のコード</a>
     <a href="<?= h(url('/account.php?tab=devices')) ?>" class="<?= $tab === 'devices' ? 'active' : '' ?>">端末</a>
     <a href="<?= h(url('/account.php?tab=password')) ?>" class="<?= $tab === 'password' ? 'active' : '' ?>">パスワード</a>
+    <a href="<?= h(url('/account.php?tab=theme')) ?>" class="<?= $tab === 'theme' ? 'active' : '' ?>">表示</a>
   </nav>
   <?php endif; ?>
 
   <?php foreach ($errors as $e): ?>
-    <div class="flash flash-error" role="alert"><?= h($e) ?></div>
+    <div class="flash flash-error" role="alert"><?= h_lines($e) ?></div>
   <?php endforeach; ?>
 
   <?php if ($tab === 'totp'): ?>
@@ -45,7 +46,7 @@ $full = $stage === 'full' && (int) $user['must_change_password'] !== 1;
       </form>
     <?php else: ?>
       <h2>2 段階認証</h2>
-      <p>設定済み（<?= h((string) $user['totp_enabled_at']) ?>）</p>
+      <p>設定済み（<?= h(display_datetime($user['totp_enabled_at'])) ?>）</p>
       <form method="post" action="<?= h(url('/account.php?tab=totp')) ?>" class="form">
         <?= form_hidden(false) ?>
         <input type="hidden" name="action" value="totp_redo">
@@ -68,7 +69,7 @@ $full = $stage === 'full' && (int) $user['must_change_password'] !== 1;
       <?php endif; ?>
     <?php else: ?>
       <p>残り <?= (int) $remaining ?> 個</p>
-      <form method="post" action="<?= h(url('/account.php?tab=codes')) ?>" class="form" data-confirm="予備のコードを作り直します。今のコードは使えなくなります。よろしいですか？">
+      <form method="post" action="<?= h(url('/account.php?tab=codes')) ?>" class="form" data-confirm="<?= h(msg('予備のコードを作り直します。今のコードは使えなくなります。よろしいですか？')) ?>">
         <?= form_hidden(false) ?>
         <input type="hidden" name="action" value="codes_regen">
         <label for="current_password_c">今のパスワード</label>
@@ -86,7 +87,7 @@ $full = $stage === 'full' && (int) $user['must_change_password'] !== 1;
         <?php foreach ($devices as $d): ?>
         <li>
           <span><?= h($d['label']) ?><?= ((int) $d['id'] === $currentDeviceId) ? '（この端末）' : '' ?></span>
-          <span class="note">最後に使用 <?= h(substr((string) $d['last_used_at'], 0, 10)) ?> / 期限 <?= h(substr((string) $d['expires_at'], 0, 10)) ?></span>
+          <span class="note">最後に使用 <?= h(display_date($d['last_used_at'])) ?> / 期限 <?= h(display_date($d['expires_at'])) ?></span>
           <form method="post" action="<?= h(url('/account.php?tab=devices')) ?>" class="inline">
             <?= form_hidden(false) ?>
             <input type="hidden" name="action" value="device_revoke">
@@ -97,7 +98,7 @@ $full = $stage === 'full' && (int) $user['must_change_password'] !== 1;
         <?php endforeach; ?>
       </ul>
     <?php endif; ?>
-    <form method="post" action="<?= h(url('/account.php?tab=devices')) ?>" class="form" data-confirm="すべての端末からログアウトします。この端末もログアウトします。よろしいですか？">
+    <form method="post" action="<?= h(url('/account.php?tab=devices')) ?>" class="form" data-confirm="<?= h(msg('すべての端末からログアウトします。この端末もログアウトします。よろしいですか？')) ?>">
       <?= form_hidden(false) ?>
       <input type="hidden" name="action" value="logout_all">
       <button type="submit" class="danger">すべての端末からログアウト</button>
@@ -121,10 +122,52 @@ $full = $stage === 'full' && (int) $user['must_change_password'] !== 1;
         <input id="new_password" name="new_password" type="password" autocomplete="new-password" maxlength="200" required>
         <button type="button" class="toggle-password" data-target="new_password">表示</button>
       </div>
-      <p class="note">文の形（好きな言葉をつなげたもの）にすると覚えやすくなります。</p>
+      <div class="password-tools">
+        <button type="button" class="small generate-password" data-target="new_password" data-confirm-target="new_password_confirm">自動で作る</button>
+        <button type="button" class="small copy-text" data-copy-from="new_password">コピー</button>
+        <span class="note copy-result" aria-live="polite"></span>
+      </div>
       <label for="new_password_confirm">新しいパスワード（確認）</label>
       <input id="new_password_confirm" name="new_password_confirm" type="password" autocomplete="new-password" maxlength="200" required>
       <button type="submit" class="primary">変更する</button>
+    </form>
+
+  <?php elseif ($tab === 'theme'): $currentThemeName = (string) ($user['ui_theme'] ?? 'auto'); /** @var array{base: string, accent: string, background: string} $customColors */ ?>
+    <h2>画面のテーマ</h2>
+    <p class="note">画面の配色を選べます。変わるのは自分の画面だけです（ほかの人の画面は変わりません）。注意やエラーを表す色の意味は、どのテーマでも同じです。</p>
+    <form method="post" action="<?= h(url('/account.php?tab=theme')) ?>" class="form theme-form">
+      <?= form_hidden(false) ?>
+      <input type="hidden" name="action" value="theme_save">
+      <div class="theme-choice-list">
+        <?php foreach (UI_THEMES as $themeName => $themeLabel): ?>
+          <label class="theme-choice">
+            <input type="radio" name="ui_theme" value="<?= h($themeName) ?>" <?= $themeName === $currentThemeName ? 'checked' : '' ?>>
+            <span class="theme-swatch theme-swatch-<?= h($themeName) ?>" aria-hidden="true"><span></span><span></span><span></span></span>
+            <span class="theme-choice-text"><span class="theme-choice-name"><?= h($themeLabel) ?></span><span class="theme-color-names"><?= h(UI_THEME_COLOR_NAMES[$themeName] ?? '') ?></span></span>
+          </label>
+        <?php endforeach; ?>
+      </div>
+      <fieldset class="sub custom-colors" id="custom-colors">
+        <legend>自分の色（「自分の色」を選んだときに使います）</legend>
+        <p class="note">土台と、強調の色（ボタン・見出し・リンク）、背景の色を選べます。注意・エラー・状態の札の色は変わりません（意味が変わらないように）。文字が読みにくくなる組み合わせのときは注意を出します（保存はできます）。</p>
+        <div class="choices">
+          <label class="choice"><input type="radio" name="custom_base" value="light" <?= $customColors['base'] !== 'dark' ? 'checked' : '' ?>> 明るい土台（白い面・黒い文字）</label>
+          <label class="choice"><input type="radio" name="custom_base" value="dark" <?= $customColors['base'] === 'dark' ? 'checked' : '' ?>> 暗い土台（黒い面・白い文字）</label>
+        </div>
+        <div class="custom-color-inputs">
+          <label for="custom_accent">強調の色 <input id="custom_accent" name="custom_accent" type="color" value="<?= h($customColors['accent']) ?>"></label>
+          <label for="custom_background">背景の色 <input id="custom_background" name="custom_background" type="color" value="<?= h($customColors['background']) ?>"></label>
+        </div>
+        <div class="custom-color-preview" aria-hidden="true">
+          <div class="custom-color-preview-card">
+            <strong class="custom-color-preview-heading">見本の見出し</strong>
+            <p>本文の文字です。<a href="#custom-colors">リンク</a></p>
+            <span class="custom-color-preview-button">ボタン</span>
+          </div>
+        </div>
+        <p class="note custom-color-check" aria-live="polite"></p>
+      </fieldset>
+      <button type="submit" class="primary">このテーマにする</button>
     </form>
   <?php endif; ?>
 </section>

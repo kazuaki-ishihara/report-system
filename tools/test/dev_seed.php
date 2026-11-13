@@ -54,6 +54,7 @@ $users = [
     ['ippan_a2', 'A一般2', $deptA, 0, null],
     ['kacho_b', 'B課長', $deptB, 0, 'final'],
     ['ippan_b1', 'B一般1', $deptB, 0, null],
+    ['hosa01', 'システム補佐', null, 0, null],   // システム管理者補佐（K-043。課なし）
 ];
 $out = [];
 foreach ($users as [$login, $name, $dept, $admin, $role]) {
@@ -62,7 +63,7 @@ foreach ($users as [$login, $name, $dept, $admin, $role]) {
     db_exec(
         'INSERT INTO users (username, password_hash, role_title, is_admin, created_at, login_id, display_name, department_id, totp_enabled_at, password_changed_at, updated_at)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        [$login, password_hash($password, PASSWORD_DEFAULT), '一般', $admin, $now, $login, $name, $dept, $now, $now, $now]
+        [$login, password_hash($password, PASSWORD_DEFAULT), ['kacho_a' => '課長', 'kacho_b' => '課長', 'dairi_a' => '課長代理', 'leader_a' => '主任'][$login] ?? '一般', $admin, $now, $login, $name, $dept, $now, $now, $now]
     );
     $id = (int) db()->lastInsertId();
     db_exec('UPDATE users SET totp_secret_enc = ? WHERE id = ?', [enc($secret, 'totp:' . $id), $id]);
@@ -72,11 +73,15 @@ foreach ($users as [$login, $name, $dept, $admin, $role]) {
     $out[$login] = ['id' => $id, 'password' => $password, 'totp' => $secret];
 }
 
+db_exec("UPDATE users SET is_admin_deputy = 1 WHERE login_id = 'hosa01'");
+
 $projects = [['P-0001', '物流系・在庫管理更改', $deptA], ['P-0002', '製造系・生産管理保守', $deptA], ['P-0003', '金融系・勘定系', $deptB], ['P-0004', '社内・共通基盤', null]];
 foreach ($projects as [$code, $alias, $dept]) {
     db_exec('INSERT INTO projects (code, alias, department_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?)', [$code, $alias, $dept, $now, $now]);
 }
 db_exec("INSERT INTO app_state (name, value) VALUES ('project_seq', '4')");
+// システムの管理担当の課（K-006。本番ではシステム 2 部システム 2 課）。検証では A課
+db_exec("INSERT INTO app_state (name, value) VALUES ('management_department_id', ?)", [(string) $deptA]);
 
 file_put_contents(__DIR__ . '/output_dev_users.json', json_encode(['dept_a' => $deptA, 'dept_b' => $deptB, 'users' => $out], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
 echo "テストデータを作りました: {$db}\n";

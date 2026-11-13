@@ -16,7 +16,7 @@ $deptSelect = function (string $name, $selected) use ($departments): string {
   <h1>案件の管理</h1>
   <p class="warn">客先名・案件名は入力しないでください。客先との対応は、このシステムの外で管理します。</p>
   <?php foreach ($errors as $e): ?>
-    <div class="flash flash-error" role="alert"><?= h($e) ?></div>
+    <div class="flash flash-error" role="alert"><?= h_lines($e) ?></div>
   <?php endforeach; ?>
 
   <form method="post" action="<?= h(url('/admin/projects.php')) ?>" class="filters">
@@ -34,6 +34,7 @@ $deptSelect = function (string $name, $selected) use ($departments): string {
       <option value="all" <?= $state === 'all' ? 'selected' : '' ?>>すべて</option>
     </select>
     <button type="submit">表示</button>
+    <a class="button" href="<?= h(url('/admin/projects.php?csv=1')) ?>">案件の一覧を CSV に出力（案件台帳の取り込み用）</a>
   </form>
 
   <table class="table">
@@ -61,7 +62,7 @@ $deptSelect = function (string $name, $selected) use ($departments): string {
         <td class="actions">
           <a href="<?= h(url('/admin/projects.php?edit=' . (int) $p['id'] . '&state=' . rawurlencode($state))) ?>">編集</a>
           <?php if ($active): ?>
-            <form method="post" action="<?= h(url('/admin/projects.php')) ?>" class="inline" data-confirm="案件を終了にします。呼び名も消しますか？（消してもコードと過去の報告は残ります）チェックで選んでから押してください。">
+            <form method="post" action="<?= h(url('/admin/projects.php')) ?>" class="inline" data-confirm="<?= h(msg('案件を終了にします。呼び名も消しますか？（消してもコードと過去の報告は残ります）チェックで選んでから押してください。')) ?>">
               <?= form_hidden() ?>
               <input type="hidden" name="action" value="end"><input type="hidden" name="id" value="<?= (int) $p['id'] ?>">
               <label class="check small"><input type="checkbox" name="clear_alias" value="1" checked> 呼び名を消す</label>

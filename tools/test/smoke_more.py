@@ -43,14 +43,14 @@ def main():
     # ---- 前月の報告を提出 → 当月は「変更なし」で提出 ----
     a1 = login(a.base, "ippan_a1", U["ippan_a1"])
     s, _, body = a1.get("/reports/edit.php?period=" + prev)
-    check("前月の報告がないときは「変更なし」が出ない", "先月から変更なしで提出" not in body)
+    check("前月の報告がないときは「変更なし」が出ない", 'value="unchanged"' not in body)   # 画面の使い方の文にも同じ言葉があるので、ボタンで見る
     form = {"csrf_token": csrf(body), "request_key": rkey(body), "period": prev, "action": "submit"}
     form.update(block(0, "P-0001", duties="在庫の引当処理", phase="build_unit", progress="on_track", continuation="ending",
                       end_month=cur, staffing="increase", staffing_note="増員 2 名の話", system_type="inventory"))
     s, loc, _ = a1.post("/reports/save.php", form)
     check("前月の報告を提出", s == 303 and "view.php" in loc, (s, loc))
     s, _, body = a1.get("/reports/edit.php?period=" + cur)
-    check("当月は「変更なし」で提出できる表示", "先月から変更なしで提出" in body)
+    check("当月は「変更なし」で提出できる表示", 'value="unchanged"' in body)
     s, loc, _ = a1.post("/reports/save.php", {"csrf_token": csrf(body), "request_key": rkey(body), "period": cur, "action": "unchanged"})
     row = db.execute("SELECT id, status, unchanged FROM report_records WHERE user_id = ? AND period = ?", (U["ippan_a1"]["id"], cur)).fetchone()
     check("「変更なし」で提出された", row is not None and row[1] == "submitted" and row[2] == 1, row)

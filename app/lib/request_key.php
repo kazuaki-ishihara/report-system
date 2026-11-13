@@ -24,10 +24,10 @@ function rk_begin(string $action, int $userId): void
             error_page(400);
         }
         if ($row['status'] === 'done' && $row['result_url'] !== null) {
-            flash('info', '前の送信で処理済みです。');
+            flash('info', msg('前の送信で処理済みです。'));
             redirect($row['result_url']);
         }
-        error_page(409, '前の送信をまだ処理しています。しばらく待ってから画面を読み直してください。');
+        error_page(409, msg('前の送信をまだ処理しています。しばらく待ってから画面を読み直してください。'));
     }
     try {
         db_exec(
@@ -36,7 +36,7 @@ function rk_begin(string $action, int $userId): void
         );
     } catch (PDOException $e) {
         // 同時に同じ番号が来た
-        error_page(409, '前の送信をまだ処理しています。しばらく待ってから画面を読み直してください。');
+        error_page(409, msg('前の送信をまだ処理しています。しばらく待ってから画面を読み直してください。'));
     }
     // 自分が登録した控えだけを、完了・取り消しの対象にする
     $GLOBALS['RK_CURRENT'] = $key;

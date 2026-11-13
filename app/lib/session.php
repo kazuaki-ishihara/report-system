@@ -66,7 +66,7 @@ function session_user(): ?array
     if ($now - (int) ($_SESSION['last_seen'] ?? 0) > $idle || $now - (int) ($_SESSION['login_at'] ?? 0) > $max) {
         session_logout();
         session_boot();
-        flash('info', '一定時間操作がなかったため、ログアウトしました。');
+        flash('info', msg('一定時間操作がなかったため、ログアウトしました。'));
         return null;
     }
     $user = db_one('SELECT * FROM users WHERE id = ?', [(int) $_SESSION['uid']]);
@@ -120,8 +120,17 @@ function page_start(array $opt = []): ?array
     if ($stage === 'full' && (int) $user['must_change_password'] === 1 && !in_array('must_change', $allow, true)) {
         redirect('/account.php?tab=password');
     }
+    // 予約した日が来た組織の改訂を反映する（便利機能 G。定期の処理が使えない環境のため。メンテナンス中は動かさない）
+    if (maintenance_state() === null && org_schedules_has_due()) {
+        org_schedules_run_due();
+        $user = session_user() ?? $user;
+    }
     if (is_post()) {
         csrf_check();
+        // メンテナンス中は、管理者・補佐以外の保存などの操作を受け付けない（便利機能 F）
+        if (maintenance_blocks($user)) {
+            error_page(503, maintenance_notice_text());
+        }
     }
     return $user;
 }

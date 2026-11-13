@@ -12,7 +12,7 @@ $uid = (int) $user['id'];
 // ---- プレビュー ----
 if (isset($_GET['preview'])) {
     $deptId = input_id('preview');
-    if (!can_manage_fields_of($user, $deptId) && !is_admin($user)) {
+    if (!can_manage_fields_of($user, $deptId) && !can_manage_system($user)) {
         error_page(403);
     }
     $dept = db_one('SELECT * FROM departments WHERE id = ?', [$deptId]);
@@ -37,7 +37,7 @@ if ($id !== null) {
         error_page(400);
     }
 }
-$allowed = $deptId === null ? is_admin($user) : can_manage_fields_of($user, $deptId);
+$allowed = $deptId === null ? can_manage_system($user) : can_manage_fields_of($user, $deptId);
 if (!$allowed) {
     error_page(403);
 }
@@ -65,22 +65,30 @@ if (is_post()) {
     validate_text($help, '説明文', 300, false, $errors, true);
     validate_text($placeholder, '入力例', 100, false, $errors);
     if (!isset(FIELD_TYPES[$type])) {
-        $errors[] = '入力部品が正しくありません';
+        $errors[] = msg('入力部品が正しくありません');
     }
     if (!in_array($scope, ['report', 'project'], true)) {
-        $errors[] = '区分が正しくありません';
+        $errors[] = msg('区分が正しくありません');
     }
     if (!isset(FIELD_CONF[$conf])) {
-        $errors[] = '機密区分が正しくありません';
+        $errors[] = msg('機密区分が正しくありません');
     }
 
-    // コード（作成時のみ）
+    // コード（作成時のみ）。空なら自動で付ける（item_<番号>）
+    $newFieldCode = '';
     if ($field === null) {
         $code = post_str('code');
+        if ($code === '') {
+            $nextFieldNumber = (int) db_val('SELECT COALESCE(MAX(id), 0) + 1 FROM report_fields');
+            do {
+                $code = 'item_' . $nextFieldNumber++;
+            } while (db_val('SELECT 1 FROM report_fields WHERE code = ?', [$code]) !== null);
+        }
+        $newFieldCode = $code;
         if (preg_match('/^[a-z][a-z0-9_]{2,39}$/', $code) !== 1) {
-            $errors[] = 'コードは英小文字で始まる、英小文字・数字・_ の 3〜40 文字にしてください';
+            $errors[] = msg('コードは英小文字で始まる、英小文字・数字・_ の 3〜40 文字にしてください');
         } elseif (db_val('SELECT 1 FROM report_fields WHERE code = ?', [$code]) !== null) {
-            $errors[] = '同じコードの項目があります';
+            $errors[] = msg('同じコードの項目があります');
         }
     }
 
@@ -90,24 +98,24 @@ if (is_post()) {
         if ($oldType !== $type) {
             $compatible = [['single_text', 'multi_text'], ['select', 'radio'], ['radio', 'select']];
             if ($oldType === 'project' || $type === 'project') {
-                $errors[] = '案件の項目の入力部品は変えられません';
+                $errors[] = msg('案件の項目の入力部品は変えられません');
             } elseif ($used && !in_array([$oldType, $type], $compatible, true)) {
-                $errors[] = 'この項目には入力済みのデータがあるため、入力部品をこの種類には変えられません';
+                $errors[] = msg('この項目には入力済みのデータがあるため、入力部品をこの種類には変えられません');
             }
         }
         if ($used && $field['field_scope'] !== $scope) {
-            $errors[] = 'この項目には入力済みのデータがあるため、区分は変えられません';
+            $errors[] = msg('この項目には入力済みのデータがあるため、区分は変えられません');
         }
-        if (($field['confidentiality'] === 'restricted') !== ($conf === 'restricted') && !is_admin($user)) {
-            $errors[] = '「限定」の付け外しは管理者だけができます';
+        if (($field['confidentiality'] === 'restricted') !== ($conf === 'restricted') && !can_manage_system($user)) {
+            $errors[] = msg('「限定」の付け外しは管理者だけができます');
         }
-    } elseif ($conf === 'restricted' && !is_admin($user)) {
-        $errors[] = '「限定」にできるのは管理者だけです';
+    } elseif ($conf === 'restricted' && !can_manage_system($user)) {
+        $errors[] = msg('「限定」にできるのは管理者だけです');
     }
     if ($type === 'project') {
         $other = db_val("SELECT id FROM report_fields WHERE field_type = 'project' AND id <> ?", [$field['id'] ?? 0]);
         if ($other !== null) {
-            $errors[] = '案件の項目はすでにあります（1 つだけ置けます）';
+            $errors[] = msg('案件の項目はすでにあります（1 つだけ置けます）');
         }
         $scope = 'project';
     }
@@ -120,7 +128,7 @@ if (is_post()) {
             return null;
         }
         if (preg_match('/^\d+$/', $v) !== 1 || (int) $v < $min || (int) $v > $max) {
-            $errors[] = $lbl . 'は ' . $min . '〜' . $max . ' にしてください';
+            $errors[] = msg('{label}は {min}〜{max} にしてください', ['label' => $lbl, 'min' => $min, 'max' => $max]);
             return null;
         }
         return (int) $v;
@@ -135,13 +143,13 @@ if (is_post()) {
         foreach (['min' => '最小', 'max' => '最大'] as $k => $lbl) {
             $v = post_str($k);
             if ($v !== '' && preg_match('/^-?\d{1,12}(\.\d+)?$/', $v) !== 1) {
-                $errors[] = $lbl . 'は数値にしてください';
+                $errors[] = msg('{label}は数値にしてください', ['label' => $lbl]);
             } elseif ($v !== '') {
                 $settings[$k] = $v;
             }
         }
         if (isset($settings['min'], $settings['max']) && (float) $settings['min'] > (float) $settings['max']) {
-            $errors[] = '最小は最大以下にしてください';
+            $errors[] = msg('最小は最大以下にしてください');
         }
         $d = $num('decimals', 0, 4, '小数の桁');
         if ($d !== null) {
@@ -159,7 +167,7 @@ if (is_post()) {
             }
             $p = array_map('trim', explode('|', $line));
             if (count($p) < 3 || preg_match('/^[a-z][a-z0-9_]{0,29}$/', $p[0]) !== 1 || $p[1] === '' || !in_array($p[2], TABLE_COLUMN_TYPES, true)) {
-                $errors[] = '表の列の定義が正しくありません: ' . $line;
+                $errors[] = msg('表の列の定義が正しくありません: {line}', ['line' => $line]);
                 continue;
             }
             $col = ['key' => $p[0], 'label' => $p[1], 'type' => $p[2]];
@@ -169,28 +177,58 @@ if (is_post()) {
             $cols[] = $col;
         }
         if (count($cols) < 1 || count($cols) > 10) {
-            $errors[] = '表の列は 1〜10 にしてください';
+            $errors[] = msg('表の列は 1〜10 にしてください');
         }
         $settings['columns'] = $cols;
     }
     $swField = post_str('show_when_field');
     if ($swField !== '') {
-        $swValues = array_values(array_filter(array_map('trim', explode(',', post_str('show_when_values'))), 'strlen'));
-        $target = db_one("SELECT id, field_type FROM report_fields WHERE code = ? AND field_type IN ('select', 'radio', 'checkbox')", [$swField]);
+        // 値は、チェックボックス（show_when_value[]）か、カンマ区切りの文字（show_when_values）で受け取る
+        $showWhenCheckedValueList = $_POST['show_when_value'] ?? null;
+        if ($showWhenCheckedValueList !== null && !is_array($showWhenCheckedValueList)) {
+            error_page(400);
+        }
+        $swValues = $showWhenCheckedValueList !== null
+            ? array_values(array_filter(array_map(function ($checkedValue): string { return is_string($checkedValue) ? trim($checkedValue) : ''; }, $showWhenCheckedValueList), 'strlen'))
+            : array_values(array_filter(array_map('trim', explode(',', post_str('show_when_values'))), 'strlen'));
+        // 条件にできるのは、同じ様式（共通の項目は共通の項目だけ）・同じ区分の、有効な選択式の項目
+        $target = db_one(
+            "SELECT id, field_type FROM report_fields
+              WHERE code = ? AND field_type IN ('select', 'radio', 'checkbox') AND is_active = 1 AND field_scope = ? AND id <> ?
+                AND " . ($deptId === null ? 'department_id IS NULL' : '(department_id IS NULL OR department_id = ?)'),
+            $deptId === null ? [$swField, $scope, $field['id'] ?? 0] : [$swField, $scope, $field['id'] ?? 0, $deptId]
+        );
         if ($target === null || !$swValues) {
-            $errors[] = '表示の条件は、選択式の項目のコードと、その値を入れてください';
+            $errors[] = msg('表示の条件は、同じ様式・同じ区分にある有効な選択式の項目のコードと、その値を入れてください');
         } else {
-            $settings['show_when'] = ['field' => $swField, 'values' => $swValues];
+            if ($target['field_type'] === 'checkbox') {
+                $allowedValues = ['1'];
+            } else {
+                $allowedValues = array_map('strval', array_column(
+                    db_all('SELECT code FROM report_field_options WHERE field_id = ? AND is_active = 1', [(int) $target['id']]),
+                    'code'
+                ));
+            }
+            $bad = array_values(array_diff($swValues, $allowedValues));
+            if ($bad) {
+                $errors[] = $target['field_type'] === 'checkbox'
+                    ? msg('表示の条件の値が、その項目の選択肢にありません: {values}（チェックの項目は 1）', ['values' => implode(', ', $bad)])
+                    : msg('表示の条件の値が、その項目の選択肢にありません: {values}', ['values' => implode(', ', $bad)]);
+            } else {
+                $settings['show_when'] = ['field' => $swField, 'values' => $swValues];
+            }
         }
     }
 
     // 選択肢
     $options = [];
+    $removedOptionCodeList = [];   // 削除する選択肢（「削除」にチェックがあり、報告で使われていないもの）
     if (in_array($type, CHOICE_TYPES, true)) {
         $codes = $_POST['opt_code'] ?? [];
         $labels = $_POST['opt_label'] ?? [];
         $actives = $_POST['opt_active'] ?? [];
-        if (!is_array($codes) || !is_array($labels) || !is_array($actives)) {
+        $deleteFlags = $_POST['opt_delete'] ?? [];
+        if (!is_array($codes) || !is_array($labels) || !is_array($actives) || !is_array($deleteFlags)) {
             error_page(400);
         }
         $existing = [];
@@ -199,19 +237,39 @@ if (is_post()) {
                 $existing[(string) $o['code']] = true;
             }
         }
+        // コードが空で表示名がある行は、あとで自動のコード（o1, o2, …。使われていない番号）を付ける
+        $usedOptionCodeSet = $existing;
+        foreach ($codes as $optionCodeText) {
+            if (is_string($optionCodeText) && trim($optionCodeText) !== '') {
+                $usedOptionCodeSet[trim($optionCodeText)] = true;
+            }
+        }
+        $nextOptionNumber = 1;
         $seen = [];
+        $deleteRequestedCodeSet = [];   // 「削除」にチェックがあった既存の選択肢
         foreach ($codes as $i => $c) {
             $c = is_string($c) ? trim($c) : '';
             $l = isset($labels[$i]) && is_string($labels[$i]) ? trim($labels[$i]) : '';
             if ($c === '' && $l === '') {
                 continue;
             }
+            if (isset($existing[$c]) && ($deleteFlags[$i] ?? '') === '1') {
+                $deleteRequestedCodeSet[$c] = true;
+                continue;   // 削除する（下で、使われていないかを確かめる）
+            }
+            if ($c === '') {
+                while (isset($usedOptionCodeSet['o' . $nextOptionNumber])) {
+                    $nextOptionNumber++;
+                }
+                $c = 'o' . $nextOptionNumber;
+                $usedOptionCodeSet[$c] = true;
+            }
             if (preg_match('/^[a-z0-9_]{1,40}$/', $c) !== 1) {
-                $errors[] = '選択肢のコードは英小文字・数字・_ の 1〜40 文字にしてください: ' . $c;
+                $errors[] = msg('選択肢のコードは英小文字・数字・_ の 1〜40 文字にしてください: {code}', ['code' => $c]);
                 continue;
             }
             if (isset($seen[$c])) {
-                $errors[] = '選択肢のコードが重複しています: ' . $c;
+                $errors[] = msg('選択肢のコードが重複しています: {code}', ['code' => $c]);
                 continue;
             }
             $seen[$c] = true;
@@ -219,19 +277,27 @@ if (is_post()) {
             $options[] = ['code' => $c, 'label' => $l, 'active' => isset($actives[$i]) && $actives[$i] === '1'];
         }
         foreach (array_keys($existing) as $c) {
-            if (!isset($seen[$c])) {
-                $errors[] = '選択肢は削除できません（無効にしてください）: ' . $c;
+            if (isset($seen[$c])) {
+                continue;
+            }
+            if (!isset($deleteRequestedCodeSet[$c])) {
+                // 送られなかっただけ（画面の不具合や古い画面）では消さない
+                $errors[] = msg('選択肢は削除できません（無効にしてください）: {code}', ['code' => $c]);
+            } elseif (form_option_is_used((int) $field['id'], (string) $c)) {
+                $errors[] = msg('報告で使われている選択肢は削除できません（無効にしてください）: {code}', ['code' => $c]);
+            } else {
+                $removedOptionCodeList[] = (string) $c;
             }
         }
         $activeCount = count(array_filter($options, function ($o) { return $o['active']; }));
         if ($activeCount < 1) {
-            $errors[] = '有効な選択肢を 1 つ以上入れてください';
+            $errors[] = msg('有効な選択肢を 1 つ以上入れてください');
         }
     }
 
     if (!$errors) {
         $settingsJson = json_encode($settings, JSON_UNESCAPED_UNICODE);
-        $savedId = tx(function () use ($field, $deptId, $label, $type, $scope, $conf, $help, $placeholder, $flags, $settingsJson, $options) {
+        $savedId = tx(function () use ($field, $deptId, $label, $type, $scope, $conf, $help, $placeholder, $flags, $settingsJson, $options, $newFieldCode, $removedOptionCodeList) {
             if ($field === null) {
                 $sort = (int) db_val(
                     'SELECT COALESCE(MAX(sort_order), 0) + 10 FROM report_fields WHERE field_scope = ? AND ' . ($deptId === null ? 'department_id IS NULL' : 'department_id = ?'),
@@ -240,7 +306,7 @@ if (is_post()) {
                 db_exec(
                     'INSERT INTO report_fields (code, label, field_type, department_id, field_scope, confidentiality, sort_order, is_active, is_required, help_text, placeholder, settings_json, carry_over, show_in_list, is_searchable, include_in_export, created_at, updated_at)
                      VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-                    [post_str('code'), $label, $type, $deptId, $scope, $conf, $sort, $flags['is_required'], $help, $placeholder, $settingsJson,
+                    [$newFieldCode, $label, $type, $deptId, $scope, $conf, $sort, $flags['is_required'], $help, $placeholder, $settingsJson,
                      $flags['carry_over'], $flags['show_in_list'], $flags['is_searchable'], $flags['include_in_export'], now(), now()]
                 );
                 $fid = (int) db()->lastInsertId();
@@ -275,6 +341,9 @@ if (is_post()) {
                     db_exec('UPDATE report_record_fields SET confidentiality = ? WHERE field_id = ?', [$conf, $fid]);
                 }
             }
+            foreach ($removedOptionCodeList as $removedOptionCode) {
+                db_exec('DELETE FROM report_field_options WHERE field_id = ? AND code = ?', [$fid, $removedOptionCode]);
+            }
             $i = 0;
             foreach ($options as $o) {
                 $i += 10;
@@ -287,7 +356,7 @@ if (is_post()) {
             return $fid;
         });
         audit_log('admin', 'field:' . $savedId . ':' . ($field === null ? 'create' : 'update'));
-        flash('success', '保存しました。これから作る報告に反映されます');
+        flash('success', msg('保存しました。これから作る報告に反映されます'));
         rk_done('/admin/fields.php?dept=' . rawurlencode($deptParam));
     }
     rk_cancel();
@@ -316,7 +385,18 @@ foreach (($settings['columns'] ?? []) as $c) {
     $columnsText .= $c['key'] . '|' . $c['label'] . '|' . $c['type'] . (isset($c['options']) ? '|' . implode(',', $c['options']) : '') . "\n";
 }
 
+// 表示の条件に選べる項目（同じ様式の有効な選択式の項目。区分は画面で絞る）
+$showWhenCandidateFieldList = [];
+foreach (db_all(
+    "SELECT * FROM report_fields WHERE is_active = 1 AND field_type IN ('select', 'radio', 'checkbox') AND id <> ? AND "
+        . ($deptId === null ? 'department_id IS NULL' : '(department_id IS NULL OR department_id = ?)') . ' ORDER BY department_id IS NOT NULL, field_scope, sort_order, id',
+    $deptId === null ? [$field['id'] ?? 0] : [$field['id'] ?? 0, $deptId]
+) as $candidateFieldRow) {
+    $showWhenCandidateFieldList[] = form_row_to_def($candidateFieldRow, form_field_options((int) $candidateFieldRow['id'], true));
+}
+
 render('admin_field_edit', [
+    'showWhenCandidateFieldList' => $showWhenCandidateFieldList,
     'title'       => $field === null ? '項目の追加' : '項目の編集',
     'user'        => $user,
     'field'       => $field,

@@ -2,7 +2,8 @@
 /** @var array $report */
 /** @var array $owner */
 /** @var bool $isOwner */
-/** @var bool $isReviewer */
+/** @var bool $isReviewer 確認者としてこの報告を見られるか */
+/** @var bool $isExpectedReviewer チェックを求められている確認者か（チェックのボタンを出す） */
 /** @var bool $isFinal */
 /** @var bool $canRestricted */
 /** @var array $fields */
@@ -24,7 +25,9 @@ foreach ($fields as $f) {
 }
 
 /** 1 つの対象（項目または報告全体）のコメント欄 */
-$renderThreads = function (int $rpId, int $fid) use ($threads, $typeLabels, $stateLabels, $rid, $uid, $user, $isOwner, $isFinal, $canComment, $report): string {
+/** @var array<int, array{id: int|string, body: string}> $commentTemplateList 報告の課のコメントの定型文（G-19） */
+/** @var array<int, array{id: int|string, body: string}> $personalCommentTemplateList 自分の定型文（G-19） */
+$renderThreads = function (int $rpId, int $fid) use ($threads, $typeLabels, $stateLabels, $rid, $uid, $user, $isOwner, $isFinal, $canComment, $report, $commentTemplateList, $personalCommentTemplateList): string {
     $key = $rpId . ':' . $fid;
     ob_start();
     foreach ($threads[$key] ?? [] as $t) {
@@ -35,15 +38,15 @@ $renderThreads = function (int $rpId, int $fid) use ($threads, $typeLabels, $sta
           <div class="comment">
             <span class="tag"><?= h($typeLabels[$hd['comment_type']] ?? '') ?></span>
             <?php if ($hd['thread_status'] !== null): ?><span class="tag tag-<?= h($hd['thread_status']) ?>"><?= h($stateLabels[$hd['thread_status']]) ?></span><?php endif; ?>
-            <strong><?= h($hd['author']) ?></strong> <span class="note"><?= h(substr((string) $hd['created_at'], 5, 11)) ?></span>
+            <strong><?= h($hd['author']) ?></strong> <span class="note"><?= h(display_datetime($hd['created_at'])) ?></span>
             <div class="comment-text"><?= $hd['text'] === null ? '<span class="muted">（削除されました）</span>' : nl2br(h($hd['text'])) ?></div>
           </div>
           <?php foreach ($t['replies'] as $r): ?>
             <div class="comment reply" id="comment-<?= (int) $r['id'] ?>">
-              <strong><?= h($r['author']) ?></strong> <span class="note"><?= h(substr((string) $r['created_at'], 5, 11)) ?></span>
+              <strong><?= h($r['author']) ?></strong> <span class="note"><?= h(display_datetime($r['created_at'])) ?></span>
               <div class="comment-text"><?= $r['text'] === null ? '<span class="muted">（削除されました）</span>' : nl2br(h($r['text'])) ?></div>
-              <?php if ($r['text'] !== null && ((int) $r['user_id'] === $uid || is_admin($user))): ?>
-                <form method="post" action="<?= h(url('/reports/act.php')) ?>" class="inline" data-confirm="このコメントを削除します。よろしいですか？">
+              <?php if ($r['text'] !== null && (int) $r['user_id'] === $uid): ?>
+                <form method="post" action="<?= h(url('/reports/act.php')) ?>" class="inline" data-confirm="<?= h(msg('このコメントを削除します。よろしいですか？')) ?>">
                   <?= form_hidden() ?><input type="hidden" name="report_id" value="<?= $rid ?>">
                   <input type="hidden" name="comment_id" value="<?= (int) $r['id'] ?>">
                   <button type="submit" name="action" value="comment_delete" class="small">削除</button>
@@ -65,8 +68,8 @@ $renderThreads = function (int $rpId, int $fid) use ($threads, $typeLabels, $sta
               <?php elseif ($canResolve && $hd['thread_status'] !== null): ?>
                 <button type="submit" name="action" value="resolve" formnovalidate>解決にする</button>
               <?php endif; ?>
-              <?php if ($hd['text'] !== null && ((int) $hd['user_id'] === $uid || is_admin($user))): ?>
-                <button type="submit" name="action" value="comment_delete" formnovalidate class="danger" data-confirm="このコメントを削除します。よろしいですか？">削除</button>
+              <?php if ($hd['text'] !== null && (int) $hd['user_id'] === $uid): ?>
+                <button type="submit" name="action" value="comment_delete" formnovalidate class="danger" data-confirm="<?= h(msg('このコメントを削除します。よろしいですか？')) ?>">削除</button>
                 <input type="hidden" name="comment_id" value="<?= (int) $hd['id'] ?>">
               <?php endif; ?>
             </form>
@@ -87,6 +90,18 @@ $renderThreads = function (int $rpId, int $fid) use ($threads, $typeLabels, $sta
               <option value="confirm">認識の確認（回答を求める）</option>
               <option value="note">連絡（返答不要）</option>
             </select>
+            <?php if ($commentTemplateList || $personalCommentTemplateList): ?>
+              <select class="comment-template-select" aria-label="定型文を選ぶ">
+                <option value="">定型文を選ぶ（本文に入ります）</option>
+                <?php foreach (['課の定型文' => $commentTemplateList, '自分の定型文' => $personalCommentTemplateList] as $templateGroupLabel => $templateGroupList): if (!$templateGroupList) { continue; } ?>
+                  <optgroup label="<?= h($templateGroupLabel) ?>">
+                    <?php foreach ($templateGroupList as $commentTemplate): ?>
+                      <option value="<?= h($commentTemplate['body']) ?>"><?= h(mb_strimwidth(str_replace("\n", ' ', $commentTemplate['body']), 0, 60, '…', 'UTF-8')) ?></option>
+                    <?php endforeach; ?>
+                  </optgroup>
+                <?php endforeach; ?>
+              </select>
+            <?php endif; ?>
             <textarea name="comment" maxlength="1000" required data-free-text="1" aria-label="コメント"></textarea>
             <p class="field-warning" hidden>客先名や個人名が含まれていませんか</p>
             <button type="submit" name="action" value="comment">コメントする</button>
@@ -98,11 +113,16 @@ $renderThreads = function (int $rpId, int $fid) use ($threads, $typeLabels, $sta
 };
 
 /** 1 つの項目の表示 */
-$renderField = function (array $f, int $rpId) use ($values, $canRestricted, $changedKeys, $isOwner, $renderThreads, $report): string {
+/** @var array $previousComparison 前月との比べ（report_previous_comparison() の戻り値） */
+$projectIdByReportProjectId = [0 => 0];   // 報告の案件ブロックの ID => 案件 ID（前月と案件で対応させる）
+foreach ($blocks as $viewBlock) {
+    $projectIdByReportProjectId[(int) $viewBlock['id']] = (int) $viewBlock['project_id'];
+}
+$renderField = function (array $f, int $rpId) use ($values, $canRestricted, $changedKeys, $isOwner, $renderThreads, $report, $previousComparison, $projectIdByReportProjectId): string {
     $v = $values[$rpId][$f['id']] ?? ['value' => '', 'warning' => false];
     $hidden = $f['conf'] === 'restricted' && !$canRestricted;
     $purged = $report['free_text_purged_at'] !== null && form_is_free_text($f);
-    $html = '<div class="view-field" id="f-' . $rpId . '-' . (int) $f['id'] . '"><div class="view-label">' . h($f['label']) . form_badges(array_merge($f, ['required' => false]));
+    $html = '<div class="view-field" id="f-' . $rpId . '-' . (int) $f['id'] . '"><div class="view-label">' . form_badges(array_merge($f, ['required' => false])) . h($f['label']);
     if (isset($changedKeys[$rpId . ':' . $f['id']])) {
         $html .= ' <span class="tag tag-changed">更新あり</span>';
     }
@@ -118,6 +138,9 @@ $renderField = function (array $f, int $rpId) use ($values, $canRestricted, $cha
         $html .= form_display_html($f, $v['value']);
     }
     $html .= '</div>';
+    if (!$hidden && !$purged) {
+        $html .= report_previous_value_html($previousComparison, $f, $projectIdByReportProjectId[$rpId] ?? -1, (string) ($v['value'] ?? ''));
+    }
     if (!$hidden) {
         $html .= $renderThreads($rpId, (int) $f['id']);
     }
@@ -129,28 +152,55 @@ $reportFields = array_values(array_filter($fields, function ($f) { return $f['sc
 <section class="card">
   <p><a href="<?= h(url('/index.php')) ?>">← ホーム</a></p>
   <h1><?= h($owner['display_name']) ?>さん <?= h(period_label((string) $report['period'])) ?>
-    <span class="tag"><?= h(report_status_label((string) $report['status'])) ?></span>
+    <?= report_status_tag_html((string) $report['status']) ?>
     <?php if ((int) $report['is_legacy'] === 1): ?><span class="tag">移行データ</span><?php endif; ?>
-    <?php if ((int) $report['unchanged'] === 1): ?><span class="tag">先月から変更なし</span><?php endif; ?></h1>
-  <?php if ($report['submitted_at'] !== null): ?><p class="note">提出 <?= h((string) $report['submitted_at']) ?></p><?php endif; ?>
+    <?php if ((int) $report['unchanged'] === 1): ?><span class="tag">前月から変更なし</span><?php endif; ?></h1>
+  <?php if ($report['submitted_at'] !== null): ?><p class="note">提出 <?= h(display_datetime($report['submitted_at'])) ?></p><?php endif; ?>
   <?php if ($isOwner && $report['status'] !== 'confirmed' && (int) $report['is_legacy'] === 0): ?>
-    <a class="button" href="<?= h(url('/reports/edit.php?period=' . rawurlencode((string) $report['period']))) ?>">編集する</a>
+    <?php if (report_period_editable((string) $report['period'])): ?>
+      <a class="button" href="<?= h(url('/reports/edit.php?period=' . rawurlencode((string) $report['period']))) ?>">編集する</a>
+    <?php else: ?>
+      <p class="note">編集できるのは当月と過去 3 か月までの報告です。</p>
+      <?php if ($report['status'] === 'draft'): ?>
+        <form method="post" action="<?= h(url('/reports/save.php')) ?>" class="inline" data-confirm="<?= h(msg('この下書きを削除します。よろしいですか？')) ?>">
+          <?= form_hidden() ?>
+          <input type="hidden" name="period" value="<?= h((string) $report['period']) ?>">
+          <button type="submit" name="action" value="delete" class="danger">下書きを削除</button>
+        </form>
+      <?php endif; ?>
+    <?php endif; ?>
   <?php endif; ?>
 
   <?php if ($report['status'] !== 'draft' && $reviewers): ?>
-  <h2>チェック</h2>
+  <h2 class="section-heading">チェック</h2>
   <ul class="list compact">
     <?php foreach ($reviewers as $r):
-        $st = $r['checked_revision'] === null ? '未チェック' : ((int) $r['checked_revision'] < (int) $report['revision'] ? '更新あり（再確認待ち）' : 'チェック済 ' . substr((string) $r['checked_at'], 5, 5)); ?>
+        $st = $r['checked_revision'] === null ? '未チェック' : ((int) $r['checked_revision'] < (int) $report['revision'] ? '更新あり（再確認待ち）' : 'チェック済み ' . display_date((string) $r['checked_at'])); ?>
       <li><span><?= (int) $r['is_final'] === 1 ? '課長 ' : '' ?><?= h($r['display_name']) ?></span><span class="<?= $r['checked_revision'] === null ? 'muted' : '' ?>"><?= h($st) ?></span></li>
     <?php endforeach; ?>
   </ul>
   <?php endif; ?>
 </section>
 
+<?php
+$currentProjectIdList = array_map(function (array $viewBlock): int { return (int) $viewBlock['project_id']; }, $blocks);
+$droppedPreviousProjectCodeList = $previousComparison['previousReport'] === null ? [] : array_values(array_diff_key(
+    $previousComparison['previousProjectCodeById'], array_flip($currentProjectIdList)
+));
+?>
+<?php if ($previousComparison['previousReport'] !== null): ?>
+<section class="card previous-summary">
+  <p class="note"><?= h(msg('{period}の報告と比べて、変わった項目に「前月から変更」と前月の値を出しています。', ['period' => $previousComparison['previousPeriodLabel']])) ?></p>
+  <?php if ($droppedPreviousProjectCodeList): ?>
+    <p><?= h(msg('{period}にあって今回ない案件: {codes}', ['period' => $previousComparison['previousPeriodLabel'], 'codes' => implode('、', $droppedPreviousProjectCodeList)])) ?></p>
+  <?php endif; ?>
+</section>
+<?php endif; ?>
+
 <?php foreach ($blocks as $i => $b): ?>
 <section class="card">
-  <h2>案件 <?= $i + 1 ?>: <?= h($b['code']) ?><?= $b['alias'] !== '' ? ' <span class="note">' . h($b['alias']) . '</span>' : '' ?></h2>
+  <h2>案件 <?= $i + 1 ?>: <?= h($b['code']) ?><?= $b['alias'] !== '' ? ' <span class="note">' . h($b['alias']) . '</span>' : '' ?>
+    <?php if ($previousComparison['previousReport'] !== null && !isset($previousComparison['previousProjectCodeById'][(int) $b['project_id']])): ?><span class="tag tag-changed"><?= h(msg('前月にない案件')) ?></span><?php endif; ?></h2>
   <?php foreach ($blockFields as $f): ?><?= $renderField($f, (int) $b['id']) ?><?php endforeach; ?>
 </section>
 <?php endforeach; ?>
@@ -168,7 +218,7 @@ $reportFields = array_values(array_filter($fields, function ($f) { return $f['sc
     <ul class="list">
       <?php foreach ($history as $hrow): ?>
         <li><span><?= h($fieldLabel[(int) $hrow['field_id']] ?? '') ?>: <?= h(mb_strimwidth((string) ($hrow['old_value'] ?? '?'), 0, 40, '…')) ?> → <?= h(mb_strimwidth((string) ($hrow['new_value'] ?? '?'), 0, 40, '…')) ?></span>
-          <span class="note"><?= h($hrow['author']) ?> <?= h(substr((string) $hrow['created_at'], 5, 11)) ?></span></li>
+          <span class="note"><?= h($hrow['author']) ?> <?= h(display_datetime($hrow['created_at'])) ?></span></li>
       <?php endforeach; ?>
     </ul>
   </details>
@@ -176,8 +226,8 @@ $reportFields = array_values(array_filter($fields, function ($f) { return $f['sc
 <?php endif; ?>
 
 <?php if (!$isOwner && $report['status'] !== 'draft'): ?>
-<div class="sticky-actions">
-  <?php if ($isReviewer): ?>
+<div class="sticky-actions review-actions">
+  <?php if ($isExpectedReviewer): ?>
     <form method="post" action="<?= h(url('/reports/act.php')) ?>" class="inline">
       <?= form_hidden() ?><input type="hidden" name="report_id" value="<?= $rid ?>">
       <input type="hidden" name="seq" value="<?= $next ? '1' : '0' ?>">
@@ -186,12 +236,12 @@ $reportFields = array_values(array_filter($fields, function ($f) { return $f['sc
     </form>
   <?php endif; ?>
   <?php if ($isFinal && $report['status'] === 'submitted'): ?>
-    <form method="post" action="<?= h(url('/reports/act.php')) ?>" class="inline" data-confirm="確認を完了にします。完了すると本人は変更できなくなります。よろしいですか？">
+    <form method="post" action="<?= h(url('/reports/act.php')) ?>" class="inline" data-confirm="<?= h(msg('確認を完了にします。完了すると本人は変更できなくなります。よろしいですか？')) ?>">
       <?= form_hidden() ?><input type="hidden" name="report_id" value="<?= $rid ?>">
       <button type="submit" name="action" value="confirm">確認を完了にする</button>
     </form>
   <?php elseif ($isFinal && $report['status'] === 'confirmed'): ?>
-    <form method="post" action="<?= h(url('/reports/act.php')) ?>" class="inline" data-confirm="確認完了を取り消して提出済みに戻します。よろしいですか？">
+    <form method="post" action="<?= h(url('/reports/act.php')) ?>" class="inline" data-confirm="<?= h(msg('確認完了を取り消して提出済みに戻します。よろしいですか？')) ?>">
       <?= form_hidden() ?><input type="hidden" name="report_id" value="<?= $rid ?>">
       <button type="submit" name="action" value="unconfirm">確認完了を取り消す</button>
     </form>

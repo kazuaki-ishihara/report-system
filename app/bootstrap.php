@@ -19,6 +19,7 @@ if (function_exists('mb_internal_encoding')) {
 require_once APP_DIR . '/lib/util.php';
 require_once APP_DIR . '/lib/html.php';
 require_once APP_DIR . '/lib/db.php';
+require_once APP_DIR . '/lib/message.php';
 require_once APP_DIR . '/lib/schema.php';
 require_once APP_DIR . '/lib/crypto.php';
 require_once APP_DIR . '/lib/csrf.php';
@@ -32,7 +33,14 @@ require_once APP_DIR . '/lib/report.php';
 require_once APP_DIR . '/lib/admin.php';
 require_once APP_DIR . '/lib/form.php';
 require_once APP_DIR . '/lib/survey.php';
+require_once APP_DIR . '/lib/search.php';
+require_once APP_DIR . '/lib/org_csv.php';
 require_once APP_DIR . '/lib/export.php';
 require_once APP_DIR . '/lib/retention.php';
+require_once APP_DIR . '/lib/support_request.php';
+require_once APP_DIR . '/lib/user_theme.php';
+require_once APP_DIR . '/lib/maintenance.php';
+require_once APP_DIR . '/lib/backup.php';
+require_once APP_DIR . '/lib/notice.php';
 
 app_init_error_handling();

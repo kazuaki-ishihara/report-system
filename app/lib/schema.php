@@ -49,6 +49,10 @@ function schema_ensure(PDO $pdo): array
         'must_change_password' => 'INTEGER NOT NULL DEFAULT 0 CHECK (must_change_password IN (0, 1))',
         'is_active'            => 'INTEGER NOT NULL DEFAULT 1 CHECK (is_active IN (0, 1))',
         'updated_at'           => 'TEXT',
+        'ui_theme'             => "TEXT NOT NULL DEFAULT 'auto'",   // 画面のテーマ（G-16。UI_THEMES のキー）
+        'team_id'              => 'INTEGER REFERENCES department_teams(id)',   // 今の班（「班ごと」の課。G-14 §6.7）
+        'is_admin_deputy'      => 'INTEGER NOT NULL DEFAULT 0 CHECK (is_admin_deputy IN (0, 1))',
+        'ui_custom_colors'     => "TEXT NOT NULL DEFAULT ''",   // 自分の色（G-16 §4.6。JSON: base・accent・background）   // システム管理者補佐（G-14 §6.9。最大 3 名）
     ];
     $existing = [];
     foreach ($pdo->query('PRAGMA table_info(users)')->fetchAll() as $col) {
@@ -133,8 +137,15 @@ function schema_ensure(PDO $pdo): array
             is_active INTEGER NOT NULL DEFAULT 1 CHECK (is_active IN (0, 1)),
             UNIQUE (field_id, code)
         )",
-        "CREATE TRIGGER IF NOT EXISTS tr_report_field_options_no_delete BEFORE DELETE ON report_field_options
-         BEGIN SELECT RAISE(ABORT, 'report_field_options cannot be deleted; deactivate the option instead'); END",
+        // 選択肢は、報告で使われていれば削除させない（無効にする）。使われていなければ削除できる（G-12）。
+        // 暗号化した値（「限定」の項目）は中身で照合できないので、値が 1 つでもあれば使われているとみなす。
+        // 以前の「いつでも削除させない」トリガーは置き換える
+        "DROP TRIGGER IF EXISTS tr_report_field_options_no_delete",
+        "CREATE TRIGGER IF NOT EXISTS tr_report_field_options_no_delete_used BEFORE DELETE ON report_field_options
+         WHEN EXISTS (SELECT 1 FROM report_field_values v WHERE v.field_id = OLD.field_id
+                        AND (v.is_encrypted = 1 OR v.value_text = OLD.code
+                             OR (v.value_text LIKE '[%' AND instr(v.value_text, '\"' || OLD.code || '\"') > 0)))
+         BEGIN SELECT RAISE(ABORT, 'report_field_options in use cannot be deleted; deactivate the option instead'); END",
         "CREATE TABLE IF NOT EXISTS warning_words (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             word TEXT NOT NULL UNIQUE,
@@ -318,14 +329,199 @@ function schema_ensure(PDO $pdo): array
         )",
         "CREATE INDEX IF NOT EXISTS ix_access_logs_created ON access_logs (created_at)",
         "CREATE INDEX IF NOT EXISTS ix_access_logs_target ON access_logs (target)",
+        "CREATE TABLE IF NOT EXISTS department_teams (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            department_id INTEGER NOT NULL REFERENCES departments(id),
+            name TEXT NOT NULL,
+            sort_order INTEGER NOT NULL DEFAULT 0,
+            is_active INTEGER NOT NULL DEFAULT 1 CHECK (is_active IN (0, 1)),
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            UNIQUE (department_id, name)
+        )",
+        "CREATE TABLE IF NOT EXISTS department_successions (
+            predecessor_department_id INTEGER NOT NULL REFERENCES departments(id),
+            successor_department_id INTEGER NOT NULL REFERENCES departments(id),
+            created_by INTEGER REFERENCES users(id),
+            created_at TEXT NOT NULL,
+            PRIMARY KEY (predecessor_department_id, successor_department_id),
+            CHECK (predecessor_department_id <> successor_department_id)
+        )",
+        "CREATE TABLE IF NOT EXISTS department_field_options (
+            department_id INTEGER NOT NULL REFERENCES departments(id),
+            field_id INTEGER NOT NULL REFERENCES report_fields(id),
+            code TEXT NOT NULL,
+            label TEXT NOT NULL DEFAULT '',
+            is_added INTEGER NOT NULL DEFAULT 0 CHECK (is_added IN (0, 1)),
+            is_hidden INTEGER NOT NULL DEFAULT 0 CHECK (is_hidden IN (0, 1)),
+            sort_order INTEGER NOT NULL DEFAULT 0,
+            updated_by INTEGER REFERENCES users(id),
+            updated_at TEXT NOT NULL,
+            PRIMARY KEY (department_id, field_id, code)
+        )",
+        "CREATE TABLE IF NOT EXISTS comment_templates (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            department_id INTEGER NOT NULL REFERENCES departments(id),
+            body TEXT NOT NULL,
+            sort_order INTEGER NOT NULL DEFAULT 0,
+            updated_by INTEGER REFERENCES users(id),
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )",
+        "CREATE INDEX IF NOT EXISTS ix_comment_templates_dept ON comment_templates (department_id, sort_order)",
+        "CREATE TABLE IF NOT EXISTS personal_comment_templates (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL REFERENCES users(id),
+            body TEXT NOT NULL,
+            sort_order INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )",
+        "CREATE INDEX IF NOT EXISTS ix_personal_comment_templates_user ON personal_comment_templates (user_id, sort_order)",
+        "CREATE TABLE IF NOT EXISTS ui_messages (
+            msg_key TEXT PRIMARY KEY,
+            body TEXT NOT NULL,
+            updated_by INTEGER REFERENCES users(id),
+            updated_at TEXT NOT NULL
+        )",
         "CREATE TABLE IF NOT EXISTS app_state (
             name TEXT PRIMARY KEY,
             value TEXT NOT NULL
         )",
+        // 要望・依頼（G-22）。件名・本文は暗号化（title_enc・body_enc）
+        "CREATE TABLE IF NOT EXISTS support_requests (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL REFERENCES users(id),
+            department_id INTEGER REFERENCES departments(id),
+            kind TEXT NOT NULL CHECK (kind IN ('improvement', 'task', 'bug', 'question')),
+            urgency TEXT NOT NULL DEFAULT 'normal' CHECK (urgency IN ('normal', 'urgent')),
+            screen_code TEXT NOT NULL DEFAULT '',
+            title_enc TEXT NOT NULL DEFAULT '',
+            body_enc TEXT NOT NULL DEFAULT '',
+            has_warning INTEGER NOT NULL DEFAULT 0 CHECK (has_warning IN (0, 1)),
+            status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'reviewing', 'in_progress', 'testing', 'release_waiting', 'released', 'done', 'declined', 'withdrawn')),
+            source_path TEXT NOT NULL DEFAULT '',   -- 開いていた画面（同じサイトのパスと決まった問い合わせの項目だけ）
+            client_text TEXT NOT NULL DEFAULT '',   -- 出したときの端末（PC／スマートフォン、ブラウザー・OS の名前）
+            requester_seen_message_id INTEGER NOT NULL DEFAULT 0,   -- 出した人が最後に見たやり取りの番号（これより後の管理者側の返信が「回答あり」）
+            last_activity_at TEXT NOT NULL,
+            closed_at TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )",
+        "CREATE INDEX IF NOT EXISTS ix_support_requests_user ON support_requests (user_id, last_activity_at)",
+        "CREATE INDEX IF NOT EXISTS ix_support_requests_status ON support_requests (status, last_activity_at)",
+        "CREATE TABLE IF NOT EXISTS support_request_messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            request_id INTEGER NOT NULL REFERENCES support_requests(id),
+            user_id INTEGER NOT NULL REFERENCES users(id),
+            is_staff INTEGER NOT NULL DEFAULT 0 CHECK (is_staff IN (0, 1)),
+            body_enc TEXT NOT NULL DEFAULT '',
+            status_change TEXT CHECK (status_change IS NULL OR status_change IN ('open', 'reviewing', 'in_progress', 'testing', 'release_waiting', 'released', 'done', 'declined', 'withdrawn')),
+            created_at TEXT NOT NULL
+        )",
+        "CREATE INDEX IF NOT EXISTS ix_support_request_messages_request ON support_request_messages (request_id, id)",
+        // 要望・依頼の返信の定型文（便利機能 B。管理者・補佐が使う）
+        "CREATE TABLE IF NOT EXISTS support_reply_templates (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            kind TEXT NOT NULL DEFAULT '',   -- 要望の種類（improvement・task・bug・question。空はすべての種類）
+            body TEXT NOT NULL,
+            sort_order INTEGER NOT NULL DEFAULT 0,
+            updated_by INTEGER REFERENCES users(id),
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )",
+        // 更新のお知らせ（便利機能 A。全員のホームに表示期間の間だけ出す）
+        "CREATE TABLE IF NOT EXISTS update_notices (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            body TEXT NOT NULL DEFAULT '',
+            show_from TEXT NOT NULL,
+            show_until TEXT NOT NULL,
+            source_request_id INTEGER REFERENCES support_requests(id),
+            created_by INTEGER REFERENCES users(id),
+            updated_by INTEGER REFERENCES users(id),
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )",
+        "CREATE INDEX IF NOT EXISTS ix_update_notices_show ON update_notices (show_from, show_until)",
+        // よくある質問（便利機能 J。全員が見られる。管理者側が文を書く）
+        "CREATE TABLE IF NOT EXISTS faq_entries (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            question TEXT NOT NULL,
+            answer TEXT NOT NULL,
+            sort_order INTEGER NOT NULL DEFAULT 0,
+            source_request_id INTEGER REFERENCES support_requests(id),
+            updated_by INTEGER REFERENCES users(id),
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )",
+        // 組織の改訂の予約（便利機能 G。予約した日に一括の CSV を反映する）
+        "CREATE TABLE IF NOT EXISTS org_schedules (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            apply_on TEXT NOT NULL,
+            csv_text TEXT NOT NULL,
+            change_count INTEGER NOT NULL DEFAULT 0,
+            status TEXT NOT NULL DEFAULT 'scheduled' CHECK (status IN ('scheduled', 'applied', 'failed', 'cancelled')),
+            result_text TEXT NOT NULL DEFAULT '',
+            created_by INTEGER REFERENCES users(id),
+            created_at TEXT NOT NULL,
+            finished_at TEXT
+        )",
+        "CREATE INDEX IF NOT EXISTS ix_org_schedules_status ON org_schedules (status, apply_on)",
     ];
     foreach ($statements as $sql) {
         $pdo->exec($sql);
     }
+
+    // あとから足した列（既存の DB には ALTER TABLE で足す）
+    $addedColumnsByTable = [
+        'departments'         => ['review_scope' => "TEXT NOT NULL DEFAULT 'department' CHECK (review_scope IN ('department', 'team'))"],   // 管理の仕方（G-14 §6.7）
+        'department_reviewers' => [
+            'team_id'    => 'INTEGER REFERENCES department_teams(id)',   // 担当の班（NULL なら課全体）
+            'does_check' => 'INTEGER NOT NULL DEFAULT 1 CHECK (does_check IN (0, 1))',   // チェックするか（K-039。課長は常に 1。課長が「課の管理」で決める）
+        ],
+        'access_logs'         => ['acted_as_deputy' => 'INTEGER NOT NULL DEFAULT 0 CHECK (acted_as_deputy IN (0, 1))'],   // 補佐としての操作（G-15）
+        'support_requests'    => [
+            'plan_text'      => "TEXT NOT NULL DEFAULT ''",   // 対応の予定（便利機能 D。例: 2026年12月にリリース予定）
+            'merged_into_id' => 'INTEGER REFERENCES support_requests(id)',   // まとめた先（便利機能 C。重複の要望）
+        ],
+        'support_reply_templates' => ['kind' => "TEXT NOT NULL DEFAULT ''"],   // 要望の種類（便利機能 B。K-047。空はすべての種類）
+    ];
+    foreach ($addedColumnsByTable as $tableName => $columnDefinitionByName) {
+        $existingColumnNameSet = [];
+        foreach ($pdo->query('PRAGMA table_info(' . $tableName . ')')->fetchAll() as $columnInfo) {
+            $existingColumnNameSet[$columnInfo['name']] = true;
+        }
+        foreach ($columnDefinitionByName as $columnName => $columnDefinition) {
+            if (!isset($existingColumnNameSet[$columnName])) {
+                $pdo->exec("ALTER TABLE {$tableName} ADD COLUMN {$columnName} {$columnDefinition}");
+                $log[] = "{$tableName}.{$columnName} を追加";
+            }
+        }
+    }
+
+    // システム管理者補佐: 有効な人で最大 3 名。管理者と補佐は兼ねない（G-14 §6.9。画面でも確かめるが、DB でも止める）
+    foreach ([
+        "CREATE TRIGGER IF NOT EXISTS tr_users_admin_deputy_insert AFTER INSERT ON users
+           WHEN NEW.is_admin_deputy = 1
+           BEGIN
+             SELECT RAISE(ABORT, 'admin deputy: not with admin') WHERE NEW.is_admin = 1;
+             SELECT RAISE(ABORT, 'admin deputy: max 3') WHERE (SELECT COUNT(*) FROM users WHERE is_admin_deputy = 1 AND is_active = 1) > 3;
+           END",
+        "CREATE TRIGGER IF NOT EXISTS tr_users_admin_deputy_update AFTER UPDATE OF is_admin_deputy, is_admin, is_active ON users
+           WHEN NEW.is_admin_deputy = 1
+           BEGIN
+             SELECT RAISE(ABORT, 'admin deputy: not with admin') WHERE NEW.is_admin = 1;
+             SELECT RAISE(ABORT, 'admin deputy: max 3') WHERE (SELECT COUNT(*) FROM users WHERE is_admin_deputy = 1 AND is_active = 1) > 3;
+           END",
+    ] as $deputyTriggerSql) {
+        $pdo->exec($deputyTriggerSql);
+    }
+
+    // 作業フェーズの表示名「総合テスト」を「システムテスト」に（APP-021。課長が別の名前に変えていれば変えない。作成済みの報告の表示はそのまま）
+    $pdo->exec("UPDATE report_field_options SET label = 'システムテスト'
+                 WHERE code = 'system_test' AND label = '総合テスト'
+                   AND field_id IN (SELECT id FROM report_fields WHERE code = 'phase')");
 
     // 客先名らしい言葉の初期値（一般的な言葉だけ。実際の客先名は入れない）
     $words = ['株式会社', '（株）', '(株)', '㈱', '有限会社', '（有）', '㈲', '合同会社', '様', '御中', 'Inc.', 'Co., Ltd.', 'Corporation', 'Ltd.'];

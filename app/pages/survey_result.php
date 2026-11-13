@@ -10,7 +10,8 @@ $user = page_start();
 survey_close_expired();
 $id = input_id('id');
 $req = survey_find($id);
-if ($req === null) {
+// 結果があるのは公開した依頼（公開中・締め切り後）だけ。下書き・ひな形は 404
+if ($req === null || (int) $req['is_template'] === 1 || !in_array($req['status'], ['open', 'closed'], true)) {
     error_page(404);
 }
 if (!survey_can_manage($user, $req)) {

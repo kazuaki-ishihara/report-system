@@ -12,12 +12,12 @@
   <?php else: ?>
     <ul class="list">
       <?php foreach ($rows as $r):
-          $editable = (int) $r['is_legacy'] === 0 && $r['status'] !== 'confirmed';
+          $editable = (int) $r['is_legacy'] === 0 && $r['status'] !== 'confirmed' && report_period_editable((string) $r['period']);
           $href = $editable && $r['status'] === 'draft' ? '/reports/edit.php?period=' . rawurlencode($r['period']) : '/reports/view.php?id=' . (int) $r['id']; ?>
         <li>
           <a href="<?= h(url($href)) ?>"><?= h(period_label($r['period'])) ?></a>
           <span>
-            <span class="tag"><?= (int) $r['is_legacy'] === 1 ? '移行データ' : h(report_status_label($r['status'])) ?></span>
+            <?= (int) $r['is_legacy'] === 1 ? '<span class="tag">移行データ</span>' : report_status_tag_html($r['status']) ?>
             <?php if ((int) $r['open_count'] > 0): ?><span class="tag tag-open">回答待ち <?= (int) $r['open_count'] ?></span><?php endif; ?>
             <?php if ($r['status'] !== 'draft' && (int) $r['reviewers'] > 0): ?><span class="note">チェック <?= (int) $r['checked'] ?>/<?= (int) $r['reviewers'] ?></span><?php endif; ?>
           </span>

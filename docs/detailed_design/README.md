@@ -32,6 +32,15 @@
 | [G14_org_users.md](G14_org_users.md) | G-14 組織・ユーザーの管理 |
 | [G15_logs.md](G15_logs.md) | G-15 記録の閲覧・削除データ |
 | [G16_account.md](G16_account.md) | G-16 アカウント設定（2 段階認証・端末・パスワード） |
+| [G17_messages.md](G17_messages.md) | G-17 メッセージ（課長が画面の文言を変える） |
+| [G18_comments.md](G18_comments.md) | G-18 コメントの一覧（報告をまたいだコメントのやり取り） |
+| [G19_comment_templates.md](G19_comment_templates.md) | G-19 コメントの定型文（課長が用意する） |
+| [G20_search.md](G20_search.md) | G-20 検索（対象月・課・選択式の値・キーワード） |
+| [G21_admin_home.md](G21_admin_home.md) | G-21 管理のトップと管理画面の道しるべ |
+| [G22_support_requests.md](G22_support_requests.md) | G-22 要望・依頼（課長・確認者 → システム管理者の返信） |
+| [G24_update_notices.md](G24_update_notices.md) | G-24 更新のお知らせ（便利機能 A） |
+| [G25_faq.md](G25_faq.md) | G-25 よくある質問（便利機能 J） |
+| [G23_department_manage.md](G23_department_manage.md) | G-23 課の管理（課長: 締め日・管理の仕方・確認者・チェックする人・項目管理者・班） |
 
 G-16 は、基本設計書の F-02（2 段階認証・端末の管理）を行う画面として追加した。G-15 には、F-21（削除の取り消し）を含めた。
 

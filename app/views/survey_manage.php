@@ -19,11 +19,11 @@ $labels = ['draft' => '下書き', 'open' => '公開中', 'closed' => '締め切
         <td><?= h($r['title']) ?><?php if ($r['requester'] !== ''): ?><br><span class="note">依頼元: <?= h($r['requester']) ?></span><?php endif; ?></td>
         <td><?= h($r['dept_name']) ?></td>
         <td><?= (int) $r['is_template'] === 1 ? 'ひな形' : h($labels[$r['status']] ?? '') ?></td>
-        <td><?= h((string) ($r['due_at'] ?? '—')) ?></td>
+        <td><?= h($r['due_at'] === null ? '—' : display_date((string) $r['due_at'])) ?></td>
         <td><?= $r['status'] === 'draft' ? '—' : (int) $r['answered'] . '/' . (int) $r['targets'] ?></td>
         <td class="actions">
           <a href="<?= h(url('/surveys/survey_edit.php?id=' . (int) $r['id'])) ?>"><?= (int) $r['is_template'] === 1 || $r['status'] === 'draft' ? '編集' : '設定' ?></a>
-          <?php if ($r['status'] !== 'draft'): ?><a href="<?= h(url('/surveys/result.php?id=' . (int) $r['id'])) ?>">結果</a><?php endif; ?>
+          <?php if ($r['status'] !== 'draft' && (int) $r['is_template'] === 0): ?><a href="<?= h(url('/surveys/result.php?id=' . (int) $r['id'])) ?>">結果</a><?php endif; ?>
         </td>
       </tr>
     <?php endforeach; ?>

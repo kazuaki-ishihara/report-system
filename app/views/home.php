@@ -11,17 +11,53 @@
 /** @var array $reviewSections */
 $editUrl = url('/reports/edit.php?period=' . rawurlencode($period));
 ?>
+<?php /** @var array<int, array{id: int|string, name: string}> $departmentsWithoutFinal 課長がいない課（管理者だけ） */ ?>
+<?php if ($departmentsWithoutFinal): ?>
+  <div class="flash flash-error" role="alert">
+    <?= h(msg('課長がいない課があります（確認を完了にできません）: {departments}', ['departments' => implode('、', array_column($departmentsWithoutFinal, 'name'))])) ?>
+    <a href="<?= h(url('/admin/org.php?tab=departments')) ?>">組織・ユーザーで設定する</a>
+  </div>
+<?php endif; ?>
+<?php /** @var int $supportRequestAnsweredCount 管理者側から返信があった自分の要望・依頼の数 */ ?>
+<?php /** @var array{open: int, waiting_reply: int}|null $supportRequestStaffCounts 管理者・補佐に知らせる要望・依頼の数 */ ?>
+<?php if ($supportRequestAnsweredCount > 0): ?>
+  <div class="flash flash-info"><a href="<?= h(url('/requests/index.php?status=all')) ?>"><?= h(msg('要望・依頼にシステム管理者から回答があります（{count} 件）', ['count' => $supportRequestAnsweredCount])) ?></a></div>
+<?php endif; ?>
+<?php if ($supportRequestStaffCounts !== null && ($supportRequestStaffCounts['open'] + $supportRequestStaffCounts['waiting_reply']) > 0): ?>
+  <div class="flash flash-info"><a href="<?= h(url('/requests/index.php')) ?>"><?= h(msg('要望・依頼: 未受付 {open} 件、返信待ち {waiting} 件', ['open' => $supportRequestStaffCounts['open'], 'waiting' => $supportRequestStaffCounts['waiting_reply']])) ?></a></div>
+<?php endif; ?>
 <p class="greeting"><?= h($user['display_name'] !== '' ? $user['display_name'] : $user['login_id']) ?> さん</p>
-
-<?php if ($user['department_id'] === null): ?>
-  <div class="flash flash-error">所属の課が設定されていません。管理者に連絡してください。</div>
+<?php /** @var array<int, array<string, mixed>> $activeNoticeList 出している更新のお知らせ */ ?>
+<?php if ($activeNoticeList): ?>
+<section class="card update-notices">
+  <h2>更新のお知らせ</h2>
+  <?php foreach ($activeNoticeList as $noticeRow): ?>
+    <details class="update-notice">
+      <summary><span class="note"><?= h(display_date((string) $noticeRow['show_from'])) ?></span> <?= h((string) $noticeRow['title']) ?></summary>
+      <?php if ((string) $noticeRow['body'] !== ''): ?><div class="update-notice-body"><?= h_lines((string) $noticeRow['body']) ?></div><?php endif; ?>
+    </details>
+  <?php endforeach; ?>
+</section>
 <?php endif; ?>
 
+<?php if ($user['department_id'] === null && can_manage_system($user)): ?>
+<section class="card">
+  <h2>管理</h2>
+  <p class="note">所属の課がないため、報告の欄は出していません。</p>
+  <ul class="shortcut-list">
+    <?php foreach (menu_items($user) as $menuItem): if (!in_array($menuItem[2], ['確認', '管理'], true)) { continue; } ?>
+      <li><a href="<?= h(url($menuItem[0])) ?>"><?= h($menuItem[1]) ?></a></li>
+    <?php endforeach; ?>
+  </ul>
+</section>
+<?php elseif ($user['department_id'] === null): ?>
+  <div class="flash flash-error"><?= h_lines(msg('所属の課が設定されていません。管理者に連絡してください。')) ?></div>
+<?php else: ?>
 <section class="card">
   <h2><?= h(period_label($period)) ?>の報告</h2>
-  <p>状態: <strong><?= h(report_status_label($mine['status'] ?? null)) ?></strong></p>
+  <p>状態: <?= report_status_tag_html($mine['status'] ?? null) ?></p>
   <?php if ($closeDate !== null): ?>
-    <p class="<?= $closeSoon ? 'warn' : '' ?>">締め日: <?= h($closeDate) ?></p>
+    <p class="<?= $closeSoon ? 'warn' : '' ?>">締め日: <?= h(display_date($closeDate)) ?></p>
   <?php endif; ?>
   <?php if ($mine === null): ?>
     <a class="button primary big" href="<?= h($editUrl) ?>">今月の報告を作る</a>
@@ -35,6 +71,7 @@ $editUrl = url('/reports/edit.php?period=' . rawurlencode($period));
       <a href="<?= h(url('/reports/edit.php?period=' . rawurlencode($prevPeriod))) ?>">作る</a></p>
   <?php endif; ?>
 </section>
+<?php endif; ?>
 
 <?php if ($openComments): ?>
 <section class="card">
@@ -45,6 +82,7 @@ $editUrl = url('/reports/edit.php?period=' . rawurlencode($period));
         <?= h($c['field_label']) ?>（<?= h($c['author']) ?>さん）</a></li>
     <?php endforeach; ?>
   </ul>
+  <a class="button" href="<?= h(url('/reports/comments.php?tab=received&status=open')) ?>">コメントの一覧</a>
 </section>
 <?php endif; ?>
 
@@ -54,7 +92,7 @@ $editUrl = url('/reports/edit.php?period=' . rawurlencode($period));
   <ul class="list">
     <?php foreach ($surveys as $s): ?>
       <li><a href="<?= h(url('/surveys/answer.php?id=' . (int) $s['id'])) ?>"><?= h($s['title']) ?></a>
-        <?php if ($s['due_at'] !== null): ?><span class="note">期限 <?= h(substr((string) $s['due_at'], 0, 10)) ?></span><?php endif; ?></li>
+        <?php if ($s['due_at'] !== null): ?><span class="note">期限 <?= h(display_date($s['due_at'])) ?></span><?php endif; ?></li>
     <?php endforeach; ?>
   </ul>
 </section>
@@ -63,12 +101,16 @@ $editUrl = url('/reports/edit.php?period=' . rawurlencode($period));
 <?php foreach ($reviewSections as $r): ?>
 <section class="card reviewer">
   <h2><?= h($r['dept']['name']) ?> <?= h(period_label($period)) ?>（確認）</h2>
-  <p>未チェック <strong><?= (int) $r['unchecked'] ?></strong>件 ／ 回答あり <strong><?= (int) $r['answered'] ?></strong>件
+  <p><?php if ($r['doesCheck']): ?>未チェック <strong><?= (int) $r['unchecked'] ?></strong>件 ／ <?php endif; ?>回答あり <strong><?= (int) $r['answered'] ?></strong>件
     <?php if ($r['notSubmitted'] !== null): ?> ／ 未提出 <strong><?= (int) $r['notSubmitted'] ?></strong>人<?php endif; ?></p>
+  <?php if (!$r['doesCheck']): ?><p class="note">この課では、報告のチェックをしない設定です（課長が「課の管理」で決めます）。報告を見ること・コメントはできます。</p><?php endif; ?>
   <?php if ($r['unchecked'] > 0): ?>
     <a class="button primary" href="<?= h(url('/status/index.php?period=' . rawurlencode($period) . '&dept=' . (int) $r['dept']['id'] . '&filter=unchecked&go=1')) ?>">未チェックを順に見る</a>
   <?php endif; ?>
   <a class="button" href="<?= h(url('/status/index.php?period=' . rawurlencode($period) . '&dept=' . (int) $r['dept']['id'])) ?>">提出状況</a>
+  <?php if ($r['answered'] > 0): ?>
+    <a class="button" href="<?= h(url('/reports/comments.php?tab=sent&status=answered')) ?>">回答ありのコメント</a>
+  <?php endif; ?>
 </section>
 <?php endforeach; ?>
 

@@ -36,6 +36,13 @@ $config = [
     'report_retention_years'     => 3,
     'search_decrypt_limit'  => 2000,
 
+    // バックアップ（便利機能 H）: 置き場所（公開ディレクトリの外）、残す数、古いと知らせる日数
+    'backup_dir'            => $appDir . '/backups',
+    'backup_keep'           => 14,
+    'backup_warn_days'      => 7,
+    // 更新のお知らせ（便利機能 A）: 表示する日数の既定
+    'notice_default_days'   => 14,
+
     // 報告の対象月の決め方: previous = 締め日まで前月
     'report_period_rule'    => 'previous',
 ];
