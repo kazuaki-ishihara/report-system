@@ -12,5 +12,5 @@ if (!empty($_SESSION['uid'])) {
 }
 session_logout();
 session_boot();
-flash('info', 'ログアウトしました。');
+flash('info', msg('ログアウトしました。'));
 redirect('/login.php');

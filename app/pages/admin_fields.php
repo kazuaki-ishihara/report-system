@@ -16,7 +16,7 @@ foreach (departments_all(true) as $d) {
         $manageable[(int) $d['id']] = $d;
     }
 }
-if (!is_admin($user) && !$manageable) {
+if (!can_manage_system($user) && !$manageable) {
     error_page(403);
 }
 
@@ -35,7 +35,7 @@ if ($deptParam !== 'common') {
 /** この項目を変更できるか */
 $canEdit = function (array $field) use ($user): bool {
     if ($field['department_id'] === null) {
-        return is_admin($user);
+        return can_manage_system($user);
     }
     return can_manage_fields_of($user, (int) $field['department_id']);
 };
@@ -73,16 +73,16 @@ if (is_post()) {
             });
             audit_log('admin', 'field:' . $fid . ':reorder');
         }
-        rk_done($back);
+        rk_done($back . '#field-' . $fid);   // 並べ替えた行の位置に戻る
     } elseif ($action === 'deactivate' || $action === 'activate') {
         if ($field['field_type'] === 'project') {
-            flash('error', '案件の項目は無効にできません');
+            flash('error', msg('案件の項目は無効にできません'));
             rk_done($back);
         }
         db_exec('UPDATE report_fields SET is_active = ?, updated_at = ? WHERE id = ?', [$action === 'activate' ? 1 : 0, now(), $fid]);
         audit_log('admin', 'field:' . $fid . ':' . $action);
-        flash('success', $action === 'activate' ? '有効にしました' : '無効にしました。新しい報告に出なくなります（過去の報告には残ります）');
-        rk_done($back);
+        flash('success', $action === 'activate' ? msg('有効にしました') : msg('無効にしました。新しい報告に出なくなります（過去の報告には残ります）'));
+        rk_done($back . '#field-' . $fid);
     }
     error_page(400);
 }

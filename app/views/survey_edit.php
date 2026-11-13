@@ -20,7 +20,7 @@ $statusLabel = $req === null ? '新規' : ((int) $req['is_template'] === 1 ? '�
 <section class="card">
   <p><a href="<?= h(url('/surveys/manage.php')) ?>">← 臨時の調査</a></p>
   <h1><?= $req === null ? '臨時の調査を作る' : h($req['title']) ?> <span class="tag"><?= h($statusLabel) ?></span></h1>
-  <?php foreach ($errors as $e): ?><div class="flash flash-error" role="alert"><?= h($e) ?></div><?php endforeach; ?>
+  <?php foreach ($errors as $e): ?><div class="flash flash-error" role="alert"><?= h_lines($e) ?></div><?php endforeach; ?>
 
   <form method="post" action="<?= h(url($self)) ?>" class="form">
     <?= form_hidden() ?>
@@ -118,19 +118,19 @@ $statusLabel = $req === null ? '新規' : ((int) $req['is_template'] === 1 ? '�
   <h2>操作</h2>
   <div class="actions">
     <?php if ($editable && (int) $req['is_template'] === 0): ?>
-      <form method="post" action="<?= h(url($self)) ?>" class="inline" data-confirm="公開すると質問は変えられません。公開しますか？"><?= form_hidden() ?>
+      <form method="post" action="<?= h(url($self)) ?>" class="inline" data-confirm="<?= h(msg('公開すると質問は変えられません。公開しますか？')) ?>"><?= form_hidden() ?>
         <button type="submit" name="action" value="publish" class="primary">公開する</button></form>
     <?php endif; ?>
     <?php if ($req['status'] === 'open'): ?>
-      <form method="post" action="<?= h(url($self)) ?>" class="inline" data-confirm="締め切ります。よろしいですか？"><?= form_hidden() ?>
+      <form method="post" action="<?= h(url($self)) ?>" class="inline" data-confirm="<?= h(msg('締め切ります。よろしいですか？')) ?>"><?= form_hidden() ?>
         <button type="submit" name="action" value="close">締め切る</button></form>
     <?php endif; ?>
-    <?php if ($req['status'] !== 'draft'): ?><a class="button" href="<?= h(url('/surveys/result.php?id=' . (int) $req['id'])) ?>">結果を見る</a><?php endif; ?>
+    <?php if ($req['status'] !== 'draft' && (int) $req['is_template'] === 0): ?><a class="button" href="<?= h(url('/surveys/result.php?id=' . (int) $req['id'])) ?>">結果を見る</a><?php endif; ?>
     <form method="post" action="<?= h(url($self)) ?>" class="inline"><?= form_hidden() ?><button type="submit" name="action" value="copy">複製</button></form>
     <?php if ((int) $req['is_template'] === 0): ?>
       <form method="post" action="<?= h(url($self)) ?>" class="inline"><?= form_hidden() ?><button type="submit" name="action" value="save_template">ひな形として保存</button></form>
     <?php endif; ?>
-    <form method="post" action="<?= h(url($self)) ?>" class="inline" data-confirm="削除します。よろしいですか？"><?= form_hidden() ?>
+    <form method="post" action="<?= h(url($self)) ?>" class="inline" data-confirm="<?= h(msg('削除します。よろしいですか？')) ?>"><?= form_hidden() ?>
       <button type="submit" name="action" value="delete" class="danger">削除</button></form>
   </div>
 </section>

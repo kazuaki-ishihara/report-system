@@ -48,14 +48,14 @@ if (!isset($depts[$deptId])) {
 }
 $view = ($_GET['view'] ?? 'table') === 'summary' ? 'summary' : 'table';
 $diff = ($_GET['diff'] ?? '1') === '1';
-$canRestricted = is_admin($user) || is_final_reviewer_of($uid, $deptId);
+$canRestricted = is_final_reviewer_of($uid, $deptId);
 
 // 自由記述は列としては出すが、値は開いたときだけ復号する（ここでは withFree=false で選択式だけを集める）
-$data = compare_dataset($deptId, $period, $period, false, $canRestricted, true);
+$data = compare_dataset($deptId, $period, $period, false, $canRestricted, true, $user);
 $freeColumns = array_values(array_filter(form_template_fields($deptId), function ($f) use ($canRestricted) {
     return form_is_free_text($f) && ($f['conf'] !== 'restricted' || $canRestricted);
 }));
-$prevData = $diff ? compare_dataset($deptId, period_shift($period, -1), period_shift($period, -1), false, $canRestricted, true) : ['rows' => []];
+$prevData = $diff ? compare_dataset($deptId, period_shift($period, -1), period_shift($period, -1), false, $canRestricted, true, $user) : ['rows' => []];
 $prevIndex = [];
 foreach ($prevData['rows'] as $r) {
     $prevIndex[$r['name'] . '|' . $r['project']] = $r;

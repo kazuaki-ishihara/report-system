@@ -48,7 +48,7 @@ if (is_post()) {
         validate_text($requester, '依頼元', 100, false, $errors);
         validate_text($purpose, '目的', 300, false, $errors, true);
         if ($due !== '' && (DateTime::createFromFormat('!Y-m-d', $due) === false || $due < date('Y-m-d'))) {
-            $errors[] = '回答期限は今日以降の日付にしてください';
+            $errors[] = msg('回答期限は今日以降の日付にしてください');
         }
         if (!in_array($vis, ['summary', 'detail'], true) || !in_array($targetType, ['all', 'users'], true)) {
             error_page(400);
@@ -63,8 +63,7 @@ if (is_post()) {
             if (!is_array($raw)) {
                 error_page(400);
             }
-            $allowed = array_map(function ($m) { return (int) $m['id']; }, is_admin($user)
-                ? db_all('SELECT id FROM users WHERE is_active = 1') : $members($deptId));
+            $allowed = array_map(function ($m) { return (int) $m['id']; }, $members($deptId));
             foreach ($raw as $t) {
                 if (!is_string($t) || !in_array((int) $t, $allowed, true)) {
                     error_page(400);
@@ -98,7 +97,7 @@ if (is_post()) {
                     return $rid;
                 });
             }
-            flash('success', '保存しました');
+            flash('success', msg('保存しました'));
             rk_done($back($rid));
         }
         rk_cancel();
@@ -109,7 +108,7 @@ if (is_post()) {
         $rid = (int) $req['id'];
         $needDraft = ['add_source', 'add_custom', 'q_remove', 'q_up', 'q_down', 'publish'];
         if (in_array($action, $needDraft, true) && !$editable) {
-            error_page(400, '公開後は質問を変えられません。');
+            error_page(400, msg('公開後は質問を変えられません。'));
         }
         if ($action === 'add_source') {
             $fid = input_id('field_id', 'POST');
@@ -134,7 +133,7 @@ if (is_post()) {
             if (!in_array($type, SURVEY_TYPES, true) || !isset(FIELD_CONF[$conf])) {
                 error_page(400);
             }
-            if ($conf === 'restricted' && !is_admin($user) && !is_final_reviewer_of($uid, (int) $req['department_id'])) {
+            if ($conf === 'restricted' && !is_final_reviewer_of($uid, (int) $req['department_id'])) {
                 error_page(403);
             }
             $options = [];
@@ -150,7 +149,7 @@ if (is_post()) {
                     $options[] = ['code' => 'o' . $i, 'label' => $line, 'active' => true];
                 }
                 if (!$options) {
-                    $errors[] = '選択肢を 1 行に 1 つずつ入れてください';
+                    $errors[] = msg('選択肢を 1 行に 1 つずつ入れてください');
                 }
             }
             if (!$errors) {
@@ -183,14 +182,14 @@ if (is_post()) {
             rk_done($back($rid));
         } elseif ($action === 'publish') {
             if ((int) $req['is_template'] === 1) {
-                error_page(400, 'ひな形は公開できません。複製して使ってください。');
+                error_page(400, msg('ひな形は公開できません。複製して使ってください。'));
             }
             $qCount = (int) db_val('SELECT COUNT(*) FROM adhoc_request_fields WHERE request_id = ?', [$rid]);
             if ($req['due_at'] === null || $req['due_at'] < date('Y-m-d')) {
-                $errors[] = '回答期限（今日以降）を入れてから公開してください';
+                $errors[] = msg('回答期限（今日以降）を入れてから公開してください');
             }
             if ($qCount < 1 || $qCount > 20) {
-                $errors[] = '質問は 1〜20 問にしてください';
+                $errors[] = msg('質問は 1〜20 問にしてください');
             }
             if (!$errors) {
                 try {
@@ -208,12 +207,12 @@ if (is_post()) {
                     db_exec("UPDATE adhoc_requests SET status = 'open', opened_at = ?, updated_at = ? WHERE id = ?", [now(), now(), $rid]);
                 });
                 } catch (DomainException $e) {
-                    $errors[] = '対象者がいません';
+                    $errors[] = msg('対象者がいません');
                 }
             }
             if (!$errors) {
                 audit_log('admin', 'survey:' . $rid . ':open');
-                flash('success', '公開しました。対象者のホーム画面に表示されます');
+                flash('success', msg('公開しました。対象者のホーム画面に表示されます'));
                 rk_done($back($rid));
             }
             rk_cancel();
@@ -223,18 +222,18 @@ if (is_post()) {
             }
             db_exec("UPDATE adhoc_requests SET status = 'closed', closed_at = ?, updated_at = ? WHERE id = ?", [now(), now(), $rid]);
             audit_log('admin', 'survey:' . $rid . ':close');
-            flash('success', '締め切りました');
+            flash('success', msg('締め切りました'));
             rk_done($back($rid));
         } elseif ($action === 'copy' || $action === 'save_template') {
             $newId = tx(function () use ($req, $uid, $action) {
                 return survey_copy($req, $uid, $action === 'save_template');
             });
-            flash('success', $action === 'copy' ? '複製しました' : 'ひな形として保存しました');
+            flash('success', $action === 'copy' ? msg('複製しました') : msg('ひな形として保存しました'));
             rk_done($back($newId));
         } elseif ($action === 'delete') {
             db_exec('UPDATE adhoc_requests SET deleted_at = ?, updated_at = ? WHERE id = ?', [now(), now(), $rid]);
             audit_log('admin', 'survey:' . $rid . ':delete');
-            flash('success', '削除しました（30 日間は管理者が戻せます）');
+            flash('success', msg('削除しました（30 日間は管理者が戻せます）'));
             rk_done('/surveys/manage.php');
         } else {
             error_page(400);

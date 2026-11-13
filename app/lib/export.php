@@ -27,7 +27,7 @@ function summary_rules(): array
  * 行 = 人 × 案件ブロック。$withFree: 自由記述を復号して入れる。$withRestricted: 「限定」を入れる。
  * 返り値: ['columns' => [項目定義...], 'rows' => [[...]], 'reports' => n]
  */
-function compare_dataset(int $deptId, string $fromPeriod, string $toPeriod, bool $withFree, bool $withRestricted, bool $listOnly): array
+function compare_dataset(int $deptId, string $fromPeriod, string $toPeriod, bool $withFree, bool $withRestricted, bool $listOnly, ?array $viewer = null): array
 {
     $reports = db_all(
         "SELECT r.*, u.display_name FROM report_records r JOIN users u ON u.id = r.user_id
@@ -35,6 +35,12 @@ function compare_dataset(int $deptId, string $fromPeriod, string $toPeriod, bool
           ORDER BY r.period, u.display_name",
         [$deptId, $fromPeriod, $toPeriod]
     );
+    // 見る人を渡したときは、その人が見られる報告だけ（班ごとの課で担当の班だけを見る確認者など）
+    if ($viewer !== null) {
+        $reports = array_values(array_filter($reports, function (array $reportRow) use ($viewer): bool {
+            return can_view_report($viewer, $reportRow);
+        }));
+    }
     // 列: 課の今の様式の項目（一覧に出す設定のもの、または出力するもの）
     $columns = [];
     foreach (form_template_fields($deptId) as $f) {

@@ -3,7 +3,10 @@
 /** @var int $count */
 /** @var int $page */
 /** @var array $q */
-$kinds = ['' => 'すべて', 'view' => '閲覧', 'export' => '出力', 'admin' => '管理', 'auth' => 'ログイン'];
+/** @var bool $isOperatorDeputy 補佐（閲覧・出力の記録は見られない） */
+$kinds = $isOperatorDeputy ? ['' => 'すべて（管理・ログイン）', 'admin' => '管理', 'auth' => 'ログイン', 'auth_fail' => 'ログインの失敗']
+    : ['' => 'すべて', 'view' => '閲覧', 'export' => '出力', 'admin' => '管理', 'auth' => 'ログイン', 'auth_fail' => 'ログインの失敗'];
+$kindLabelByAction = ['view' => '閲覧', 'export' => '出力', 'admin' => '管理', 'auth' => 'ログイン'];
 $qs = http_build_query($q);
 ?>
 <section class="card wide">
@@ -20,12 +23,12 @@ $qs = http_build_query($q);
     <button type="submit">検索</button>
     <a class="button" href="<?= h(url('/admin/logs.php?' . $qs . '&csv=1')) ?>">この条件で CSV に出力</a>
   </form>
-  <p class="note"><?= $count ?> 件。「この報告を見た人」は、対象に report:報告の番号 を入れて調べます。記録には報告の中身は入っていません。</p>
+  <p class="note"><?= $count ?> 件。<?php if ($isOperatorDeputy): ?>補佐の画面では、ログインと管理の操作の記録だけを出します（閲覧・出力の記録は管理者だけが見られます）。<?php else: ?>「この報告を見た人」は、対象に report:報告の番号 を入れて調べます。<?php endif; ?>記録には報告の中身は入っていません。「補佐」の札は、システム管理者補佐としての操作です。</p>
   <table class="table">
     <thead><tr><th>日時</th><th>利用者</th><th>種類</th><th>対象</th><th>IP アドレス</th></tr></thead>
     <tbody>
-    <?php foreach ($rows as $r): ?>
-      <tr><td><?= h($r['created_at']) ?></td><td><?= h((string) $r['login_id']) ?></td><td><?= h($kinds[$r['action']] ?? $r['action']) ?></td><td><?= h($r['target']) ?></td><td><?= h($r['ip_address']) ?></td></tr>
+    <?php foreach ($rows as $r): $isLoginFailure = $r['action'] === 'auth' && strpos((string) $r['target'], 'login:') === 0 && $r['target'] !== 'login:ok'; ?>
+      <tr class="<?= $isLoginFailure ? 'log-failure' : '' ?>"><td><?= h($r['created_at']) ?></td><td><?= h((string) $r['login_id']) ?><?= (int) $r['acted_as_deputy'] === 1 ? ' <span class="tag tag-open">補佐</span>' : '' ?></td><td><?= h($kindLabelByAction[$r['action']] ?? $r['action']) ?></td><td><?= h($r['target']) ?></td><td><?= h($r['ip_address']) ?></td></tr>
     <?php endforeach; ?>
     </tbody>
   </table>

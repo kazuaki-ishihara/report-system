@@ -45,9 +45,7 @@
       <label class="choice"><input type="radio" name="format" value="csv"> CSV</label>
     </div>
     <label class="check"><input type="checkbox" name="free" value="1"> 自由記述を含める</label>
-    <?php if (is_admin($user)): ?>
-      <label class="check"><input type="checkbox" name="restricted" value="1"> 「限定」の項目を含める（管理者のみ）</label>
-    <?php endif; ?>
+    <label class="check"><input type="checkbox" name="restricted" value="1"> 「限定」の項目を含める（社外秘の中でも特に限られた人だけが見る項目です。渡す相手を確かめてください）</label>
     <button type="submit" class="primary">出力する</button>
   </form>
   <?php endif; ?>

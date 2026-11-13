@@ -162,8 +162,10 @@ def main():
 
     # ---- 前月からの引き継ぎ ----
     s, _, eb = a1.get("/reports/edit.php?period=" + cur)
-    check("当月の画面に前月の内容が入る", "前月の内容を入れてあります" in eb and 'value="build_unit" selected' in eb, s)
-    check("「限定」の自由記述は引き継がない設定どおり", "来月 2 名増員" not in eb)
+    check("当月の画面に前月の内容が入る", "前月の報告の内容を写しています" in eb and 'value="build_unit" selected' in eb, s)
+    staffing_note_textarea = re.search(r'<textarea id="b0_%d"[^>]*>(.*?)</textarea>' % F["staffing_note"], eb, re.S)
+    check("「限定」の自由記述は引き継がない設定どおり（入力欄に入らない）",
+          staffing_note_textarea is not None and "来月 2 名増員" not in staffing_note_textarea.group(1), staffing_note_textarea is not None)
 
     # ---- 管理画面の権限 ----
     s, _, _ = a1.get("/admin/fields.php")

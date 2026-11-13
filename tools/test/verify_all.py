@@ -177,7 +177,7 @@ def main():
     ap.add_argument("--ui", action="store_true", help="画面の自動操作検証も行う")
     ap.add_argument("--show", action="store_true", help="自動操作検証でブラウザーを表示する")
     ap.add_argument("--browser-port", type=int, default=0, help="起動済みのブラウザーにつなぐ（--remote-debugging-port の番号）")
-    ap.add_argument("--skip", default="", help="省く工程（カンマ区切り）: auth,reports,fields,more,retention")
+    ap.add_argument("--skip", default="", help="省く工程（カンマ区切り）: auth,reports,fields,more,fixes,copy,messages,features,ledger,org,deputy,requests,theme,conveniences,retention")
     a = ap.parse_args()
     skip = set(x for x in a.skip.split(",") if x)
 
@@ -197,6 +197,7 @@ def main():
     step_lint(r, php)
     step_php74(r)
     step_repo(r)
+    r.run("メッセージの一覧が最新", [sys.executable, "-I", os.path.join(ROOT, "tools", "lib", "msg_catalog.py"), "--check"])
 
     port = free_port()
     base = "http://127.0.0.1:%d" % port
@@ -226,6 +227,37 @@ def main():
                 r.run("テストデータの作成（段階 2・3）", seed)
                 r.run("変更なし・提出状況・横並び・臨時の調査・出力・記録・削除データ", [py, "-I", os.path.join(HERE, "smoke_more.py"), "--base", base, "--db", db])
                 r.run("DB に平文の秘密がない（段階 2・3）", [py, "-I", os.path.join(HERE, "check_db_secrets.py"), db])
+            if "fixes" not in skip:
+                r.run("テストデータの作成（課題の対応）", seed)
+                r.run("件数の数え方・権限と状態の確認・入力の確認・文言", [py, "-I", os.path.join(HERE, "smoke_fixes.py"), "--base", base, "--db", db])
+            if "features" not in skip:
+                r.run("テストデータの作成（便利機能）", seed)
+                r.run("便利機能", [py, "-I", os.path.join(HERE, "smoke_features.py"), "--base", base, "--db", db])
+            if "org" not in skip:
+                r.run("テストデータの作成（組織）", seed)
+                r.run("組織（班ごと・異動・管理担当・課長がいない課）", [py, "-I", os.path.join(HERE, "smoke_org.py"), "--base", base, "--db", db])
+            if "deputy" not in skip:
+                r.run("テストデータの作成（システム管理者補佐）", seed)
+                r.run("システム管理者補佐（代行できること・見られないもの）", [py, "-I", os.path.join(HERE, "smoke_deputy.py"), "--base", base, "--db", db])
+            if "theme" not in skip:
+                r.run("テストデータの作成（自分の色）", seed)
+                r.run("自分の色（土台・強調・背景、読めない組み合わせを断る）", [py, "-I", os.path.join(HERE, "smoke_theme.py"), "--base", base, "--db", db])
+            if "conveniences" not in skip:
+                r.run("テストデータの作成（便利機能 A〜J）", seed)
+                r.run("便利機能 A〜J（お知らせ・定型文・まとめる・予定・CSV・メンテナンス・予約・バックアップ・使い方・よくある質問）", [py, "-I", os.path.join(HERE, "smoke_conveniences.py"), "--base", base, "--db", db])
+            if "requests" not in skip:
+                r.run("テストデータの作成（要望・依頼）", seed)
+                r.run("要望・依頼（課長・確認者 → システム管理者の返信）", [py, "-I", os.path.join(HERE, "smoke_requests.py"), "--base", base, "--db", db])
+                r.run("DB に平文の秘密がない（要望・依頼）", [py, "-I", os.path.join(HERE, "check_db_secrets.py"), db])
+            if "ledger" not in skip:
+                r.run("テストデータの作成（案件台帳）", seed)
+                r.run("案件台帳の道具・案件の一覧の CSV 出力", [py, "-I", os.path.join(HERE, "smoke_project_ledger.py"), "--base", base, "--db", db])
+            if "messages" not in skip:
+                r.run("テストデータの作成（メッセージ）", seed)
+                r.run("メッセージ（課長が文言を変える）", [py, "-I", os.path.join(HERE, "smoke_messages.py"), "--base", base, "--db", db])
+            if "copy" not in skip:
+                r.run("テストデータの作成（過去の報告から写す）", seed)
+                r.run("過去の報告から写す", [py, "-I", os.path.join(HERE, "smoke_copy.py"), "--base", base, "--db", db])
             if a.ui:
                 r.run("テストデータの作成（画面）", seed)
                 ui = [py, "-I", os.path.join(HERE, "ui_check.py"), "--base", base, "--db", db, "--out", os.path.join(out, "画面")]

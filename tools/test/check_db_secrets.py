@@ -41,6 +41,16 @@ def main():
         if v != "" and not v.startswith("v1:"):
             ng.append("コメントが平文: id=%s" % cid)
 
+    # 要望・依頼（G-22）の件名・本文・返信は暗号化されている
+    has_support_tables = con.execute("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'support_requests'").fetchone() is not None
+    if has_support_tables:
+        for request_id, title_enc, body_enc in con.execute("SELECT id, title_enc, body_enc FROM support_requests"):
+            if not str(title_enc).startswith("v1:") or not str(body_enc).startswith("v1:"):
+                ng.append("要望・依頼の件名か本文が平文: id=%s" % request_id)
+        for message_id, message_body_enc in con.execute("SELECT id, body_enc FROM support_request_messages"):
+            if message_body_enc != "" and not str(message_body_enc).startswith("v1:"):
+                ng.append("要望・依頼の返信が平文: id=%s" % message_id)
+
     # 記録にパスワードやコードらしいものが入っていない
     for lid, t in con.execute("SELECT id, target FROM access_logs"):
         if re.search(r"password=|code=|secret", t):

@@ -5,7 +5,7 @@ declare(strict_types=1);
 // ====================================================================
 // G-10 出力（詳細設計書 G10_export.md）
 // GET: 条件の画面。POST: 印刷用画面（PDF 保存）、xlsx、CSV。
-// 課長と管理者だけ。PC からだけ。「限定」は管理者のみ選べる。
+// 課長だけ（自分が課長の課だけ。管理者でも課長でなければ不可）。PC からだけ。「限定」は、出力する課の課長が選べる。
 // ====================================================================
 
 $user = page_start();
@@ -30,7 +30,7 @@ if (!is_post()) {
 }
 
 if ($mobile) {
-    error_page(403, '出力は PC から行ってください。');
+    error_page(403, msg('出力は PC から行ってください。'));
 }
 $type = post_str('type') === 'survey' ? 'survey' : 'report';
 $format = post_str('format');
@@ -39,9 +39,7 @@ if (!in_array($format, ['print', 'xlsx', 'csv'], true)) {
 }
 $withFree = ($_POST['free'] ?? '') === '1';
 $withRestricted = ($_POST['restricted'] ?? '') === '1';
-if ($withRestricted && !is_admin($user)) {
-    error_page(403);
-}
+// 「限定」を含められるのは、出力する課の課長だけ（課の確認は下で行う。管理者でも課長でなければ不可）
 $stamp = date('Y-m-d H:i');
 $exporter = '出力者: ' . ($user['display_name'] !== '' ? $user['display_name'] : $user['login_id']) . '（' . $user['login_id'] . '）  出力日時: ' . $stamp;
 
@@ -53,10 +51,10 @@ if ($type === 'report') {
     $from = post_str('from');
     $to = post_str('to');
     if (!is_valid_period($from) || !is_valid_period($to) || $from > $to) {
-        error_page(400, '対象月を正しく選んでください（開始 ≦ 終了）。');
+        error_page(400, msg('対象月を正しく選んでください（開始 ≦ 終了）。'));
     }
     if ($to > period_shift($from, 11)) {
-        error_page(400, '対象月は 12 か月以内にしてください。');
+        error_page(400, msg('対象月は 12 か月以内にしてください。'));
     }
     $content = post_str('content');
     if (!in_array($content, ['table', 'summary', 'both'], true)) {
@@ -64,7 +62,7 @@ if ($type === 'report') {
     }
     $data = compare_dataset($deptId, $from, $to, $withFree, $withRestricted, false);
     if (!$data['rows']) {
-        error_page(404, '出力する報告がありません。');
+        error_page(404, msg('出力する報告がありません。'));
     }
     $title = '月次報告 ' . $depts[$deptId]['name'] . ' ' . period_label($from) . ($from !== $to ? '〜' . period_label($to) : '');
     $header = ['対象月', '氏名', '案件'];

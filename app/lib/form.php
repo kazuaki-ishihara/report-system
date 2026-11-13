@@ -63,7 +63,7 @@ function form_field_options(int $fieldId, bool $activeOnly): array
     return $out;
 }
 
-/** 課の様式（共通項目＋課別項目。有効なものだけ） */
+/** 課の様式（共通項目＋課別項目。有効なものだけ）。共通の選択式の項目には、課ごとの選択肢の設定を反映する */
 function form_template_fields(?int $deptId): array
 {
     $rows = db_all(
@@ -73,9 +73,72 @@ function form_template_fields(?int $deptId): array
     );
     $out = [];
     foreach ($rows as $r) {
-        $out[] = form_row_to_def($r, form_field_options((int) $r['id'], true));
+        $options = form_field_options((int) $r['id'], true);
+        if ($deptId !== null && $r['department_id'] === null && in_array($r['field_type'], CHOICE_TYPES, true)) {
+            $options = form_department_options($deptId, (int) $r['id'], $options);
+        }
+        $out[] = form_row_to_def($r, $options);
     }
     return $out;
+}
+
+/**
+ * 共通の選択式の項目の選択肢に、課ごとの設定（department_field_options）を重ねる。
+ * 共通の選択肢: 課で「出さない」にしたものを除き、課での表示名があれば置き換える。そのあとに、課で足した有効な選択肢を並べる。
+ *
+ * @param array<int, array{code: string, label: string, active: bool}> $commonOptionList 共通の有効な選択肢
+ * @return array<int, array{code: string, label: string, active: bool}>
+ */
+function form_department_options(int $departmentId, int $fieldId, array $commonOptionList): array
+{
+    $departmentOptionRowByCode = [];
+    $addedOptionList = [];
+    foreach (db_all('SELECT * FROM department_field_options WHERE department_id = ? AND field_id = ? ORDER BY sort_order, code', [$departmentId, $fieldId]) as $departmentOptionRow) {
+        if ((int) $departmentOptionRow['is_added'] === 1) {
+            if ((int) $departmentOptionRow['is_hidden'] === 0) {
+                $addedOptionList[] = ['code' => (string) $departmentOptionRow['code'], 'label' => (string) $departmentOptionRow['label'], 'active' => true];
+            }
+        } else {
+            $departmentOptionRowByCode[(string) $departmentOptionRow['code']] = $departmentOptionRow;
+        }
+    }
+    $mergedOptionList = [];
+    foreach ($commonOptionList as $commonOption) {
+        $departmentOptionRow = $departmentOptionRowByCode[$commonOption['code']] ?? null;
+        if ($departmentOptionRow !== null && (int) $departmentOptionRow['is_hidden'] === 1) {
+            continue;
+        }
+        if ($departmentOptionRow !== null && (string) $departmentOptionRow['label'] !== '') {
+            $commonOption['label'] = (string) $departmentOptionRow['label'];
+        }
+        $mergedOptionList[] = $commonOption;
+    }
+    return array_merge($mergedOptionList, $addedOptionList);
+}
+
+/**
+ * 選択肢のコードが、報告の値で使われているか（削除してよいかの確認）。$departmentId を渡すと、その課の報告だけを見る。
+ */
+function form_option_is_used(int $fieldId, string $optionCode, ?int $departmentId = null): bool
+{
+    $departmentCondition = $departmentId === null ? '' : ' AND r.department_id = ' . (int) $departmentId;
+    // 暗号化した値（「限定」の項目）は中身で照合できないので、値が 1 つでもあれば使われているとみなす
+    $hasEncryptedValue = db_val(
+        'SELECT 1 FROM report_field_values v JOIN report_records r ON r.id = v.report_id
+          WHERE v.field_id = ? AND v.is_encrypted = 1' . $departmentCondition . ' LIMIT 1',
+        [$fieldId]
+    ) !== null;
+    if ($hasEncryptedValue) {
+        return true;
+    }
+    // 1 つ選ぶ項目は値がコードそのもの。複数選ぶ項目（multi_check）は JSON の配列の中に "コード" がある
+    $jsonQuotedCodeText = json_encode($optionCode, JSON_UNESCAPED_UNICODE);
+    $likePatternText = '%' . str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $jsonQuotedCodeText) . '%';
+    return db_val(
+        "SELECT 1 FROM report_field_values v JOIN report_records r ON r.id = v.report_id
+          WHERE v.field_id = ? AND (v.value_text = ? OR (v.value_text LIKE '[%' AND v.value_text LIKE ? ESCAPE '\\'))" . $departmentCondition . ' LIMIT 1',
+        [$fieldId, $optionCode, $likePatternText]
+    ) !== null;
 }
 
 /** 報告の作成時の定義 */
@@ -204,7 +267,7 @@ function form_parse_value(array $f, $raw, bool $checkRequired, array &$errors, s
         }
         foreach ($arr as $v) {
             if (!is_string($v) || !in_array($v, form_option_codes($f, false), true)) {
-                $errors[$key] = '選べない値です';
+                $errors[$key] = msg('選べない値です');
             }
         }
         $value = $picked ? json_encode($picked, JSON_UNESCAPED_UNICODE) : '';
@@ -226,7 +289,7 @@ function form_parse_value(array $f, $raw, bool $checkRequired, array &$errors, s
                     $empty = false;
                 }
                 if (has_control_chars($cv, ($c['type'] ?? '') === 'multi_text') || str_len($cv) > 2000) {
-                    $errors[$key] = $label . 'の「' . $c['label'] . '」に使えない文字か、長すぎる値があります';
+                    $errors[$key] = msg('{label}の「{column}」に使えない文字か、長すぎる値があります', ['label' => $label, 'column' => $c['label']]);
                 }
                 $clean[$ck] = $cv;
             }
@@ -235,48 +298,48 @@ function form_parse_value(array $f, $raw, bool $checkRequired, array &$errors, s
             }
         }
         if (count($out) > $maxRows) {
-            $errors[$key] = '行は ' . $maxRows . ' 行までにしてください';
+            $errors[$key] = msg('行は {max} 行までにしてください', ['max' => $maxRows]);
         }
         $value = $out ? json_encode($out, JSON_UNESCAPED_UNICODE) : '';
     } else {
         if (is_array($raw)) {
-            $errors[$key] = '値が正しくありません';
+            $errors[$key] = msg('値が正しくありません');
             return '';
         }
         $str = trim((string) $raw);
         if ($str !== '' && preg_match('//u', $str) !== 1) {
-            $errors[$key] = '値が正しくありません';
+            $errors[$key] = msg('値が正しくありません');
             return '';
         }
         switch ($type) {
             case 'single_text':
                 $max = (int) ($s['max_length'] ?? 200);
                 if (has_control_chars($str)) {
-                    $errors[$key] = '改行や使えない文字が含まれています';
+                    $errors[$key] = msg('改行や使えない文字が含まれています');
                 } elseif (str_len($str) > $max) {
-                    $errors[$key] = $max . ' 文字以内にしてください（今 ' . str_len($str) . ' 文字）';
+                    $errors[$key] = msg('{max} 文字以内にしてください（今 {length} 文字）', ['max' => $max, 'length' => str_len($str)]);
                 }
                 break;
             case 'multi_text':
                 $str = str_replace(["\r\n", "\r"], "\n", $str);
                 $max = (int) ($s['max_length'] ?? 2000);
                 if (has_control_chars($str, true)) {
-                    $errors[$key] = '使えない文字が含まれています';
+                    $errors[$key] = msg('使えない文字が含まれています');
                 } elseif (str_len($str) > $max) {
-                    $errors[$key] = $max . ' 文字以内にしてください（今 ' . str_len($str) . ' 文字）';
+                    $errors[$key] = msg('{max} 文字以内にしてください（今 {length} 文字）', ['max' => $max, 'length' => str_len($str)]);
                 }
                 break;
             case 'date':
                 if ($str !== '') {
                     $d = DateTime::createFromFormat('!Y-m-d', $str);
                     if ($d === false || $d->format('Y-m-d') !== $str) {
-                        $errors[$key] = '日付の形が正しくありません';
+                        $errors[$key] = msg('日付の形が正しくありません');
                     }
                 }
                 break;
             case 'month':
                 if ($str !== '' && !is_valid_period($str)) {
-                    $errors[$key] = '年月の形が正しくありません';
+                    $errors[$key] = msg('年月の形が正しくありません');
                 }
                 break;
             case 'number':
@@ -284,13 +347,13 @@ function form_parse_value(array $f, $raw, bool $checkRequired, array &$errors, s
                     $dec = (int) ($s['decimals'] ?? 0);
                     $pattern = $dec > 0 ? '/^-?\d{1,12}(\.\d{1,' . $dec . '})?$/' : '/^-?\d{1,12}$/';
                     if (preg_match($pattern, $str) !== 1) {
-                        $errors[$key] = $dec > 0 ? '数値（小数は ' . $dec . ' 桁まで）を入れてください' : '整数を入れてください';
+                        $errors[$key] = $dec > 0 ? msg('数値（小数は {decimals} 桁まで）を入れてください', ['decimals' => $dec]) : msg('整数を入れてください');
                     } else {
                         if (isset($s['min']) && $s['min'] !== '' && (float) $str < (float) $s['min']) {
-                            $errors[$key] = $s['min'] . ' 以上にしてください';
+                            $errors[$key] = msg('{min} 以上にしてください', ['min' => $s['min']]);
                         }
                         if (isset($s['max']) && $s['max'] !== '' && (float) $str > (float) $s['max']) {
-                            $errors[$key] = $s['max'] . ' 以下にしてください';
+                            $errors[$key] = msg('{max} 以下にしてください', ['max' => $s['max']]);
                         }
                     }
                 }
@@ -299,23 +362,23 @@ function form_parse_value(array $f, $raw, bool $checkRequired, array &$errors, s
             case 'radio':
                 // 無効にした選択肢は、すでに保存されている値のままなら受け付ける
                 if ($str !== '' && !in_array($str, form_option_codes($f), true) && $str !== $prevValue) {
-                    $errors[$key] = '選べない値です';
+                    $errors[$key] = msg('選べない値です');
                 }
                 break;
             case 'checkbox':
                 if ($str !== '' && $str !== '0' && $str !== '1') {
-                    $errors[$key] = '値が正しくありません';
+                    $errors[$key] = msg('値が正しくありません');
                 }
                 $str = $str === '1' ? '1' : '';
                 break;
             default:
-                $errors[$key] = '値が正しくありません';
+                $errors[$key] = msg('値が正しくありません');
         }
         $value = $str;
     }
 
     if ($checkRequired && $f['required'] && $value === '' && !isset($errors[$key])) {
-        $errors[$key] = '入力してください';
+        $errors[$key] = msg('入力してください');
     }
     return $value;
 }
@@ -334,6 +397,7 @@ function form_is_visible(array $f, array $valuesByCode): bool
 
 // ---- 入力欄の HTML -------------------------------------------------------
 
+/** 項目の札（必須・社外秘・限定）。項目名の前に置く（APP-016） */
 function form_badges(array $f): string
 {
     $html = '';
@@ -369,8 +433,8 @@ function form_input_html(array $f, string $value, string $name, string $id, ?str
     if (isset($s['show_when']['field'])) {
         $showWhen = ' data-show-field="' . h((string) $s['show_when']['field']) . '" data-show-values="' . h(implode(',', (array) ($s['show_when']['values'] ?? []))) . '"';
     }
-    $html = '<div class="field" data-code="' . h($f['code']) . '"' . $showWhen . '>';
-    $html .= '<label for="' . h($id) . '">' . h($f['label']) . form_badges($f) . '</label>';
+    $html = '<div class="field' . ($f['required'] ? ' is-required' : '') . '" data-code="' . h($f['code']) . '"' . $showWhen . '>';
+    $html .= '<label for="' . h($id) . '">' . form_badges($f) . '<span class="field-label-text">' . h($f['label']) . '</span></label>';
 
     switch ($type) {
         case 'single_text':
@@ -482,7 +546,7 @@ function form_input_html(array $f, string $value, string $name, string $id, ?str
         $html .= '<p class="field-warning"' . ($warning ? '' : ' hidden') . '>客先名や個人名が含まれていませんか</p>';
     }
     if ($error !== null) {
-        $html .= '<p class="field-error">' . h($error) . '</p>';
+        $html .= '<p class="field-error">' . h_lines($error) . '</p>';
     }
     return $html . '</div>';
 }

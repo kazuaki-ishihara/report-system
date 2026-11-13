@@ -12,13 +12,13 @@ $back = '/admin/fields.php?dept=' . rawurlencode($deptParam);
   <form method="get" action="<?= h(url('/admin/fields.php')) ?>" class="filters">
     <label for="dept">様式</label>
     <select id="dept" name="dept">
-      <?php if (is_admin($user)): ?><option value="common" <?= $deptParam === 'common' ? 'selected' : '' ?>>共通項目のみ</option><?php endif; ?>
+      <?php if (can_manage_system($user)): ?><option value="common" <?= $deptParam === 'common' ? 'selected' : '' ?>>共通項目のみ</option><?php endif; ?>
       <?php foreach ($manageable as $d): ?>
         <option value="<?= (int) $d['id'] ?>" <?= $deptParam === (string) $d['id'] ? 'selected' : '' ?>><?= h($d['name']) ?>の様式（共通＋<?= h($d['name']) ?>）</option>
       <?php endforeach; ?>
     </select>
     <button type="submit">表示</button>
-    <?php if ($deptId !== null || is_admin($user)): ?>
+    <?php if ($deptId !== null || can_manage_system($user)): ?>
       <a class="button" href="<?= h(url('/admin/field_edit.php?dept=' . rawurlencode($deptParam))) ?>">＋ 項目を足す</a>
     <?php endif; ?>
     <?php if ($deptId !== null): ?>
@@ -37,7 +37,7 @@ $back = '/admin/fields.php?dept=' . rawurlencode($deptParam);
         <thead><tr><th>項目</th><th>入力部品</th><th>適用</th><th>区分</th><th>設定</th><th>使用</th><th></th></tr></thead>
         <tbody>
         <?php foreach ($list as $r): $editable = $canEdit($r); ?>
-          <tr>
+          <tr id="field-<?= (int) $r['id'] ?>">
             <td><?= h($r['label']) ?><br><span class="note"><?= h($r['code']) ?></span></td>
             <td><?= h(FIELD_TYPES[$r['field_type']] ?? $r['field_type']) ?></td>
             <td><?= $r['department_id'] === null ? '共通' : h((string) $r['dept_name']) ?></td>
@@ -55,12 +55,15 @@ $back = '/admin/fields.php?dept=' . rawurlencode($deptParam);
                   <?php endforeach; ?>
                 <?php endif; ?>
                 <?php if ($r['field_type'] !== 'project'): ?>
-                  <form method="post" action="<?= h(url($back)) ?>" class="inline" <?= $state === 1 ? 'data-confirm="新しい報告に出なくなります。過去の報告には残ります。無効にしますか？"' : '' ?>><?= form_hidden() ?>
+                  <form method="post" action="<?= h(url($back)) ?>" class="inline" <?= $state === 1 ? 'data-confirm="' . h(msg('新しい報告に出なくなります。過去の報告には残ります。無効にしますか？')) . '"' : '' ?>><?= form_hidden() ?>
                     <input type="hidden" name="action" value="<?= $state === 1 ? 'deactivate' : 'activate' ?>"><input type="hidden" name="field_id" value="<?= (int) $r['id'] ?>">
                     <button type="submit" class="small"><?= $state === 1 ? '無効にする' : '有効にする' ?></button></form>
                 <?php endif; ?>
               <?php else: ?>
                 <span class="note">見るだけ</span>
+              <?php endif; ?>
+              <?php if ($deptId !== null && $state === 1 && $r['department_id'] === null && in_array($r['field_type'], CHOICE_TYPES, true) && can_manage_fields_of($user, $deptId)): ?>
+                <a class="button small" href="<?= h(url('/admin/field_options.php?field=' . (int) $r['id'] . '&dept=' . (int) $deptId)) ?>">この課の選択肢</a>
               <?php endif; ?>
             </td>
           </tr>

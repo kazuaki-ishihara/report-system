@@ -18,7 +18,11 @@
       <input id="new_password" name="new_password" type="password" autocomplete="new-password" maxlength="200" required>
       <button type="button" class="toggle-password" data-target="new_password">表示</button>
     </div>
-    <p class="note">文の形（好きな言葉をつなげたもの）にすると覚えやすくなります。</p>
+    <div class="password-tools">
+      <button type="button" class="small generate-password" data-target="new_password" data-confirm-target="new_password_confirm">自動で作る</button>
+      <button type="button" class="small copy-text" data-copy-from="new_password">コピー</button>
+      <span class="note copy-result" aria-live="polite"></span>
+    </div>
     <label for="new_password_confirm">新しいパスワード（確認）</label>
     <input id="new_password_confirm" name="new_password_confirm" type="password" autocomplete="new-password" maxlength="200" required>
     <button type="submit" class="primary">再設定する</button>

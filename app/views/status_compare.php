@@ -27,9 +27,8 @@
   <?php elseif ($view === 'table'): ?>
     <div class="table-input">
     <table class="table compare">
-      <thead><tr><th>氏名</th><th>案件</th>
-        <?php foreach ($data['columns'] as $f): ?><th><?= h($f['label']) ?><?= form_badges(array_merge($f, ['required' => false])) ?></th><?php endforeach; ?>
-        <?php foreach ($freeColumns as $f): ?><th><?= h($f['label']) ?><?= form_badges(array_merge($f, ['required' => false])) ?></th><?php endforeach; ?>
+      <thead><tr><th><span class="compare-head-badges"></span><span class="compare-head-label">氏名</span></th><th><span class="compare-head-badges"></span><span class="compare-head-label">案件</span></th>
+        <?php foreach (array_merge($data['columns'], $freeColumns) as $f): ?><th><span class="compare-head-badges"><?= form_badges(array_merge($f, ['required' => false])) ?></span><span class="compare-head-label"><?= h($f['label']) ?></span></th><?php endforeach; ?>
       </tr></thead>
       <tbody>
       <?php foreach ($data['rows'] as $r): $prev = $prevIndex[$r['name'] . '|' . $r['project']] ?? null; ?>

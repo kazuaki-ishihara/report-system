@@ -36,7 +36,7 @@ $open = $req['status'] === 'open';
 if (is_post()) {
     rk_begin('survey.answer', $uid);
     if (!$open) {
-        error_page(400, 'この調査は締め切られました。');
+        error_page(400, msg('この調査は締め切られました。'));
     }
     $raw = $_POST['q'] ?? [];
     if (!is_array($raw)) {
@@ -71,7 +71,7 @@ if (is_post()) {
                 );
             }
         });
-        flash('success', '回答しました');
+        flash('success', msg('回答しました'));
         rk_done('/index.php');
     }
 }

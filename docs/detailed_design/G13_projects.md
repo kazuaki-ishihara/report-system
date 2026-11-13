@@ -2,7 +2,7 @@
 
 | 項目 | 内容 |
 |---|---|
-| URL | `/admin/projects.php?state=<active|ended|all>`（GET: 一覧）、`/admin/projects.php?edit=<id>`（GET: その行を編集の形で出す）、`/admin/projects.php`（POST: `action` = `add`・`update`・`end`・`reopen`） |
+| URL | `/admin/projects.php?state=<active|ended|all>`（GET: 一覧）、`/admin/projects.php?edit=<id>`（GET: その行を編集の形で出す）、`/admin/projects.php?csv=1`（GET: 案件の一覧の CSV）、`/admin/projects.php`（POST: `action` = `add`・`update`・`end`・`reopen`） |
 | ファイル | `app/pages/admin_projects.php`、`app/views/admin_projects.php` |
 | 利用者 | 管理者 |
 | 主な端末 | PC |
@@ -69,6 +69,17 @@
 - 追加・編集のあと、呼び名に客先名らしい言葉があれば、注意のメッセージを出す。
 - 案件の物理削除はしない（過去の報告がコードで参照しているため）。
 
+### 6.4 案件の一覧の CSV 出力
+
+客先名・案件名は、システムの外の案件台帳（`tools/lib/project_ledger.py`。手順は `docs/project_ledger.md`）で管理する。台帳と突き合わせるために、システムの案件の一覧を出力する。
+
+| 項目 | 内容 |
+|---|---|
+| 操作 | 一覧の「案件の一覧を CSV に出力（案件台帳の取り込み用）」。管理者だけ。スマートフォンからは 403「出力は PC から行ってください。」 |
+| 中身 | 状態に関係なくすべての案件。列は「案件コード・社内向けの呼び名・課・状態（有効／終了）・終了日・作成日・最後に報告で使われた月・その月の人数」（移行データ・削除済みの報告は数えない）。客先名・案件名はシステムにないので出ない |
+| 形式 | G-10 と同じ（UTF-8 BOM、CRLF、見出し 3 行「社外秘」「案件の一覧（システム）」「出力者: … 出力日時: …」、数式の注入対策）。ファイル名 `projects_YYYYmmdd-HHMM.csv` |
+| 記録 | `export export:projects` |
+
 ## 7. メッセージ
 
 | 状況 | 文言 |
@@ -83,11 +94,12 @@
 
 ## 8. 記録
 
-`admin project:<id>:create|update|end|reopen`。
+`admin project:<id>:create|update|end|reopen`。CSV 出力は `export export:projects`。
 
 ## 9. 検証の観点
 
 - 管理者以外は開けない・POST できない。
 - コードが再利用されない（終了・最大の番号の扱い）。
 - 終了した案件が、新しい報告の選択肢に出ない。過去の報告には「P-0007」と出る。
+- 案件の一覧の CSV: 管理者だけが出力でき、BOM と社外秘の見出しが付き、客先名の列がない。記録に残る（`smoke_project_ledger.py`）。
 - テーブルに客先名の列がない（自動の検証にはまだない）。

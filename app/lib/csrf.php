@@ -19,6 +19,6 @@ function csrf_check(): void
     $sent = $_POST['csrf_token'] ?? ($_SERVER['HTTP_X_CSRF_TOKEN'] ?? '');
     $token = $_SESSION['csrf_token'] ?? '';
     if (!is_string($sent) || !is_string($token) || $token === '' || !hash_equals($token, $sent)) {
-        error_page(403, '画面を開き直してから、もう一度お試しください。');
+        error_page(403, msg('画面を開き直してから、もう一度お試しください。'));
     }
 }

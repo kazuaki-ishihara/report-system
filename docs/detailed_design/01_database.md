@@ -36,6 +36,9 @@ SQLite 3。テーブルは `app/lib/schema.php` の `schema_ensure()` で作る�
 | | `department_admins` | 課別項目を管理できる人 |
 | 項目 | `report_fields` | 項目マスタ |
 | | `report_field_options` | 選択肢 |
+| | `department_field_options` | 共通の選択式の項目の、課ごとの選択肢（G-12 §6.5） |
+| | `department_successions` | 組織の改訂で引き継いだ課（G-14 §6.6） |
+| | `department_teams` | 課の班（G-14 §6.7） |
 | | `warning_words` | 客先名らしい言葉の一覧 |
 | 案件 | `projects` | 案件コードと社内向けの呼び名 |
 | 報告 | `report_records` | 月次報告 |
@@ -54,7 +57,16 @@ SQLite 3。テーブルは `app/lib/schema.php` の `schema_ensure()` で作る�
 | 仕組み | `request_keys` | 送信の番号 |
 | | `access_logs` | 記録 |
 | | `login_throttle` | 存在しない ID でのログインの失敗を、IP アドレスごとに数える |
-| | `app_state` | 仕組みの状態（名前と値） |
+| | `comment_templates` | コメントの定型文（課の。G-19） |
+| | `personal_comment_templates` | コメントの定型文（自分だけの。G-19） |
+| | `ui_messages` | 課長が変えた画面の文言（G-17） |
+| | `app_state` | 仕組みの状態（名前と値。管理担当の課、メンテナンス中（`maintenance`）など） |
+| 要望・依頼 | `support_requests` | 課長・確認者からシステム管理者への要望・依頼（G-22。件名・本文は暗号化） |
+| | `support_request_messages` | 要望・依頼のやり取り（返信・状態の変更。本文は暗号化） |
+| | `support_reply_templates` | 要望・依頼の返信の定型文（便利機能 B） |
+| 便利機能 | `update_notices` | 更新のお知らせ（G-24） |
+| | `faq_entries` | よくある質問（G-25） |
+| | `org_schedules` | 組織の改訂の予約（G-14 §6.10。取り込んだ CSV を持つ） |
 | 移行 | `legacy_reports`・`legacy_comments` | 移行前の `reports`・`comments` の名前を変えて残したもの（§6。`schema_ensure()` では作らない） |
 
 ---
@@ -81,6 +93,11 @@ ALTER TABLE users ADD COLUMN password_changed_at TEXT;
 ALTER TABLE users ADD COLUMN must_change_password INTEGER NOT NULL DEFAULT 0 CHECK (must_change_password IN (0, 1));
 ALTER TABLE users ADD COLUMN is_active        INTEGER NOT NULL DEFAULT 1 CHECK (is_active IN (0, 1));
 ALTER TABLE users ADD COLUMN updated_at       TEXT;
+ALTER TABLE users ADD COLUMN ui_theme         TEXT NOT NULL DEFAULT 'auto';   -- 画面のテーマ（G-16 §4.5）
+-- department_reviewers にも後から列を足す: does_check INTEGER NOT NULL DEFAULT 1（チェックするか。K-039。課長は常に 1。G-23 §5）
+ALTER TABLE users ADD COLUMN ui_custom_colors TEXT NOT NULL DEFAULT '';   -- 自分の色（G-16 §4.6。JSON: base・accent・background）
+ALTER TABLE users ADD COLUMN is_admin_deputy  INTEGER NOT NULL DEFAULT 0 CHECK (is_admin_deputy IN (0, 1));   -- システム管理者補佐（G-14 §6.9）
+-- 補佐は有効な人で 3 名まで、管理者と兼ねない（トリガー tr_users_admin_deputy_insert・tr_users_admin_deputy_update が RAISE(ABORT)）
 CREATE UNIQUE INDEX IF NOT EXISTS ux_users_login_id ON users (login_id);
 
 CREATE TABLE IF NOT EXISTS user_backup_codes (
@@ -176,8 +193,53 @@ CREATE TABLE IF NOT EXISTS report_field_options (
     is_active  INTEGER NOT NULL DEFAULT 1 CHECK (is_active IN (0, 1)),
     UNIQUE (field_id, code)
 );
-CREATE TRIGGER IF NOT EXISTS tr_report_field_options_no_delete BEFORE DELETE ON report_field_options
-BEGIN SELECT RAISE(ABORT, 'report_field_options cannot be deleted; deactivate the option instead'); END;
+-- 報告で使われている選択肢は削除させない（無効にする）。暗号化した値があれば使われているとみなす。
+-- 以前の「いつでも削除させない」トリガー tr_report_field_options_no_delete は DROP してから作る
+CREATE TRIGGER IF NOT EXISTS tr_report_field_options_no_delete_used BEFORE DELETE ON report_field_options
+WHEN EXISTS (SELECT 1 FROM report_field_values v WHERE v.field_id = OLD.field_id
+               AND (v.is_encrypted = 1 OR v.value_text = OLD.code
+                    OR (v.value_text LIKE '[%' AND instr(v.value_text, '"' || OLD.code || '"') > 0)))
+BEGIN SELECT RAISE(ABORT, 'report_field_options in use cannot be deleted; deactivate the option instead'); END;
+
+-- 課の班（「班ごと」で管理する課。G-14 §6.7）
+CREATE TABLE IF NOT EXISTS department_teams (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    department_id INTEGER NOT NULL REFERENCES departments(id),
+    name          TEXT NOT NULL,
+    sort_order    INTEGER NOT NULL DEFAULT 0,
+    is_active     INTEGER NOT NULL DEFAULT 1 CHECK (is_active IN (0, 1)),
+    created_at    TEXT NOT NULL,
+    updated_at    TEXT NOT NULL,
+    UNIQUE (department_id, name)
+);
+-- あとから足した列
+ALTER TABLE departments ADD COLUMN review_scope TEXT NOT NULL DEFAULT 'department' CHECK (review_scope IN ('department', 'team'));   -- 管理の仕方
+ALTER TABLE department_reviewers ADD COLUMN team_id INTEGER REFERENCES department_teams(id);   -- 担当の班（NULL なら課全体）
+ALTER TABLE users ADD COLUMN team_id INTEGER REFERENCES department_teams(id);                  -- 今の班
+
+-- 組織の改訂で、課が引き継いだ改訂の前の課（G-14 §6.6）。後の課の確認者は、前の課の報告も見られる
+CREATE TABLE IF NOT EXISTS department_successions (
+    predecessor_department_id INTEGER NOT NULL REFERENCES departments(id),   -- 改訂の前の課
+    successor_department_id   INTEGER NOT NULL REFERENCES departments(id),   -- 引き継いだ課
+    created_by                INTEGER REFERENCES users(id),
+    created_at                TEXT NOT NULL,
+    PRIMARY KEY (predecessor_department_id, successor_department_id),
+    CHECK (predecessor_department_id <> successor_department_id)
+);
+
+-- 共通の選択式の項目の、課ごとの選択肢（G-12 §6.5）
+CREATE TABLE IF NOT EXISTS department_field_options (
+    department_id INTEGER NOT NULL REFERENCES departments(id),
+    field_id      INTEGER NOT NULL REFERENCES report_fields(id),   -- 共通の項目
+    code          TEXT NOT NULL,                  -- 共通の選択肢のコード、または課で足した選択肢のコード（d<課ID>_o<番号>）
+    label         TEXT NOT NULL DEFAULT '',       -- 共通の選択肢: この課での表示名（空なら共通のまま）。足した選択肢: 表示名
+    is_added      INTEGER NOT NULL DEFAULT 0 CHECK (is_added IN (0, 1)),   -- 1 = 課で足した選択肢
+    is_hidden     INTEGER NOT NULL DEFAULT 0 CHECK (is_hidden IN (0, 1)),  -- 1 = この課では出さない
+    sort_order    INTEGER NOT NULL DEFAULT 0,
+    updated_by    INTEGER REFERENCES users(id),
+    updated_at    TEXT NOT NULL,
+    PRIMARY KEY (department_id, field_id, code)
+);
 
 CREATE TABLE IF NOT EXISTS warning_words (
     id         INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -193,7 +255,7 @@ CREATE TABLE IF NOT EXISTS warning_words (
   - `max_rows`: 1〜50（既定 20）。
   - `show_when`: `{field: <項目のコード>, values: [...]}`。
   - 画面では、表の列を 1 行に 1 列ずつ `キー|名前|種類|選択肢1,選択肢2` の文字で入れ、表示の条件は項目のコードとカンマ区切りの値で入れる（G-12）。
-- `is_searchable` は保存するだけで、まだ使っていない（共通編 §8.3）。
+- `is_searchable` は、検索（G-20）でキーワードを探す項目かどうか（共通編 §8.3）。
 - `sort_order`: G-12 の ↑↓ のボタンで、同じ `field_scope`・同じ適用（共通か、その課か）の中で隣と入れ替え、そのまとまりを 10, 20, 30… で振り直す。
 
 ### 3.4 案件
@@ -224,7 +286,7 @@ CREATE TABLE IF NOT EXISTS report_records (
     status           TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'submitted', 'confirmed')),
     revision         INTEGER NOT NULL DEFAULT 0,           -- 提出後に内容を変えるたびに +1
     unchanged        INTEGER NOT NULL DEFAULT 0 CHECK (unchanged IN (0, 1)),  -- 「前月から変更なし」で提出
-    copied_from_id   INTEGER REFERENCES report_records(id), -- 引き継いだ前月の報告
+    copied_from_id   INTEGER REFERENCES report_records(id), -- 引き継いだ前月の報告（過去の報告から写したときは写した元。G-04 §4.4）
     submitted_at     TEXT,
     confirmed_by     INTEGER REFERENCES users(id),
     confirmed_at     TEXT,
@@ -391,6 +453,62 @@ CREATE TABLE IF NOT EXISTS adhoc_response_values (
 
 質問の種類（`adhoc_request_fields.field_type`）は `single_text`・`multi_text`・`number`・`date`・`month`・`select`・`radio`・`checkbox`・`multi_check`。`table` と `project` は使わない。
 
+### 3.7.1 要望・依頼（G-22）
+
+```sql
+CREATE TABLE IF NOT EXISTS support_requests (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id       INTEGER NOT NULL REFERENCES users(id),        -- 出した人
+    department_id INTEGER REFERENCES departments(id),           -- 出したときの課
+    kind          TEXT NOT NULL CHECK (kind IN ('improvement', 'task', 'bug', 'question')),
+    urgency       TEXT NOT NULL DEFAULT 'normal' CHECK (urgency IN ('normal', 'urgent')),
+    screen_code   TEXT NOT NULL DEFAULT '',                     -- 関係する画面（G-02 など。空は指定しない）
+    title_enc     TEXT NOT NULL DEFAULT '',                     -- 件名（暗号化。文脈 sreq_title:<ID>）
+    body_enc      TEXT NOT NULL DEFAULT '',                     -- 内容（暗号化。文脈 sreq_body:<ID>）
+    has_warning   INTEGER NOT NULL DEFAULT 0 CHECK (has_warning IN (0, 1)),
+    status        TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'reviewing', 'in_progress', 'testing', 'release_waiting', 'released', 'done', 'declined', 'withdrawn')),
+    source_path   TEXT NOT NULL DEFAULT '',                     -- 開いていた画面（G-22 §4。決まった問い合わせの項目だけ）
+    client_text   TEXT NOT NULL DEFAULT '',                     -- 出したときの端末（PC／スマートフォン、ブラウザー・OS の名前）
+    requester_seen_message_id INTEGER NOT NULL DEFAULT 0,       -- 出した人が最後に見たやり取りの番号（「回答あり」の判定）
+    last_activity_at TEXT NOT NULL,
+    closed_at     TEXT,                                         -- 完了・見送り・取り下げの日時
+    created_at    TEXT NOT NULL,
+    updated_at    TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS ix_support_requests_user ON support_requests (user_id, last_activity_at);
+CREATE INDEX IF NOT EXISTS ix_support_requests_status ON support_requests (status, last_activity_at);
+
+CREATE TABLE IF NOT EXISTS support_request_messages (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    request_id    INTEGER NOT NULL REFERENCES support_requests(id),
+    user_id       INTEGER NOT NULL REFERENCES users(id),
+    is_staff      INTEGER NOT NULL DEFAULT 0 CHECK (is_staff IN (0, 1)),   -- 1 = 管理者・補佐の返信
+    body_enc      TEXT NOT NULL DEFAULT '',                     -- 本文（暗号化。文脈 sreq_msg:<要望ID>:<ID>。状態の変更だけなら空）
+    status_change TEXT CHECK (status_change IS NULL OR status_change IN ('open', 'reviewing', 'in_progress', 'testing', 'release_waiting', 'released', 'done', 'declined', 'withdrawn')),
+    created_at    TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS ix_support_request_messages_request ON support_request_messages (request_id, id);
+```
+
+保管期限による削除の対象にはしていない（期間は未決。仮設定 K-044）。
+
+### 3.7.2 便利機能（A・B・C・D・G・J）
+
+```sql
+CREATE TABLE IF NOT EXISTS support_reply_templates (id INTEGER PRIMARY KEY AUTOINCREMENT, kind TEXT NOT NULL DEFAULT '', body TEXT NOT NULL, sort_order INTEGER NOT NULL DEFAULT 0,
+    updated_by INTEGER REFERENCES users(id), created_at TEXT NOT NULL, updated_at TEXT NOT NULL);           -- B 返信の定型文
+CREATE TABLE IF NOT EXISTS update_notices (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL, body TEXT NOT NULL DEFAULT '',
+    show_from TEXT NOT NULL, show_until TEXT NOT NULL, source_request_id INTEGER REFERENCES support_requests(id),
+    created_by INTEGER REFERENCES users(id), updated_by INTEGER REFERENCES users(id), created_at TEXT NOT NULL, updated_at TEXT NOT NULL);   -- A 更新のお知らせ
+CREATE TABLE IF NOT EXISTS faq_entries (id INTEGER PRIMARY KEY AUTOINCREMENT, question TEXT NOT NULL, answer TEXT NOT NULL, sort_order INTEGER NOT NULL DEFAULT 0,
+    source_request_id INTEGER REFERENCES support_requests(id), updated_by INTEGER REFERENCES users(id), created_at TEXT NOT NULL, updated_at TEXT NOT NULL);   -- J よくある質問
+CREATE TABLE IF NOT EXISTS org_schedules (id INTEGER PRIMARY KEY AUTOINCREMENT, apply_on TEXT NOT NULL, csv_text TEXT NOT NULL, change_count INTEGER NOT NULL DEFAULT 0,
+    status TEXT NOT NULL DEFAULT 'scheduled' CHECK (status IN ('scheduled', 'applied', 'failed', 'cancelled')), result_text TEXT NOT NULL DEFAULT '',
+    created_by INTEGER REFERENCES users(id), created_at TEXT NOT NULL, finished_at TEXT);   -- G 組織の改訂の予約（取り込んだ CSV を持つ）
+-- support_requests に後から足す列: plan_text TEXT NOT NULL DEFAULT ''（D 対応の予定）、merged_into_id INTEGER（C まとめた先）
+-- app_state の maintenance（F メンテナンス中。JSON: until・message・started_by・started_at）
+```
+
 ### 3.8 仕組み
 
 ```sql
@@ -409,7 +527,8 @@ CREATE TABLE IF NOT EXISTS access_logs (
     action     TEXT NOT NULL CHECK (action IN ('view', 'export', 'admin', 'auth')),
     target     TEXT NOT NULL,
     ip_address TEXT NOT NULL DEFAULT '',
-    created_at TEXT NOT NULL
+    created_at TEXT NOT NULL,
+    acted_as_deputy INTEGER NOT NULL DEFAULT 0 CHECK (acted_as_deputy IN (0, 1))   -- 補佐としての管理の操作・出力（あとから ALTER TABLE で足す）
 );
 CREATE INDEX IF NOT EXISTS ix_access_logs_created ON access_logs (created_at);
 CREATE INDEX IF NOT EXISTS ix_access_logs_target ON access_logs (target);
@@ -421,14 +540,46 @@ CREATE TABLE IF NOT EXISTS login_throttle (
     updated_at   TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS comment_templates (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    department_id INTEGER NOT NULL REFERENCES departments(id),
+    body          TEXT NOT NULL,                -- 定型文（300 文字まで）
+    sort_order    INTEGER NOT NULL DEFAULT 0,
+    updated_by    INTEGER REFERENCES users(id),
+    created_at    TEXT NOT NULL,
+    updated_at    TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS ix_comment_templates_dept ON comment_templates (department_id, sort_order);
+
+-- 自分だけのコメントの定型文（G-19）
+CREATE TABLE IF NOT EXISTS personal_comment_templates (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id    INTEGER NOT NULL REFERENCES users(id),
+    body       TEXT NOT NULL,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS ix_personal_comment_templates_user ON personal_comment_templates (user_id, sort_order);
+
+CREATE TABLE IF NOT EXISTS ui_messages (
+    msg_key    TEXT PRIMARY KEY,               -- 既定の文言（コードの msg('…') の文）
+    body       TEXT NOT NULL,                  -- 課長が変えた文言
+    updated_by INTEGER REFERENCES users(id),
+    updated_at TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS app_state (
     name  TEXT PRIMARY KEY,
     value TEXT NOT NULL
 );
 ```
 
+- `comment_templates`: 課長が G-19 で用意するコメントの定型文。課ごと。コメントからは参照しない（選ぶと本文に写す）ので、物理削除する。暗号化しない（業務の中身を書かない前提の定型文）。
+- `ui_messages`: 課長が G-17 で変えた文言だけを持つ（変えていない文言は行がない）。全体で 1 つ（課ごとには持たない）。暗号化しない（業務の中身ではない）。
+
 - `login_throttle`: 存在しない ID・無効の ID でログインに失敗したとき、IP アドレスごとに数える。ロックまでの回数と時間は利用者と同じ（`login_max_failures`・`login_lock_minutes`）。
-- `app_state`: 今使う名前は `housekeeping`（1 日 1 回の後片付けを最後に行った日）と `project_seq`（案件コードの最後の番号。G-13）。
+- `app_state`: 今使う名前は `housekeeping`（1 日 1 回の後片付けを最後に行った日）、`project_seq`（案件コードの最後の番号。G-13）、`management_department_id`（システムの管理担当の課。G-14 §6.7）。
 
 ---
 

@@ -55,6 +55,29 @@ class Client:
         status = getattr(resp, "status", None) or resp.code
         return status, resp.headers.get("Location", ""), text
 
+    def post_file(self, path, form_values, file_field_name, file_name, file_bytes, content_type="text/csv"):
+        """ファイル付きで送る（multipart/form-data）。戻り値は req() と同じ"""
+        boundary = "----verify%d" % int(time.time() * 1000)
+        body_parts = []
+        line_break = "\r\n"
+        for field_name, field_value in form_values.items():
+            body_parts.append(("--%s%sContent-Disposition: form-data; name=\"%s\"%s%s%s%s"
+                               % (boundary, line_break, field_name, line_break, line_break, field_value, line_break)).encode("utf-8"))
+        body_parts.append(("--%s%sContent-Disposition: form-data; name=\"%s\"; filename=\"%s\"%sContent-Type: %s%s%s"
+                           % (boundary, line_break, file_field_name, file_name, line_break, content_type, line_break, line_break)).encode("utf-8")
+                          + file_bytes + line_break.encode("utf-8"))
+        body_parts.append(("--%s--%s" % (boundary, line_break)).encode("utf-8"))
+        request = urllib.request.Request(self.base + path, data=b"".join(body_parts), method="POST",
+                                         headers=dict(self.headers, **{"Content-Type": "multipart/form-data; boundary=" + boundary}))
+        try:
+            response = self.opener.open(request, timeout=20)
+        except urllib.error.HTTPError as http_error:
+            response = http_error
+        raw_bytes = response.read()
+        self.last_raw = raw_bytes
+        status_code = getattr(response, "status", None) or response.code
+        return status_code, response.headers.get("Location", ""), raw_bytes.decode("utf-8", "replace")
+
     def get(self, path):
         return self.req("GET", path)
 

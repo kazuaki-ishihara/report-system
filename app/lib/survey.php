@@ -16,7 +16,7 @@ function survey_find(int $id): ?array
 /** 管理できるか（その課の課長、または管理者） */
 function survey_can_manage(array $user, array $req): bool
 {
-    return is_admin($user) || is_final_reviewer_of((int) $user['id'], (int) $req['department_id']);
+    return is_final_reviewer_of((int) $user['id'], (int) $req['department_id']);   // 管理者でも課長でなければ不可（回答は報告の中身と同じ扱い）
 }
 
 /** 質問を様式の仕組みで扱える形にする */
