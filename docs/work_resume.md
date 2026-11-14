@@ -155,9 +155,9 @@ python tools\test\verify_all.py --ui     # 画面の自動操作検証も行う�
 3. **仕様決め**: 済み（K-001〜K-047 すべて決定。`C:\ReportSystem\仮設定.md`）。新しく推奨案で仮に決めたものが出たら、同じく選択式で決める。
 4. **本番予定環境の指摘**: `課題管理.md` の ENV-003（DB が公開されたまま。今はテストデータだけのため保留）。実データを入れる前に必ず確かめる。
 5. **作っていない機能の判断**: `C:\ReportSystem\課題管理.md` の APP-013（代理編集、コメントを直す、自由記述の検索など）を、作るか課長と決める。
-6. **一時的な設定を戻す**: ローカルで画面を見るため、2 段階認証を飛ばす設定を入れてある。画面確認が終わって不要になったら戻す（自動検証のときは一時的に `false` にして、終わったら `true` に戻している）。
-   - `app/pages/login.php` の `dev_skip_2fa` の 4 行（コミットしていない）。`git checkout app/pages/login.php` で戻る。
-   - `app/config/config.local.php`（リポジトリ外）の `'dev_skip_2fa' => true` の行。
+6. **2 段階認証を飛ばす設定**: ローカルで画面を見るため、設定 `dev_skip_2fa` で 2 段階認証を飛ばせる（自動検証のときは一時的に `false` にして、終わったら `true` に戻す）。
+   - `app/pages/login.php` の `dev_skip_2fa` の 4 行はコミット済み。既定は `false`（`app/config/config.php`）で、`https => true`（本番）では `true` にしても効かない。
+   - 使う端末では `app/config/config.local.php`（リポジトリ外）に `'dev_skip_2fa' => true` を足す。
 7. **PHP 環境のアンインストール用バッチを作る**: 検証環境の準備（`dev_check_report` ブランチの `tools/verify/setup_devenv.ps1`。winget で `PHP.PHP.8.3` を入れ、php.ini を作る）で入れた PHP と設定を、端末から取り除くためのもの。
    - 対象の端末: 202、206、207。
 8. **push の前**: 細かいコミットをまとめる（push は指示があったときだけ）。

@@ -76,6 +76,10 @@ if (is_post()) {
                 if (password_needs_rehash((string) $user['password_hash'], PASSWORD_DEFAULT)) {
                     db_exec('UPDATE users SET password_hash = ? WHERE id = ?', [password_hash($password, PASSWORD_DEFAULT), (int) $user['id']]);
                 }
+                // 開発用: 2 段階認証を飛ばす（config.local.php の dev_skip_2fa。HTTPS の本番では効かない）
+                if (cfg('dev_skip_2fa') === true && !cfg('https')) {
+                    $finishLogin($user, $next);
+                }
                 if ($user['totp_enabled_at'] === null) {
                     // 2 段階認証が未設定: 設定の画面だけ使える状態にする
                     session_login($user, 'setup');

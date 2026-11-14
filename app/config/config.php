@@ -45,6 +45,10 @@ $config = [
 
     // 報告の対象月の決め方: previous = 締め日まで前月
     'report_period_rule'    => 'previous',
+
+    // 開発用: true で 2 段階認証を飛ばす（https => false のときだけ効く）。
+    // 自動検証（verify_all.py）は 2 段階認証を前提にするので、検証のときは false にする
+    'dev_skip_2fa'          => false,
 ];
 
 $local = __DIR__ . '/config.local.php';
