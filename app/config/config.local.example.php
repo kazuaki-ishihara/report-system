@@ -1,0 +1,26 @@
+<?php
+
+// ====================================================================
+// ローカル検証環境の設定のひな形（このファイル自体は読み込まれない）
+//
+// 使い方: このファイルを config.local.php という名前で写して使う。
+//   Linux / macOS: cp app/config/config.local.example.php app/config/config.local.php
+//   Windows      : copy app\config\config.local.example.php app\config\config.local.php
+//
+// 【注意】
+// - ローカル検証環境の専用。本番（さくらのレンタルサーバー）には絶対に置かない。
+//   https => false で Cookie の Secure が外れ、dev_skip_2fa => true で 2 段階認証が飛ばされ、
+//   allow_dev_seed => true で dev_seed.php が DB を消して作り直せるようになる。
+// - config.local.php はリポジトリに入れない（.gitignore 済み。verify_all.py も入っていないことを確かめる）。
+//   設定を変えたいときは、このひな形を直してコミットする。
+// - dev_skip_2fa => true のままだと、verify_all.py のログインを使う検証が失敗する。
+//   自動検証のときは false にし、終わったら true に戻す。
+// ====================================================================
+
+return [
+    'base_path'      => '',                                  // 公開側の URL の先頭（ローカルでは空）
+    'https'          => false,                               // ローカルは http
+    'allow_dev_seed' => true,                                // tools/test/dev_seed.php を使えるようにする
+    'db_path'        => dirname(__DIR__) . '/data/dev.sqlite', // テスト用の DB（app/data/ はリポジトリに入れない）
+    'dev_skip_2fa'   => true,                                // 画面を見るため 2 段階認証を飛ばす（検証のときは false）
+];

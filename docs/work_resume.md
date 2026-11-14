@@ -74,12 +74,18 @@ python tools\test\dev_code.py               # テスト用の利用者と 2 段�
 
 ブラウザーで `http://127.0.0.1:8000/` を開く。
 
-`config.local.php` がない端末では、次の内容で作る（リポジトリに入れない）。
+`config.local.php` がない端末では、ひな形 `app/config/config.local.example.php`（コミット済み）を写して作る。写したファイルはリポジトリに入れない（`.gitignore` 済み）。ひな形は本番に置かない（注意はひな形の先頭に書いてある）。
 
-```php
-<?php
-return ['base_path' => '', 'https' => false, 'allow_dev_seed' => true, 'db_path' => dirname(__DIR__) . '/data/dev.sqlite'];
+Linux の端末（PHP 8.3 と、拡張 `pdo_sqlite`・`sqlite3`・`mbstring`・`openssl` が要る。Ubuntu 24.04 なら `sudo apt install php8.3-cli php8.3-sqlite3 php8.3-mbstring`）:
+
+```sh
+cp app/config/config.local.example.php app/config/config.local.php
+php tools/test/dev_seed.php --yes        # テストデータを作り直す
+php -S 127.0.0.1:8000 -t public          # サーバー（止めるときは Ctrl + C）
+python3 tools/test/dev_code.py           # テスト用の利用者と 2 段階認証のコード
 ```
+
+- 8000 番を別のソフトが使っている端末では、別の番号（例: 8080）で起動する（作業端末 D:\ReportSystem では IncrediBuild が 8000 番を使っている）。
 
 ## 6. 検証
 
@@ -158,7 +164,7 @@ python tools\test\verify_all.py --ui     # 画面の自動操作検証も行う�
 5. **作っていない機能の判断**: `C:\ReportSystem\課題管理.md` の APP-013（代理編集、コメントを直す、自由記述の検索など）を、作るか課長と決める。
 6. **2 段階認証を飛ばす設定**: ローカルで画面を見るため、設定 `dev_skip_2fa` で 2 段階認証を飛ばせる（自動検証のときは一時的に `false` にして、終わったら `true` に戻す）。
    - `app/pages/login.php` の `dev_skip_2fa` の 4 行はコミット済み。既定は `false`（`app/config/config.php`）で、`https => true`（本番）では `true` にしても効かない。
-   - 使う端末では `app/config/config.local.php`（リポジトリ外）に `'dev_skip_2fa' => true` を足す。
+   - ひな形 `app/config/config.local.example.php` は `'dev_skip_2fa' => true` になっている。写した `config.local.php`（リポジトリ外）で切り替える。
 7. **PHP 環境のアンインストール用バッチを作る**: 検証環境の準備（`dev_check_report` ブランチの `tools/verify/setup_devenv.ps1`。winget で `PHP.PHP.8.3` を入れ、php.ini を作る）で入れた PHP と設定を、端末から取り除くためのもの。
    - 対象の端末: 202、206、207。
 8. **push の前**: 細かいコミットをまとめる（push は指示があったときだけ）。
