@@ -39,6 +39,7 @@ C:\ReportSystem\
 | `docs/detailed_design/` | 詳細設計書（共通編・DB 編・画面 G-01〜G-25） |
 | `docs/org_revision.md` | 組織の改訂の手順（毎年の改訂・年の途中の退職。CSV での一括の入れ替え） |
 | `docs/project_ledger.md` | 案件台帳の道具の使い方（客先名・案件名と案件コードの対応。システムの外で管理） |
+| `docs/operation_manual.md` | 利用者向けの操作マニュアル（役割ごとの操作。読み手が Linux の PC を使う前提の注意を含む） |
 
 ## 4. 実装の状況
 
