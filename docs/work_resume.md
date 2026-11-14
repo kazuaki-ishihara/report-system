@@ -51,7 +51,7 @@ C:\ReportSystem\
 | `app/pages/`・`app/views/` | 画面ごとの処理とテンプレート |
 | `public/` | 公開側の入り口（本番では公開ディレクトリ。`app/` は公開ディレクトリの外に置く） |
 | `app/bin/` | `migrate.php`（テーブルと鍵の作成）、`seed_template.php`（初期の様式）、`create_user.php`（利用者の作成）、`migrate_legacy.php`（既存データの移行）、`backup.php`（DB のバックアップ。定期実行に登録）、`run_schedules.php`（予約した組織の改訂の反映。定期実行に登録） |
-| `tools/lib/` | 何度も使う道具（Python 3 標準ライブラリ、3.8 互換）: `msg_catalog.py`（文言の一覧）、`project_ledger.py`（案件台帳。使い方は `docs/project_ledger.md`） |
+| `tools/lib/` | 何度も使う道具（Python 3 標準ライブラリ、3.8 互換）: `msg_catalog.py`（文言の一覧）、`project_ledger.py`（案件台帳。使い方は `docs/project_ledger.md`）、`mdview.py`（Markdown をブラウザーで読む。`python3 tools/lib/mdview.py docs` で docs/ を一覧から読める。Linux・Windows 共通） |
 | `tools/test/` | 検証の道具（Python 3 標準ライブラリ）。`screen_gallery.py` は画面の目視確認の道具（全画面の画像と一覧のページ） |
 
 詳細設計書（共通編・DB 編・G-01〜G-25）は実装に合わせて更新済み。まだ作っていないもの（`Strict-Transport-Security`、鍵の入れ替え、記録の削除）は、設計書にその旨を書いてある。
