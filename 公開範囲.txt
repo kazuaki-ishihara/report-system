@@ -1,0 +1,104 @@
+月次報告システム 本番の配置と公開範囲
+（さくらのレンタルサーバー。www の外には置けないため、すべて ~/www/report-system/ に置く）
+
+■ 置き方
+反映用の一式を、次の道具で作って上げる。手で選んで上げない。
+
+  python tools/deploy/build_package.py
+
+できた tools/deploy/output/<日時>_<コミット>/report-system/ の中身を、
+サーバーの ~/www/report-system/ にそのまま上書きで上げる（手順は同じ場所の 反映手順.txt）。
+一式は、リポジトリの public/ の中身（41 ファイル）と app/（108 ファイル）だけでできている。
+コミットした内容から作るので、作業中の変更は入らない。
+
+■ サーバーの中の形
+
+~/www/report-system/
+├── .htaccess                ← 必ず上げる（HTTPS への転送、app/ などの拒否、拡張子の拒否）
+├── _boot.php                  app/ を読み込む（Web からは拒否）
+├── account.php
+├── faq.php
+├── health.php
+├── index.php
+├── login.php
+├── logout.php
+├── password_reset.php
+├── admin/
+│   ├── comment_templates.php
+│   ├── department.php
+│   ├── field_edit.php
+│   ├── field_options.php
+│   ├── fields.php
+│   ├── index.php
+│   ├── logs.php
+│   ├── messages.php
+│   ├── notices.php
+│   ├── org.php
+│   ├── projects.php
+│   ├── trash.php
+│   └── user_edit.php
+├── css/
+│   ├── app.css
+│   └── user_theme.php
+├── export/
+│   └── index.php
+├── js/
+│   └── app.js
+├── reports/
+│   ├── act.php
+│   ├── comments.php
+│   ├── edit.php
+│   ├── mine.php
+│   ├── save.php
+│   ├── search.php
+│   └── view.php
+├── requests/
+│   ├── index.php
+│   └── view.php
+├── status/
+│   ├── compare.php
+│   └── index.php
+├── surveys/
+│   ├── answer.php
+│   ├── manage.php
+│   ├── result.php
+│   └── survey_edit.php
+└── app/                     ← Web からは見えない（下記）
+    ├── .htaccess            ← 必ず上げる（すべて拒否）
+    ├── bootstrap.php  bin/  config/  lib/  pages/  views/
+    ├── data/reports.sqlite    DB          （サーバーで作る。一式に入らない。消さない）
+    ├── keys/field_v1.key      暗号化の鍵  （サーバーで作る。一式に入らない。消さない。権限 600）
+    ├── backups/               バックアップ（サーバーで作る。一式に入らない）
+    └── logs/                  エラーの記録（サーバーで作る。一式に入らない）
+
+■ Web から見える範囲
+見えるのは、上の画面の入り口（.php）と css/・js/ だけ。
+
+見えないもの（.htaccess で拒否する）:
+  - app/ の中すべて（app/.htaccess と ~/www/report-system/.htaccess の二重）
+  - 置かれていても 404 にするフォルダー:
+      app  docs  tools  public  __pycache__  node_modules  vendor
+      data  keys  backup(s)  log(s)  config  lib  include(s)  src  db  database  storage  tmp  private
+  - 名前が「.」で始まるファイル・フォルダー（.git など）
+  - 拡張子: sqlite sqlite3 db key bak backup log md sql json ini sh py pyc pyo txt csv tsv
+            zip tar gz tgz 7z yml yaml xml dist example orig swp lock env
+  - _boot.php
+
+■ 本番に置かないもの
+  - docs/、tools/（設計書と開発の道具）
+  - app/config/config.local.php と config.local.example.php（ローカル検証専用）
+  - 旧システム（レポート管理システム）の public/・data/ など
+  - この 公開範囲.txt と 反映手順.txt
+
+■ 上げたあとの確認
+  python tools/deploy/check_prod.py https://toyama-mai.sakura.ne.jp/report-system
+  画面を見るだけの確認（ログイン・データの変更はしない）。全件 OK になること。
+  .htaccess を変えたときも必ず流す（www の中に app/ を置くので、.htaccess の誤りがそのまま漏えいになる）。
+
+■ 初めて置くとき（DB と鍵がまだ無いとき）
+サーバーでコマンドを実行して作る（Web からは作れない）。
+  php app/bin/migrate.php                                         DB と暗号化の鍵を作る
+  php app/bin/create_user.php --login=<ID> --name=<名前> --admin  最初の管理者を作る（仮パスワードを 1 回だけ表示）
+開発用の DB・鍵・アカウント（dev_seed.php で作ったもの）は本番に持ち込まない。
+
+詳しくは docs/system_architecture.md の「2. サーバーの中の配置」。
