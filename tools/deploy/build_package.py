@@ -81,7 +81,7 @@ def main():
     if dirty and a.ref == "HEAD":
         print("注意: public/ か app/ にコミットしていない変更があります。一式には入りません。\n" + dirty + "\n")
 
-    tar_bytes = git("archive", "--format=tar", a.ref, "public", "app", binary=True)
+    tar_bytes = git("-c", "core.autocrlf=false", "archive", "--format=tar", a.ref, "public", "app", binary=True)
     files = {}  # 一式の中の場所 -> 中身
     with tarfile.open(fileobj=io.BytesIO(tar_bytes)) as tar:
         for m in tar.getmembers():
