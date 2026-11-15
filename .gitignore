@@ -12,3 +12,7 @@
 # 検証の出力
 /tools/test/output/
 /tools/test/output_*.json
+
+# 反映用の一式（tools/deploy/build_package.py の出力）
+/tools/deploy/output/
+__pycache__/

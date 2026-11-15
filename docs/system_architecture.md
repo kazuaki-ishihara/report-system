@@ -70,32 +70,31 @@ flowchart LR
 
 ## 2. サーバーの中の配置
 
-さくらのレンタルサーバーでは、`~/www/` の下だけが Web に公開される。**公開するのは画面の入り口だけ**にし、それ以外は `~/www/` の外に置く。
+さくらのレンタルサーバーでは、`~/www/` の下だけが Web に公開される。本来は画面の入り口だけを公開し、それ以外は `~/www/` の外に置きたいが、**このサーバーでは `~/www/` の外に置けない**（2026-11 に課長に確認）。そのため、`app/` も `~/www/report-system/` の中に置き、`.htaccess` で Web からの取得を拒否する。
 
 ```text
-~/                                   （サーバーのホーム）
-├── www/                             ← Web に公開される
-│   └── report-system/               ← 公開する入り口だけ
-│       ├── index.php                  各画面の入り口（中身は app/ を読み込むだけ）
-│       ├── ...
-│       ├── css/  js/                  画面の見た目と最小限の JavaScript
-│       └── .htaccess                  HTTPS への転送、セキュリティヘッダー、一覧表示の禁止
-│
-└── report-system-app/               ← 公開されない
-    ├── app/                           画面の処理（権限の確認、入力の確認）
-    ├── lib/                           共通部品（認証、CSRF、様式の組み立て、暗号化、出力）
-    ├── config/                        設定（DB の場所、鍵の場所）
-    ├── data/
-    │   └── reports.sqlite             DB
-    ├── keys/
-    │   └── field.key                  「限定」の項目の暗号化の鍵（権限 600）
-    ├── backups/                       DB のバックアップ（保管期限で削除）
-    └── logs/                          エラーの記録（画面には詳細を出さない）
+~/www/                               ← Web に公開される
+└── report-system/                   ← リポジトリの public/ の中身
+    ├── .htaccess                      HTTPS への転送、一覧表示の禁止、app/ などの拒否、拡張子の拒否
+    ├── _boot.php                      app/ を探して読み込む（Web からは拒否）
+    ├── index.php  login.php  ...      各画面の入り口（中身は app/ を読み込むだけ）
+    ├── css/  js/                      画面の見た目と最小限の JavaScript
+    └── app/                         ← リポジトリの app/（Web からは拒否）
+        ├── .htaccess                  すべて拒否
+        ├── bootstrap.php  lib/  pages/  views/  bin/
+        ├── config/                    設定（DB の場所、鍵の場所）。config.local.php は置かない
+        ├── data/reports.sqlite        DB（初回に bin/migrate.php で作る。反映で上書きしない）
+        ├── keys/field_v1.key          「限定」の項目の暗号化の鍵（権限 600。反映で上書きしない）
+        ├── backups/                   DB のバックアップ（保管期限で削除）
+        └── logs/                      エラーの記録（画面には詳細を出さない）
 ```
 
-- 公開ディレクトリの外に置けば、`.htaccess` の設定を誤っても DB や鍵は Web から取得できない（既存の Web 版では DB が公開ディレクトリの中にあり、取得できる状態になっている）。
-- 念のため、`report-system-app/` の各ディレクトリにも、Web からのアクセスを拒否する `.htaccess` を置く。
+- `app/` は **二重に拒否する**: `app/.htaccess`（すべて拒否）と、`report-system/.htaccess` の `RedirectMatch 404`（`.htaccess` の上げ忘れに備える）。後者は `docs/`・`tools/`・`public/`・`__pycache__`・隠しフォルダーも 404 にする。
+- 拡張子でも拒否する（DB・鍵・ログ・`.md`・`.py`・`.pyc`・`.json` など）。
+- 反映は、`tools/deploy/build_package.py` で作った一式（`public/` の中身＋`app/`。`docs/`・`tools/`・ローカル用の設定は入らない）を、`~/www/report-system/` に上書きで上げる。一式に DB・鍵・記録は入らないので、上書きしても消えない。
+- 反映のあとは `tools/deploy/check_prod.py` で、外から DB・鍵・設定・ソースが取れないことを確かめる。
 - 鍵ファイルとバックアップは、ファイルの権限を所有者だけが読める設定にする。
+- `.htaccess` の誤りがそのまま漏えいにつながる配置なので、`.htaccess` を変えたときは必ず `check_prod.py` を流す。
 
 ---
 
