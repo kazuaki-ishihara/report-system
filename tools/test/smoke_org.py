@@ -283,6 +283,28 @@ def main():
         "SELECT is_final FROM department_reviewers WHERE user_id = ? AND department_id = ?", (user_id_of("kacho_a"), department_a_id)).fetchone() == (1,))
     check("反映が記録に残る", database.execute("SELECT 1 FROM access_logs WHERE target LIKE 'organization:bulk_apply:%'").fetchone() is not None)
 
+    # ---- 課の並び順: 範囲外・負の数・数字以外はエラーにし、黙って 0 にしない（検証官の指摘） ----
+    original_sort_order = database.execute("SELECT sort_order FROM departments WHERE id = ?", (department_b_id,)).fetchone()[0]
+    department_b_name = database.execute("SELECT name FROM departments WHERE id = ?", (department_b_id,)).fetchone()[0]
+    org_edit_path_b = "/admin/org.php?tab=departments&edit=%d" % department_b_id
+    for bad_sort_order_text in ("1000000", "-1", "1.5", "abc", "9999999999999999999999"):
+        status_code, _location, page_html = post_org(org_edit_path_b, {"action": "dept_save", "id": str(department_b_id), "name": department_b_name,
+                                                                         "sort_order": bad_sort_order_text, "is_active": "1"})
+        check("課の並び順に「%s」を入れると、エラーになり保存されない" % bad_sort_order_text,
+              status_code == 200 and "並び順は 0〜999999 の整数にしてください" in page_html
+              and database.execute("SELECT sort_order FROM departments WHERE id = ?", (department_b_id,)).fetchone()[0] == original_sort_order, status_code)
+    status_code, _location, _page_html = post_org(org_edit_path_b, {"action": "dept_save", "id": str(department_b_id), "name": department_b_name,
+                                                                      "sort_order": "999999", "is_active": "1"})
+    check("課の並び順の上限 999999 は保存できる", database.execute("SELECT sort_order FROM departments WHERE id = ?", (department_b_id,)).fetchone()[0] == 999999)
+    status_code, _location, _page_html = post_org(org_edit_path_b, {"action": "dept_save", "id": str(department_b_id), "name": department_b_name,
+                                                                      "sort_order": str(original_sort_order), "is_active": "1"})
+    check("課の並び順を元に戻せる", database.execute("SELECT sort_order FROM departments WHERE id = ?", (department_b_id,)).fetchone()[0] == original_sort_order)
+    status_code, _location, page_html = post_org("/admin/org.php?tab=departments&new=1", {"action": "dept_save", "name": "並び順の確かめの課", "sort_order": "1000000"})
+    check("課の追加でも、並び順が範囲外ならエラーになり、課は作られない",
+          "並び順は 0〜999999 の整数にしてください" in page_html and database.execute("SELECT 1 FROM departments WHERE name = '並び順の確かめの課'").fetchone() is None)
+    _status_code, _location, org_html = admin_client.get("/admin/org.php?tab=departments&new=1")
+    check("並び順の入力欄に max=\"999999\" がある", 'name="sort_order" type="number" min="0" max="999999"' in org_html)
+
     return summary()
 
 

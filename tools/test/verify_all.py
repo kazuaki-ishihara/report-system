@@ -177,6 +177,10 @@ def wait_server(base, timeout=15):
 
 
 def main():
+    # 出力先の文字コード（Windows の cp932 など）で表せない文字があっても、表示で止まらないようにする（以降の工程が流れなくなるため）
+    for output_stream in (sys.stdout, sys.stderr):
+        if hasattr(output_stream, "reconfigure"):
+            output_stream.reconfigure(errors="replace")
     ap = argparse.ArgumentParser()
     ap.add_argument("--php", default="")
     ap.add_argument("--ui", action="store_true", help="画面の自動操作検証も行う")

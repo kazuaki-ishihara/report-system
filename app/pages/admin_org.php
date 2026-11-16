@@ -106,7 +106,15 @@ if (is_post() && post_str('action') === 'bulk_preview') {
         $name = post_str('name');
         $sort = post_str('sort_order');
         validate_text($name, '課の名前', 40, true, $errors);
-        $sortN = preg_match('/^\d{1,6}$/', $sort) === 1 ? (int) $sort : 0;
+        // 並び順: 空なら 0。0〜999999 の整数でなければ断る（範囲外・負の数・数字以外を黙って 0 にしない）
+        $sortN = 0;
+        if ($sort !== '') {
+            if (preg_match('/^\d{1,6}$/', $sort) === 1) {
+                $sortN = (int) $sort;
+            } else {
+                $errors[] = msg('並び順は 0〜999999 の整数にしてください');
+            }
+        }
         $dup = db_val('SELECT id FROM departments WHERE name = ? AND id <> ?', [$name, $id ?? 0]);
         if ($dup !== null) {
             $errors[] = msg('同じ名前の課があります');

@@ -24,7 +24,7 @@
       <input id="name" name="name" type="text" maxlength="40" required>
       <p class="note">課の名前には人名を入れないことをおすすめします（例: A課）。</p>
       <label for="sort_order">並び順</label>
-      <input id="sort_order" name="sort_order" type="number" min="0" value="0">
+      <input id="sort_order" name="sort_order" type="number" min="0" max="999999" step="1" value="0">
       <button type="submit" class="primary">追加する</button>
     </form>
   <?php endif; ?>
@@ -41,7 +41,7 @@
       <label for="e_name">課の名前</label>
       <input id="e_name" name="name" type="text" maxlength="40" value="<?= h($edit['name']) ?>" required>
       <label for="e_sort">並び順</label>
-      <input id="e_sort" name="sort_order" type="number" min="0" value="<?= (int) $edit['sort_order'] ?>">
+      <input id="e_sort" name="sort_order" type="number" min="0" max="999999" step="1" value="<?= (int) $edit['sort_order'] ?>">
       <label class="check"><input type="checkbox" name="is_active" value="1" <?= (int) $edit['is_active'] === 1 ? 'checked' : '' ?>> 有効</label>
       <label class="check"><input type="checkbox" name="is_management" value="1" <?= $managementDepartmentId === (int) $edit['id'] ? 'checked' : '' ?>> この課をシステムの管理担当にする（この課の課長が、画面の文言（メッセージ）を変えられる。1 つの課だけ）</label>
       <button type="submit" class="primary">保存</button>
