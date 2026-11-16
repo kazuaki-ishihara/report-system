@@ -56,7 +56,7 @@ function msg_overrides(bool $forceReload = false): array
 /**
  * 変えられる文言の一覧（tools/test/msg_catalog.py が作る messages_catalog.php）。
  *
- * @return array<string, array{screens: string[]}> 既定の文言 => 使っている画面（例: ['G-04 報告の作成・編集']）
+ * @return array<string, array{screens: string[], js?: bool}> 既定の文言 => 使っている画面（例: ['G-04 報告の作成・編集']）と、JavaScript で使うかの印
  */
 function msg_catalog(): array
 {
@@ -127,29 +127,19 @@ function msg_validate(string $defaultText, string $newText): ?string
 }
 
 /**
- * JavaScript で使う文言（layout.php が body の data-msgs で渡す）。
+ * JavaScript で使う文言（layout.php が body の data-msgs で渡す）。public/js/app.js の M() が、この対応表で文言を差し替える。
+ * 対象は、文言の一覧（messages_catalog.php）で 'js' => true の印が付いたものすべて（tools/lib/msg_catalog.py が app.js の M() から集める）。
+ * 手書きの一覧は持たない（漏れると、課長が G-17 で変えても JavaScript の文言が変わらないため）。
  *
  * @return array<string, string> 既定の文言 => 画面に出す文言
  */
 function msg_js_map(): array
 {
     $displayTextByDefaultText = [];
-    foreach (JS_MESSAGES as $defaultText) {
-        $displayTextByDefaultText[$defaultText] = msg($defaultText);
+    foreach (msg_catalog() as $defaultText => $catalogEntry) {
+        if (!empty($catalogEntry['js'])) {
+            $displayTextByDefaultText[$defaultText] = msg($defaultText);
+        }
     }
     return $displayTextByDefaultText;
 }
-
-/** JavaScript（public/js/app.js の M()）で使う文言の既定の文 */
-const JS_MESSAGES = [
-    '自動保存しました {time}',
-    '自動保存できませんでした（入力を確かめてください）',
-    '通信が切れたため自動保存できませんでした。入力は残っています',
-    '同じ月の報告が別の画面で作られたため、自動保存を止めました。「下書き保存」を押してください',
-    '客先名や個人名の注意が出ている欄が {count} か所あります。このまま送りますか？',
-    '{text}。よろしいですか？',
-    '表示できません',
-    '通信エラー',
-    '「{code}」の内容を写しました。追加する案件を選んでください（保存するまで反映されません）',
-    '（案件なし）',
-];

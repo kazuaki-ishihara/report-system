@@ -120,6 +120,21 @@ def main():
     check("文言で探せる", "下書きを削除しました" in page_html and "提出しました" not in page_html)
     log_count = database.execute("SELECT COUNT(*) FROM access_logs WHERE action = 'admin' AND target LIKE 'message:%'").fetchone()[0]
     check("変更・戻す・消すが記録に残る", log_count >= 6, log_count)
+    # ---- JavaScript（app.js の M()）の文言も、変えると画面に渡る（アカウント設定の色の注意など。報告のあった不具合） ----
+    javascript_default_text = "背景の色と文字の色が近く、読みにくくなります"
+    check("JavaScript の文言にも一覧で印が付いている", "'%s' => ['screens' => ['共通（画面の補助）'], 'js' => true]" % javascript_default_text in catalog_text)
+    post_message(kacho_client, "save", javascript_default_text, "背景と文字の色が近いです（検証）")
+    status_code, _location, account_html = kacho_client.get("/account.php?tab=theme")
+    check("G-17 で変えた JavaScript の文言が、画面の data-msgs に入る",
+          status_code == 200 and "背景と文字の色が近いです（検証）" in account_html, status_code)
+    post_message(kacho_client, "reset", javascript_default_text)
+    js_marked_count = catalog_text.count("'js' => true")
+    javascript_source = open(os.path.join(test_dir, "..", "..", "public", "js", "app.js"), encoding="utf-8").read()
+    javascript_call_count = len(set(re.findall(r"\bM\('((?:[^'\\]|\\.)*)'", javascript_source)))
+    check("app.js の M() の文言がすべて一覧で印付き（%d / %d）" % (js_marked_count, javascript_call_count), js_marked_count == javascript_call_count)
+    # 臨時の調査の締め切りの知らせも、文言の仕組みを通す
+    survey_view_source = open(os.path.join(test_dir, "..", "..", "app", "views", "survey_answer.php"), encoding="utf-8").read()
+    check("締め切りの知らせが msg() を通る", "msg('この調査は締め切られました。')" in survey_view_source)
     check("G-01・G-02 の文言は一覧にない（固定）", "ログイン ID かコードが違います" not in catalog_text and "ログイン ID かコードが違います" not in kacho_client.get("/admin/messages.php")[2])
 
     return summary()

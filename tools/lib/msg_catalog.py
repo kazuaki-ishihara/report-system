@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """メッセージ（画面に出す文言）の一覧を作る・確かめる道具（詳細設計書 G17_messages.md）。
 
-コードの msg('…')（PHP）、M('…')（public/js/app.js）、JS_MESSAGES（app/lib/message.php）から
+コードの msg('…')（PHP）と M('…')（public/js/app.js）から
 既定の文言を集め、app/lib/messages_catalog.php に書き出す。課長が文言を変える画面（G-17）はこの一覧を使う。
 
     python3 tools/lib/msg_catalog.py          # 一覧を作り直す
@@ -53,7 +53,7 @@ COMMON_SCREEN_NAME = "共通"
 PHP_MSG_CALL = re.compile(r"\bmsg\(\s*'((?:[^'\\]|\\.)*)'")
 PHP_MSG_CALL_ANY = re.compile(r"\bmsg\(\s*([^\s)])")
 JS_M_CALL = re.compile(r"\bM\(\s*'((?:[^'\\]|\\.)*)'")
-PHP_QUOTED = re.compile(r"'((?:[^'\\]|\\.)*)'")
+JS_M_CALL_ANY = re.compile(r"(?<!function )\bM\(\s*([^\s)])")
 
 
 def unescape_php_single_quoted(literal_body):
@@ -84,8 +84,12 @@ def screen_name_for(path):
 
 
 def collect_messages():
-    """戻り値: (screen_names_by_default_text: dict[str, set[str]], problem_lines: list[str])"""
+    """戻り値: (screen_names_by_default_text: dict[str, set[str]], javascript_texts: set[str], problem_lines: list[str])
+
+    javascript_texts は app.js の M() で使う文言。一覧で 'js' => true の印を付け、画面に渡す対応表（msg_js_map()）に入れる。
+    """
     screen_names_by_default_text = {}
+    javascript_texts = set()
     problem_lines = []
     for path in list_source_paths():
         relative_path = os.path.relpath(path, REPO_ROOT).replace("\\", "/")
@@ -96,34 +100,38 @@ def collect_messages():
         for match in call_pattern.finditer(source_text):
             default_text = unescape_php_single_quoted(match.group(1))
             screen_names_by_default_text.setdefault(default_text, set()).add(screen_name_for(path))
+            if is_javascript:
+                javascript_texts.add(default_text)
+        if is_javascript:
+            # M() の最初の引数も、必ず文字列そのもの（一覧と、画面に渡す対応表に載せるため）
+            for match in JS_M_CALL_ANY.finditer(source_text):
+                if match.group(1) != "'":
+                    line_number = source_text.count("\n", 0, match.start()) + 1
+                    problem_lines.append("%s:%d: M() の最初の引数が文字列そのものではない" % (relative_path, line_number))
         if not is_javascript and not is_message_lib:
-            # msg() の最初の引数は、必ず文字列そのもの（一覧に載せるため）。message.php は JS_MESSAGES を回すので除く
+            # msg() の最初の引数は、必ず文字列そのもの（一覧に載せるため）。message.php は msg() の定義そのものなので除く
             for match in PHP_MSG_CALL_ANY.finditer(source_text):
                 if match.group(1) != "'":
                     line_number = source_text.count("\n", 0, match.start()) + 1
                     problem_lines.append("%s:%d: msg() の最初の引数が文字列そのものではない" % (relative_path, line_number))
-        if is_message_lib:
-            js_block = re.search(r"const JS_MESSAGES = \[(.*?)\];", source_text, re.S)
-            for match in PHP_QUOTED.finditer(js_block.group(1) if js_block else ""):
-                default_text = unescape_php_single_quoted(match.group(1))
-                screen_names_by_default_text.setdefault(default_text, set()).add(SCREEN_NAME_BY_FILE_NAME["app.js"])
-    return screen_names_by_default_text, problem_lines
+    return screen_names_by_default_text, javascript_texts, problem_lines
 
 
-def render_catalog(screen_names_by_default_text):
+def render_catalog(screen_names_by_default_text, javascript_texts):
     lines = [
         "<?php",
         "",
         "declare(strict_types=1);",
         "",
         "// 変えられる文言の一覧（tools/lib/msg_catalog.py が作る。手で直さない）",
-        "// 既定の文言 => ['screens' => 使っている画面]",
+        "// 既定の文言 => ['screens' => 使っている画面, 'js' => JavaScript（app.js の M()）で使う文言なら true]",
         "",
         "return [",
     ]
     for default_text in sorted(screen_names_by_default_text, key=lambda text: (sorted(screen_names_by_default_text[text])[0], text)):
         screen_list_text = ", ".join("'%s'" % escape_php_single_quoted(name) for name in sorted(screen_names_by_default_text[default_text]))
-        lines.append("    '%s' => ['screens' => [%s]]," % (escape_php_single_quoted(default_text), screen_list_text))
+        javascript_mark_text = ", 'js' => true" if default_text in javascript_texts else ""
+        lines.append("    '%s' => ['screens' => [%s]%s]," % (escape_php_single_quoted(default_text), screen_list_text, javascript_mark_text))
     lines.append("];")
     return "\n".join(lines) + "\n"
 
@@ -133,15 +141,15 @@ def main():
     parser.add_argument("--check", action="store_true", help="一覧が最新かを確かめるだけ（書き換えない）")
     arguments = parser.parse_args()
 
-    screen_names_by_default_text, problem_lines = collect_messages()
-    catalog_text = render_catalog(screen_names_by_default_text)
+    screen_names_by_default_text, javascript_texts, problem_lines = collect_messages()
+    catalog_text = render_catalog(screen_names_by_default_text, javascript_texts)
     current_catalog_text = open(CATALOG_PATH, encoding="utf-8").read() if os.path.exists(CATALOG_PATH) else ""
 
     if arguments.check:
         is_up_to_date = current_catalog_text == catalog_text
         print(("OK  " if is_up_to_date else "NG  ") + "メッセージの一覧が最新（%d 件）" % len(screen_names_by_default_text)
               + ("" if is_up_to_date else "  python3 tools/lib/msg_catalog.py で作り直してください"))
-        print(("OK  " if not problem_lines else "NG  ") + "msg() の最初の引数がすべて文字列そのもの")
+        print(("OK  " if not problem_lines else "NG  ") + "msg()・M() の最初の引数がすべて文字列そのもの")
         for problem_line in problem_lines:
             print("    " + problem_line)
         return 0 if is_up_to_date and not problem_lines else 1

@@ -52,8 +52,8 @@
 | 鍵 | 既定の文言そのもの。同じ文言を複数の画面で使っていれば、変えるとすべてに出る |
 | 改行 | 文言に改行を入れられる。画面では改行して出す（メッセージの欄・入力の誤り・エラー画面は `h_lines()` で `<br>`、JavaScript の表示は CSS の `white-space: pre-line`）。確認の表示（ブラウザーの確認）も改行して出る。ログイン・再設定の画面の文言は固定なので改行しない |
 | 保存 | 変えた文言だけを `ui_messages` に持つ（DB 編）。1 回の要求で 1 度だけ読む（`msg_overrides()`）。DB に届かないときは既定の文言を出す |
-| JavaScript | `app.js` の文言は `M('既定の文言', {name: 値})`。`layout.php` が `body` の `data-msgs` に、既定の文言 => 画面に出す文言を JSON で入れる（`msg_js_map()`。一覧は `message.php` の `JS_MESSAGES`） |
-| 一覧 | `tools/lib/msg_catalog.py` が、コードの `msg('…')`・`M('…')`・`JS_MESSAGES` を集めて `app/lib/messages_catalog.php` を作る（手で直さない）。画面の名前はファイル名から決める |
+| JavaScript | `app.js` の文言は `M('既定の文言', {name: 値})`。`layout.php` が `body` の `data-msgs` に、既定の文言 => 画面に出す文言を JSON で入れる（`msg_js_map()`）。対象は、一覧で `'js' => true` の印が付いた文言すべて（`app.js` の `M()` から集める）。手書きの一覧は持たない（漏れると、G-17 で変えても JavaScript の文言が変わらないため） |
+| 一覧 | `tools/lib/msg_catalog.py` が、コードの `msg('…')`・`M('…')` を集めて `app/lib/messages_catalog.php` を作る（手で直さない）。画面の名前はファイル名から決める。`M()` の文言には `'js' => true` の印を付ける。`--check` は、一覧が最新か、`msg()`・`M()` の最初の引数が文字列そのものかを確かめる（自動検証で使う） |
 | 確かめ | `msg_catalog.py --check` で、一覧が最新か、`msg()` の最初の引数が文字列そのものかを確かめる（自動検証に組み込み）。文言を足したり変えたりしたら、`python3 tools/lib/msg_catalog.py` で作り直す |
 | 既定の文言を変えたとき | プログラムの更新で既定の文言が変わると、その文言の変更は画面に出なくなる。G-17 の「使われていない文言」に出すので、新しい文言で変え直してから消す |
 
