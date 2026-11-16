@@ -1,0 +1,70 @@
+<?php
+
+declare(strict_types=1);
+
+require_once __DIR__ . '/../../config/database.php';
+require_once __DIR__ . '/../../lib/functions.php';
+require_once __DIR__ . '/../../lib/auth.php';
+require_once __DIR__ . '/../../lib/csrf.php';
+require_once __DIR__ . '/../../lib/report_fields.php';
+
+// ==================================================
+// 項目管理：項目の編集画面（管理者のみ）
+// ==================================================
+
+requireReportFieldAdmin($pdo);
+requireReportFieldTables($pdo);
+
+$id = getId('id');
+$field = findReportField($pdo, $id);
+
+if ($field === null) {
+    http_response_code(404);
+    exit('指定された項目が見つかりません。');
+}
+
+$csrfToken = getCsrfToken();
+list($message, $error) = getFlashMessages();
+
+?>
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>項目の編集</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/report_fields.css">
+</head>
+
+<body>
+
+<div class="rf-container rf-narrow">
+
+    <h1>項目の編集</h1>
+
+    <?php if ($error !== ''): ?>
+        <div class="rf-error" role="alert"><?= h($error) ?></div>
+    <?php endif; ?>
+
+    <?php if ((int) $field['is_active'] !== 1): ?>
+        <div class="rf-warning">この項目は非表示になっています。</div>
+    <?php endif; ?>
+
+    <form method="post" action="update.php">
+        <input type="hidden" name="id" value="<?= (int) $field['id'] ?>">
+
+        <?php require __DIR__ . '/_form.php'; ?>
+
+        <div class="rf-toolbar">
+            <button type="submit" class="rf-button">保存する</button>
+            <a href="index.php" class="rf-button rf-button-secondary">キャンセル</a>
+        </div>
+    </form>
+
+</div>
+
+</body>
+
+</html>

@@ -5,6 +5,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../lib/functions.php';
 require_once __DIR__ . '/../../lib/auth.php';
+require_once __DIR__ . '/../../lib/report_values.php';
 
 // ==================================================
 // 1. ログイン確認
@@ -165,14 +166,8 @@ if (!$isAdmin && $commentUserId !== $loginUserId) {
 // 8. コメント対象項目の確認
 // ==================================================
 
-$allowedFields = [
-    'report_date',
-    'name',
-    'subject',
-    'content',
-    'issues',
-    'remarks',
-];
+// 項目管理の全項目（非表示の項目に付いた既存のコメントも扱えるようにする）
+$allowedFields = array_keys(loadReportFieldLabels($pdo, false));
 
 $fieldName = $comment['field_name'];
 

@@ -5,6 +5,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../lib/functions.php';
 require_once __DIR__ . '/../../lib/auth.php';
+require_once __DIR__ . '/../../lib/report_values.php';
 
 // POST以外のアクセスは一覧画面へ戻す
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -69,14 +70,32 @@ if (!$isAdmin && $reportUserId !== $loginUserId) {
 }
 
 // レポートを削除
-$stmt = $pdo->prepare(
-    'DELETE FROM reports
-     WHERE id = :id'
-);
+// 外部キーが効かないため、項目管理で追加した項目の値もあわせて削除する（D36）
+try {
+    $pdo->beginTransaction();
 
-$stmt->execute([
-    ':id' => $id,
-]);
+    deleteReportFieldValues($pdo, $id);
+
+    $stmt = $pdo->prepare(
+        'DELETE FROM reports
+         WHERE id = :id'
+    );
+
+    $stmt->execute([
+        ':id' => $id,
+    ]);
+
+    $pdo->commit();
+} catch (PDOException $e) {
+    if ($pdo->inTransaction()) {
+        $pdo->rollBack();
+    }
+
+    error_log('レポート削除エラー: ' . $e->getMessage());
+
+    http_response_code(500);
+    exit('レポートを削除できませんでした。');
+}
 
 // 一覧画面へ戻る
 header('Location: ../index.php');

@@ -5,6 +5,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../lib/functions.php';
 require_once __DIR__ . '/../../lib/auth.php';
+require_once __DIR__ . '/../../lib/report_values.php';
 
 // ========================================
 // 1. ログインチェック
@@ -100,17 +101,21 @@ if (!$isAdmin) {
 }
 
 // ========================================
-// 5. コメント対象の項目
+// 5. 表示する項目とコメント対象の項目（項目管理の定義から作る）
 // ========================================
 
-$fields = [
-    'report_date' => '日付',
-    'name'        => '氏名',
-    'subject'     => '件名',
-    'content'     => '内容',
-    'issues'      => '課題',
-    'remarks'     => '備考',
-];
+// 表示中の項目（内部コード => 定義）
+$fieldDefinitions = loadReportFields($pdo, true);
+
+// 表示用の値（内部コード => 値）
+$fieldValues = loadReportValues($pdo, $report, $fieldDefinitions);
+
+// 内部コード => 表示名
+$fields = [];
+
+foreach ($fieldDefinitions as $code => $definition) {
+    $fields[$code] = (string) $definition['label'];
+}
 
 // ========================================
 // 6. コメントを取得
@@ -526,20 +531,16 @@ foreach ($allComments as $comment) {
         <?php foreach ($fields as $fieldName => $label): ?>
 
             <?php
-            // 長文項目
-            $multilineFields = [
-                'content',
-                'issues',
-                'remarks',
-            ];
-
-            $valueClass = in_array(
-                $fieldName,
-                $multilineFields,
-                true
-            )
+            // 長文項目（複数行テキスト）は改行を保って表示する
+            $valueClass = $fieldDefinitions[$fieldName]['field_type'] === 'textarea'
                 ? 'detail-value multiline'
                 : 'detail-value';
+
+            // 表示する値（数値・選択肢は表示用の文字にする）
+            $displayValue = formatReportValue(
+                $fieldDefinitions[$fieldName],
+                $fieldValues[$fieldName] ?? null
+            );
 
             // この項目のコメント数
             $commentCount = count($commentsByField[$fieldName]);
@@ -727,7 +728,7 @@ foreach ($allComments as $comment) {
 
                 <div class="detail-content-column">
 
-                    <div class="<?= h($valueClass) ?>"><?= h($report[$fieldName] ?? '') ?></div>
+                    <div class="<?= h($valueClass) ?>"><?= h($displayValue) ?></div>
 
                 </div>
 

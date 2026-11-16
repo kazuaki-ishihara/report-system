@@ -3,6 +3,7 @@
 require_once '../config/database.php';
 require_once '../lib/functions.php';
 require_once '../lib/auth.php';
+require_once __DIR__ . '/../lib/report_values.php';
 
 // ログイン必須
 requireLogin();
@@ -22,6 +23,35 @@ $isAdmin = (int) $loginUser['is_admin'] === 1;
 // 検索条件
 $name = trim($_GET['name'] ?? '');
 $keyword = trim($_GET['keyword'] ?? '');
+
+// --------------------------------------------------
+// 項目管理の定義
+//
+// 一覧の列：「一覧に表示」の項目（日付・氏名・件名は固定で表示）
+// キーワード検索：「キーワード検索の対象」の項目
+// --------------------------------------------------
+
+$reportFields = loadReportFields($pdo, true);
+
+$listFields = array_filter(
+    $reportFields,
+    static function (array $field): bool {
+        return (int) $field['show_in_list'] === 1;
+    }
+);
+
+$searchLabels = [];
+
+foreach ($reportFields as $field) {
+    if (
+        (int) $field['is_searchable'] === 1
+        && in_array($field['field_type'], REPORT_FIELD_TEXT_TYPES, true)
+    ) {
+        $searchLabels[] = (string) $field['label'];
+    }
+}
+
+$nameLabel = isset($reportFields['name']) ? (string) $reportFields['name']['label'] : '氏名';
 
 // --------------------------------------------------
 // 閲覧可能なユーザーIDを取得
@@ -79,8 +109,8 @@ if (!$isAdmin) {
 // --------------------------------------------------
 
 $sql = "
-    SELECT *
-    FROM reports
+    SELECT r.*
+    FROM reports r
     WHERE 1 = 1
 ";
 
@@ -99,16 +129,13 @@ if ($name !== '') {
 // キーワード検索
 if ($keyword !== '') {
 
-    $sql .= "
-        AND (
-            subject LIKE :keyword
-            OR content LIKE :keyword
-            OR issues LIKE :keyword
-            OR remarks LIKE :keyword
-        )
-    ";
-
-    $params[':keyword'] = '%' . $keyword . '%';
+    // 項目管理で「キーワード検索の対象」にした項目を探す
+    $sql .= buildReportKeywordCondition(
+        $reportFields,
+        $keyword,
+        'r',
+        $params
+    );
 }
 
 // 閲覧権限による絞り込み
@@ -151,6 +178,25 @@ $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 
 $reports = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// 項目管理で追加した項目のうち、一覧に表示するものの値
+$addedListValues = loadAddedFieldValues(
+    $pdo,
+    array_map(
+        static function (array $report): int {
+            return (int) $report['id'];
+        },
+        $reports
+    ),
+    $listFields
+);
+
+// 一覧の列の CSS クラス（既存の 3 項目は今の幅の指定を使う）
+$listColumnClasses = [
+    'report_date' => 'date-column',
+    'name'        => 'name-column',
+    'subject'     => 'subject-column',
+];
 
 ?>
 
@@ -223,6 +269,7 @@ $reports = $stmt->fetchAll(PDO::FETCH_ASSOC);
             display: flex;
             align-items: center;
             gap: 10px;
+            flex-wrap: wrap;
         }
 
         .login-user {
@@ -389,6 +436,11 @@ $reports = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         .subject-column {
             min-width: 200px;
+        }
+
+        /* 項目管理で追加した項目の列 */
+        .field-column {
+            min-width: 120px;
         }
 
         .action-column {
@@ -562,6 +614,10 @@ $reports = $stmt->fetchAll(PDO::FETCH_ASSOC);
     ユーザー管理
 </a>
 
+<a href="report_fields/index.php" class="button">
+    項目管理
+</a>
+
 <?php endif; ?>
             <a href="reports/create.php" class="button new-button">
                 新規登録
@@ -583,7 +639,7 @@ $reports = $stmt->fetchAll(PDO::FETCH_ASSOC);
             <div class="search-item">
 
                 <label for="name">
-                    氏名
+                    <?= h($nameLabel) ?>
                 </label>
 
                 <input
@@ -591,7 +647,7 @@ $reports = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     id="name"
                     name="name"
                     value="<?= h($name) ?>"
-                    placeholder="氏名を入力"
+                    placeholder="<?= h($nameLabel) ?>を入力"
                 >
 
             </div>
@@ -607,7 +663,7 @@ $reports = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     id="keyword"
                     name="keyword"
                     value="<?= h($keyword) ?>"
-                    placeholder="件名・内容・課題・備考"
+                    placeholder="<?= h(implode('・', $searchLabels)) ?>"
                 >
 
             </div>
@@ -646,17 +702,13 @@ $reports = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         ID
                     </th>
 
-                    <th class="date-column">
-                        日付
-                    </th>
+                    <?php foreach ($listFields as $code => $field): ?>
 
-                    <th class="name-column">
-                        氏名
-                    </th>
+                        <th class="<?= h($listColumnClasses[$code] ?? 'field-column') ?>">
+                            <?= h($field['label']) ?>
+                        </th>
 
-                    <th class="subject-column">
-                        件名
-                    </th>
+                    <?php endforeach; ?>
 
                     <th class="action-column">
                         操作
@@ -672,7 +724,7 @@ $reports = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
                     <tr>
 
-                        <td colspan="5" class="no-data">
+                        <td colspan="<?= count($listFields) + 2 ?>" class="no-data">
                             該当するレポートはありません。
                         </td>
 
@@ -694,17 +746,20 @@ $reports = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                 <?= h($report['id']) ?>
                             </td>
 
-                            <td class="date-column">
-                                <?= h($report['report_date']) ?>
-                            </td>
+                            <?php foreach ($listFields as $code => $field): ?>
 
-                            <td class="name-column">
-                                <?= h($report['name']) ?>
-                            </td>
+                                <?php
+                                // 既存 6 項目は reports の列、追加項目は値テーブルの値
+                                $listValue = isReportColumnField($code)
+                                    ? ($report[$code] ?? null)
+                                    : ($addedListValues[(int) $report['id']][$code] ?? null);
+                                ?>
 
-                            <td class="subject-column">
-                                <?= h($report['subject']) ?>
-                            </td>
+                                <td class="<?= h($listColumnClasses[$code] ?? 'field-column') ?>">
+                                    <?= h(formatReportValue($field, $listValue)) ?>
+                                </td>
+
+                            <?php endforeach; ?>
 
                             <td class="action-column">
 

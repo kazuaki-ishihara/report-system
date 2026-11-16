@@ -5,6 +5,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../lib/functions.php';
 require_once __DIR__ . '/../../lib/auth.php';
+require_once __DIR__ . '/../../lib/report_values.php';
 
 // ==================================================
 // 1. ログイン確認
@@ -138,14 +139,8 @@ if (!$isAdmin && $commentUserId !== $loginUserId) {
 // 6. コメント対象の項目名
 // ==================================================
 
-$fields = [
-    'report_date' => '日付',
-    'name'        => '氏名',
-    'subject'     => '件名',
-    'content'     => '内容',
-    'issues'      => '課題',
-    'remarks'     => '備考',
-];
+// 項目管理の全項目（非表示の項目に付いた既存のコメントも編集できるようにする）
+$fields = loadReportFieldLabels($pdo, false);
 
 $fieldName = $comment['field_name'];
 

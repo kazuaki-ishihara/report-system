@@ -5,12 +5,13 @@ declare(strict_types=1);
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../lib/functions.php';
 require_once __DIR__ . '/../../lib/auth.php';
+require_once __DIR__ . '/../../lib/report_values.php';
 
 // ========================================
 // ログインチェック
 // ========================================
 
-// 未ログインの場合はログイン画面へ移動
+// ログインしていない場合はログイン画面へ移動
 requireLogin();
 
 
@@ -39,58 +40,23 @@ if ($userId === null) {
 
 
 // ========================================
-// 入力値を取得
+// 入力チェック（項目管理の定義に従う。登録・更新で共通）
 // ========================================
 
-// 配列などの不正な値が送信された場合に備え、
-// 文字列以外は空文字として扱う
-$getPostString = static function (string $key): string {
-    $value = $_POST[$key] ?? '';
+$fields = loadReportFields($pdo, true);
 
-    return is_string($value) ? $value : '';
-};
+list($values, $errors) = readReportFormInput($fields);
 
-$reportDate = $getPostString('report_date');
-$name       = $getPostString('name');
-$subject    = $getPostString('subject');
-$content    = $getPostString('content');
-$issues     = $getPostString('issues');
-$remarks    = $getPostString('remarks');
-
-
-// ========================================
-// 入力チェック
-// ========================================
-
-// 必須項目のチェック
-if (
-    trim($reportDate) === ''
-    || trim($name) === ''
-    || trim($subject) === ''
-) {
+if (count($errors) > 0) {
     http_response_code(400);
-    exit('必須項目が入力されていません。');
+    exit(
+        '入力内容を確認してください。<br>' .
+        implode('<br>', array_map('h', $errors)) .
+        '<br><br>ブラウザの「戻る」で入力画面に戻ってください。'
+    );
 }
 
-
-// ========================================
-// 日付チェック
-// ========================================
-
-// YYYY-MM-DD形式であることを確認
-$date = DateTimeImmutable::createFromFormat(
-    '!Y-m-d',
-    $reportDate
-);
-
-// 存在しない日付や不正な形式を拒否
-if (
-    $date === false
-    || $date->format('Y-m-d') !== $reportDate
-) {
-    http_response_code(400);
-    exit('日付の形式が正しくありません。');
-}
+$columns = buildReportColumnValues($fields, $values, null);
 
 
 // ========================================
@@ -104,45 +70,63 @@ $now = date('Y-m-d H:i:s');
 // SQLiteへ登録
 // ========================================
 
-// ログインユーザーIDを user_id に保存する
-$stmt = $pdo->prepare("
-    INSERT INTO reports (
-        user_id,
-        report_date,
-        name,
-        subject,
-        content,
-        issues,
-        remarks,
-        created_at,
-        updated_at
-    )
-    VALUES (
-        :user_id,
-        :report_date,
-        :name,
-        :subject,
-        :content,
-        :issues,
-        :remarks,
-        :created_at,
-        :updated_at
-    )
-");
+try {
+    $pdo->beginTransaction();
 
+    // ログインユーザーIDを user_id に保存する
+    $stmt = $pdo->prepare("
+        INSERT INTO reports (
+            user_id,
+            report_date,
+            name,
+            subject,
+            content,
+            issues,
+            remarks,
+            created_at,
+            updated_at
+        )
+        VALUES (
+            :user_id,
+            :report_date,
+            :name,
+            :subject,
+            :content,
+            :issues,
+            :remarks,
+            :created_at,
+            :updated_at
+        )
+    ");
 
-// SQL実行
-$stmt->execute([
-    ':user_id'     => $userId,
-    ':report_date' => $reportDate,
-    ':name'        => $name,
-    ':subject'     => $subject,
-    ':content'     => $content,
-    ':issues'      => $issues,
-    ':remarks'     => $remarks,
-    ':created_at'  => $now,
-    ':updated_at'  => $now,
-]);
+    $stmt->execute([
+        ':user_id'     => $userId,
+        ':report_date' => $columns['report_date'],
+        ':name'        => $columns['name'],
+        ':subject'     => $columns['subject'],
+        ':content'     => $columns['content'],
+        ':issues'      => $columns['issues'],
+        ':remarks'     => $columns['remarks'],
+        ':created_at'  => $now,
+        ':updated_at'  => $now,
+    ]);
+
+    $reportId = (int) $pdo->lastInsertId();
+
+    // 項目管理で追加した項目の値
+    saveAddedFieldValues($pdo, $reportId, $fields, $values, $now);
+
+    $pdo->commit();
+} catch (PDOException $e) {
+    if ($pdo->inTransaction()) {
+        $pdo->rollBack();
+    }
+
+    error_log('レポート登録エラー: ' . $e->getMessage());
+
+    http_response_code(500);
+    exit('レポートを登録できませんでした。');
+}
 
 
 // ========================================

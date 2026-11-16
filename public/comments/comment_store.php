@@ -5,6 +5,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../lib/functions.php';
 require_once __DIR__ . '/../../lib/auth.php';
+require_once __DIR__ . '/../../lib/report_values.php';
 
 // ========================================
 // 1. ログインチェック
@@ -57,14 +58,8 @@ $commentText = trim($getPostString('comment'));
 // ========================================
 
 // コメントを登録できる項目
-$allowedFields = [
-    'report_date',
-    'name',
-    'subject',
-    'content',
-    'issues',
-    'remarks',
-];
+// 項目管理で表示中の項目だけ（非表示の項目には新しくコメントできない）
+$allowedFields = array_keys(loadReportFieldLabels($pdo, true));
 
 // レポートIDの確認
 if (

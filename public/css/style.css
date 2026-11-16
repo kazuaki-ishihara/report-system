@@ -102,3 +102,52 @@ th {
     color: #666;
 }
 
+
+/* ========================================
+   レポートの登録・編集：項目管理で追加した入力欄
+======================================== */
+
+.required-mark {
+    margin-left: 4px;
+    color: #c62828;
+    font-size: 13px;
+    font-weight: normal;
+}
+
+.report-choice-group {
+    margin: 0;
+    padding: 10px 14px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+.report-choice-group legend {
+    padding: 0 6px;
+    font-weight: bold;
+}
+
+.choice-label {
+    display: inline-flex;
+    gap: 6px;
+    align-items: center;
+    margin: 4px 16px 4px 0;
+    font-weight: normal;
+}
+
+.choice-label input {
+    width: auto;
+}
+
+.choice-empty {
+    margin: 4px 0;
+    color: #777;
+}
+
+.report-select {
+    box-sizing: border-box;
+    width: 100%;
+    padding: 10px;
+    font-size: 16px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}

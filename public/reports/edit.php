@@ -5,6 +5,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../lib/functions.php';
 require_once __DIR__ . '/../../lib/auth.php';
+require_once __DIR__ . '/../../lib/report_values.php';
 
 // ==================================================
 // 1. ログイン確認
@@ -80,6 +81,13 @@ if (!$isAdmin && $reportUserId !== $loginUserId) {
     exit('このレポートを編集する権限がありません。');
 }
 
+// ==================================================
+// 5. 入力欄（項目管理の定義から作る）
+// ==================================================
+
+$fields = loadReportFields($pdo, true);
+$formValues = loadReportValues($pdo, $report, $fields);
+
 ?>
 
 <!DOCTYPE html>
@@ -116,94 +124,7 @@ if (!$isAdmin && $reportUserId !== $loginUserId) {
                 value="<?= h($report['id']) ?>"
             >
 
-            <div class="form-group">
-
-                <label for="report_date">
-                    日付
-                </label>
-
-                <input
-                    type="date"
-                    id="report_date"
-                    name="report_date"
-                    value="<?= h($report['report_date']) ?>"
-                    required
-                >
-
-            </div>
-
-            <div class="form-group">
-
-                <label for="name">
-                    氏名
-                </label>
-
-                <input
-                    type="text"
-                    id="name"
-                    name="name"
-                    maxlength="100"
-                    value="<?= h($report['name']) ?>"
-                    required
-                >
-
-            </div>
-
-            <div class="form-group">
-
-                <label for="subject">
-                    件名
-                </label>
-
-                <input
-                    type="text"
-                    id="subject"
-                    name="subject"
-                    maxlength="200"
-                    value="<?= h($report['subject']) ?>"
-                    required
-                >
-
-            </div>
-
-            <div class="form-group">
-
-                <label for="content">
-                    内容
-                </label>
-
-                <textarea
-                    id="content"
-                    name="content"
-                ><?= h($report['content']) ?></textarea>
-
-            </div>
-
-            <div class="form-group">
-
-                <label for="issues">
-                    課題
-                </label>
-
-                <textarea
-                    id="issues"
-                    name="issues"
-                ><?= h($report['issues']) ?></textarea>
-
-            </div>
-
-            <div class="form-group">
-
-                <label for="remarks">
-                    備考
-                </label>
-
-                <textarea
-                    id="remarks"
-                    name="remarks"
-                ><?= h($report['remarks']) ?></textarea>
-
-            </div>
+            <?php require __DIR__ . '/_fields.php'; ?>
 
             <div class="buttons">
 

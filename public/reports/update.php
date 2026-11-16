@@ -5,6 +5,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../lib/functions.php';
 require_once __DIR__ . '/../../lib/auth.php';
+require_once __DIR__ . '/../../lib/report_values.php';
 
 // ==================================================
 // 1. POSTリクエストの確認
@@ -89,117 +90,78 @@ if (!$isAdmin && $reportUserId !== $loginUserId) {
 }
 
 // ==================================================
-// 6. POSTされた入力値を取得
+// 6. 入力チェック（項目管理の定義に従う。登録・更新で共通）
 // ==================================================
 
-$reportDate = $_POST['report_date'] ?? null;
-$name       = $_POST['name'] ?? null;
-$subject    = $_POST['subject'] ?? null;
-$content    = $_POST['content'] ?? null;
-$issues     = $_POST['issues'] ?? null;
-$remarks    = $_POST['remarks'] ?? null;
+$fields = loadReportFields($pdo, true);
+
+// 今の値（非表示になった選択肢を選んだままにできるようにするため）
+$currentValues = loadReportValues($pdo, $report, $fields);
+
+list($values, $errors) = readReportFormInput($fields, $currentValues);
+
+if (count($errors) > 0) {
+    http_response_code(400);
+    exit(
+        '入力内容を確認してください。<br>' .
+        implode('<br>', array_map('h', $errors)) .
+        '<br><br>ブラウザの「戻る」で入力画面に戻ってください。'
+    );
+}
+
+// 非表示の項目は今の値を残す
+$columns = buildReportColumnValues($fields, $values, $report);
 
 // ==================================================
-// 7. 入力値の形式を確認
-// ==================================================
-
-// 文字列以外の値が送信された場合は拒否
-$inputValues = [
-    $reportDate,
-    $name,
-    $subject,
-    $content,
-    $issues,
-    $remarks,
-];
-
-foreach ($inputValues as $value) {
-    if (!is_string($value)) {
-        http_response_code(400);
-        exit('入力値が正しくありません。');
-    }
-}
-
-// 必須項目の確認
-$name = trim($name);
-$subject = trim($subject);
-
-if (
-    $reportDate === ''
-    || $name === ''
-    || $subject === ''
-) {
-    http_response_code(400);
-    exit('必須項目が入力されていません。');
-}
-
-// 日付の形式を確認（YYYY-MM-DD）
-$date = DateTimeImmutable::createFromFormat(
-    '!Y-m-d',
-    $reportDate
-);
-
-$dateErrors = DateTimeImmutable::getLastErrors();
-
-if (
-    $date === false
-    || (
-        $dateErrors !== false
-        && (
-            $dateErrors['warning_count'] > 0
-            || $dateErrors['error_count'] > 0
-        )
-    )
-    || $date->format('Y-m-d') !== $reportDate
-) {
-    http_response_code(400);
-    exit('日付の形式が正しくありません。');
-}
-
-// 氏名・件名の最大バイト数を確認
-// 日本語の文字数ではなく、UTF-8のバイト数で判定する
-if (strlen($name) > 300) {
-    http_response_code(400);
-    exit('氏名が長すぎます。');
-}
-
-if (strlen($subject) > 600) {
-    http_response_code(400);
-    exit('件名が長すぎます。');
-}
-
-// ==================================================
-// 8. レポートを更新
+// 7. レポートを更新
 // ==================================================
 
 $now = date('Y-m-d H:i:s');
 
-$stmt = $pdo->prepare(
-    'UPDATE reports
-     SET
-        report_date = :report_date,
-        name = :name,
-        subject = :subject,
-        content = :content,
-        issues = :issues,
-        remarks = :remarks,
-        updated_at = :updated_at
-     WHERE id = :id'
-);
+try {
+    $pdo->beginTransaction();
 
-$stmt->execute([
-    ':report_date' => $reportDate,
-    ':name'        => $name,
-    ':subject'     => $subject,
-    ':content'     => $content,
-    ':issues'      => $issues,
-    ':remarks'     => $remarks,
-    ':updated_at'  => $now,
-    ':id'           => $id,
-]);
+    $stmt = $pdo->prepare(
+        'UPDATE reports
+         SET
+            report_date = :report_date,
+            name = :name,
+            subject = :subject,
+            content = :content,
+            issues = :issues,
+            remarks = :remarks,
+            updated_at = :updated_at
+         WHERE id = :id'
+    );
+
+    $stmt->execute([
+        ':report_date' => $columns['report_date'],
+        ':name'        => $columns['name'],
+        ':subject'     => $columns['subject'],
+        ':content'     => $columns['content'],
+        ':issues'      => $columns['issues'],
+        ':remarks'     => $columns['remarks'],
+        ':updated_at'  => $now,
+        ':id'          => $id,
+    ]);
+
+    // 項目管理で追加した項目の値（非表示の項目の値は残す）
+    saveAddedFieldValues($pdo, $id, $fields, $values, $now);
+
+    $pdo->commit();
+} catch (PDOException $e) {
+    if ($pdo->inTransaction()) {
+        $pdo->rollBack();
+    }
+
+    error_log('レポート更新エラー: ' . $e->getMessage());
+
+    http_response_code(500);
+    exit('レポートを更新できませんでした。');
+}
 
 // ==================================================
-// 9. 更新完了後、一覧画面へ戻る
+// 8. 更新完了後、一覧画面へ戻る
 // ==================================================
 
 header('Location: ../index.php');

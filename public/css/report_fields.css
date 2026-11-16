@@ -1,0 +1,215 @@
+/* レポート項目管理（public/report_fields/）の画面で使うスタイル */
+
+.rf-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 24px;
+    background: #fff;
+    border-radius: 8px;
+    box-sizing: border-box;
+}
+
+.rf-narrow {
+    max-width: 760px;
+}
+
+.rf-toolbar {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.rf-button {
+    display: inline-block;
+    padding: 7px 14px;
+    border: 1px solid transparent;
+    border-radius: 5px;
+    font-size: 14px;
+    font-family: inherit;
+    line-height: 1.4;
+    text-align: center;
+    text-decoration: none;
+    cursor: pointer;
+    box-sizing: border-box;
+    background: #1976d2;
+    color: #fff;
+}
+
+.rf-button:hover {
+    background: #1565c0;
+}
+
+.rf-button-secondary {
+    background: #fff;
+    color: #333;
+    border-color: #777;
+}
+
+.rf-button-secondary:hover {
+    background: #f2f2f2;
+}
+
+.rf-button-small {
+    padding: 4px 9px;
+    font-size: 13px;
+}
+
+.rf-button[disabled] {
+    background: #ccc;
+    border-color: #ccc;
+    color: #fff;
+    cursor: default;
+}
+
+.rf-inline-form {
+    display: inline;
+    margin: 0;
+}
+
+.rf-message,
+.rf-error,
+.rf-warning {
+    padding: 12px 16px;
+    margin-bottom: 20px;
+    border-radius: 5px;
+}
+
+.rf-message {
+    background: #e8f5e9;
+    color: #1b5e20;
+}
+
+.rf-error {
+    background: #ffebee;
+    color: #b71c1c;
+}
+
+.rf-warning {
+    background: #fff8e1;
+    color: #6d4c00;
+}
+
+.rf-table-wrapper {
+    width: 100%;
+    overflow-x: auto;
+}
+
+.rf-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.rf-table th,
+.rf-table td {
+    padding: 8px 10px;
+    border: 1px solid #ddd;
+    text-align: left;
+    vertical-align: middle;
+}
+
+.rf-table th {
+    background: #f2f4f7;
+    white-space: nowrap;
+}
+
+.rf-table td.rf-nowrap {
+    white-space: nowrap;
+}
+
+.rf-table tr.rf-inactive td {
+    color: #888;
+    background: #fafafa;
+}
+
+.rf-badge {
+    display: inline-block;
+    padding: 1px 7px;
+    border-radius: 10px;
+    font-size: 12px;
+    background: #eceff1;
+    color: #37474f;
+    white-space: nowrap;
+}
+
+.rf-badge-system {
+    background: #e3f2fd;
+    color: #0d47a1;
+}
+
+.rf-badge-warning {
+    background: #fff3e0;
+    color: #e65100;
+}
+
+.rf-help {
+    margin: 4px 0 0;
+    color: #666;
+    font-size: 13px;
+    font-weight: normal;
+}
+
+.rf-checkbox-label {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    font-weight: normal;
+}
+
+.rf-checkbox-label input {
+    width: auto;
+}
+
+.rf-fieldset {
+    margin: 0 0 20px;
+    padding: 12px 16px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+}
+
+.rf-fieldset legend {
+    padding: 0 6px;
+    font-weight: bold;
+}
+
+.rf-select {
+    box-sizing: border-box;
+    width: 100%;
+    padding: 10px;
+    font-size: 16px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+.rf-status-list {
+    margin: 0 0 20px;
+    padding-left: 20px;
+    line-height: 1.8;
+}
+
+.rf-option-label-input {
+    width: 100%;
+    min-width: 160px;
+    padding: 5px 8px;
+    font-size: 14px;
+}
+
+@media (max-width: 700px) {
+    body {
+        padding: 10px;
+    }
+
+    .rf-container {
+        padding: 14px;
+    }
+}
+
+.rf-button-danger {
+    color: #c62828;
+    border-color: #c62828;
+}
+
+.rf-button-danger:hover {
+    background: #ffebee;
+}
