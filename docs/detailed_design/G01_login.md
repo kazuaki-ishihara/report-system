@@ -83,7 +83,7 @@ ID かパスワードが空のときは「ログイン ID とパスワードを�
 ### 6.1 ログイン（手順 1）
 
 1. `next` を受ける。自サイトのパスで、`/login.php` で始まらないものだけ使い、それ以外は `/index.php` にする。
-2. `users` を `login_id` で探す。ないとき、無効（`is_active = 0`）のときは、ダミーのハッシュで `password_verify` を行う（時間をそろえる）。そのうえで、IP アドレスでロック中ならロックの文言を出し、そうでなければ IP アドレスの失敗を 1 増やして（`login_throttle`、`ip:<IP>`。上限と時間は利用者と同じ）、パスワード違いと同じ文言を出す。記録 `auth login:fail`（利用者なし）。
+2. `users` を `login_id` で探す。ないとき、無効（`is_active = 0`）のときは、ダミーのハッシュで `password_verify` を行う（時間をそろえる）。そのうえで、IP アドレスでロック中ならロックの文言を出し、そうでなければ IP アドレスの失敗を 1 増やして（`login_throttle`、`ip:<IP>`。上限と時間は利用者と同じ）、パスワード違いと同じ文言を出す。記録 `auth login:fail;id=<入れた ID>`（利用者なし）。入れた ID が ID の形（`auth_is_valid_login_id`）に合わないときは、パスワードを ID の欄に入れた恐れがあるので `login:fail;id=(形が違う)` とだけ残す（K-041。G-15 §2）。
 3. `locked_until` が今より後なら、ダミーのハッシュで時間をそろえ、ロックの文言を出す（パスワードは確かめない）。記録 `auth login:locked_attempt`。
 4. `password_verify`。違えば `failed_count` を 1 増やし、`login_max_failures` に達したら `locked_until = 今 + login_lock_minutes`、`failed_count = 0`。記録 `auth login:fail`（ロックしたら `login:locked`）。
 5. 正しくても、失敗の回数はここでは戻さない（パスワードだけ知る人がコードを総当たりできないように）。`password_needs_rehash` なら作り直して保存する。
@@ -122,7 +122,7 @@ POST だけ（GET は 400）。記録 `auth logout` を残し、セッション�
 
 ## 8. 記録
 
-`auth` に `login:ok`、`login:fail`（存在しない ID は利用者なし）、`login:locked`、`login:locked_attempt`、`login:2fa_fail`、`login:pw_ok_setup`、`logout`。パスワードとコードは記録しない。
+`auth` に `login:ok`、`login:fail`（存在しない ID は利用者なしで、入れた ID を付ける。形に合わないものは伏せる）、`login:locked`、`login:locked_attempt`、`login:2fa_fail`、`login:pw_ok_setup`、`logout`。パスワードとコードは記録しない。
 
 ## 9. 検証の観点
 

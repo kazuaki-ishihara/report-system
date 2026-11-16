@@ -428,7 +428,7 @@ require APP_DIR . '/pages/home.php';
 | 臨時の調査の回答を開いた | `view` | `survey:5:responses` |
 | 出力した | `export` | `export:report;period=2026-10..2026-11;dept=2;format=xlsx;content=table;free_text=0;restricted=0`、`export:survey;id=5;format=csv;free_text=0;restricted=0`、`export:logs;from=…;to=…` |
 | 管理の操作 | `admin` | `department:<id>:create／update／roles`、`word:<id>:add／delete`、`project:<id>:create／update／…`、`field:<id>:create／update／reorder／activate／deactivate`、`user:<id>:create／update／deactivate／admin_on／admin_off／temp_password／reset_2fa／unlock／logout_all`（コマンドラインからは `create_cli`）、`comment:<id>:delete`、`survey:<id>:open／close／delete`、`restore:<report／comment／survey>:<id>` |
-| ログイン・アカウントの操作 | `auth` | `login:ok`、`login:fail`（存在しない ID は利用者なし）、`login:locked`、`login:locked_attempt`、`login:2fa_fail`、`login:pw_ok_setup`、`logout`、`logout_all`、`password:change`、`password:reset`、`password:reset_fail`、`totp:setup`、`totp:backup_regenerated`、`device:revoke` |
+| ログイン・アカウントの操作 | `auth` | `login:ok`、`login:fail`（存在しない ID は利用者なしで `login:fail;id=<入れた ID>`。ID の形に合わないものは `login:fail;id=(形が違う)`。K-041）、`login:locked`、`login:locked_attempt`、`login:2fa_fail`、`login:pw_ok_setup`、`logout`、`logout_all`、`password:change`、`password:reset`、`password:reset_fail`、`totp:setup`、`totp:backup_regenerated`、`device:revoke` |
 
 - 中身（報告の値、コメント、パスワード、コード）は記録しない。
 - 本人が自分の報告を開いたときは記録しない（件数を抑えるため）。

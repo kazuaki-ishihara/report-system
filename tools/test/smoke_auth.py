@@ -121,6 +121,9 @@ def main():
     s2, _, b2, _ = c.post("/login.php", {"csrf_token": csrf(body), "action": "password", "login_id": a.login, "password": "wrong-password"})
     msg = "ログイン ID またはパスワードが違います"
     check("存在しない ID とパスワード違いで同じ表示", s1 == s2 == 200 and msg in b1 and msg in b2, (s1, s2))
+    # ID の形に合わないもの（パスワードを ID の欄に入れた恐れ）は、記録で伏せる（K-041。下の管理者の確かめで見る）
+    s3, _, b3, _ = c.post("/login.php", {"csrf_token": csrf(body), "action": "password", "login_id": "Secret Pass!99", "password": "wrong-password"})
+    check("ID の形に合わないものでも同じ表示", s3 == 200 and msg in b3, s3)
 
     # ---- 初回ログイン → 2 段階認証の設定 ----
     s, loc, body, _ = c.post("/login.php", {"csrf_token": csrf(body), "action": "password", "login_id": a.login,
@@ -161,6 +164,11 @@ def main():
     check("ホームが表示される", s == 200 and "さん" in body and "の報告" in body, s)
     if a.admin:
         check("管理者のメニューが出る", "組織・ユーザー" in body)
+        # 無い ID での失敗は、入れた ID も記録する。形に合わないものは伏せる（K-041）
+        s, _, logs_html, _ = c.get("/admin/logs.php?kind=auth_fail")
+        check("無い ID でのログインの失敗に、入れた ID が記録される", s == 200 and "login:fail;id=nobody-xyz" in logs_html, s)
+        check("ID の形に合わないものは「(形が違う)」とだけ記録され、入れた文字は残らない",
+              "login:fail;id=(形が違う)" in logs_html and "secret pass" not in logs_html.lower())
     else:
         check("管理者でなければ管理者のメニューが出ない", "組織・ユーザー" not in body)
 

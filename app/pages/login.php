@@ -63,7 +63,8 @@ if (is_post()) {
                     auth_ip_register_failure();
                     $errors[] = LOGIN_MSG_FAIL;
                 }
-                audit_log('auth', 'login:fail', null);
+                // 無い ID での失敗: 入れた ID も残す（ID の形に合わないものは、パスワードを誤って入れた恐れがあるので伏せる。K-041）
+                audit_log('auth', 'login:fail;id=' . (auth_is_valid_login_id($loginId) ? $loginId : '(形が違う)'), null);
             } elseif (auth_is_locked($user)) {
                 auth_dummy_verify($password);
                 $errors[] = LOGIN_MSG_LOCK;

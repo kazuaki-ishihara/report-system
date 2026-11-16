@@ -103,8 +103,13 @@ class Runner:
 
 def php_files():
     out = []
+    # 道具が作った出力（反映用の一式など。リポジトリの外）は数えない（同じファイルの写しが二重に数えられるため）
+    generated_output_dirs = (os.path.join(ROOT, "tools", "deploy", "output") + os.sep,
+                             os.path.join(ROOT, "tools", "test", "output") + os.sep)
     for d in ("app", "public", "tools"):
         for path in glob.glob(os.path.join(ROOT, d, "**", "*.php"), recursive=True):
+            if path.startswith(generated_output_dirs):
+                continue
             out.append(path)
     return sorted(out)
 
