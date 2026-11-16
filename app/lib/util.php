@@ -115,6 +115,21 @@ function json_response(array $data, int $status = 200): void
     exit;
 }
 
+/**
+ * 画面の中から JSON で問い合わせている要求か（よくある質問のチャットの ?format=json、Accept: application/json）。
+ * ログインが切れているときやエラーのとき、画面（HTML）ではなく JSON で返すために使う。
+ */
+function is_json_request(): bool
+{
+    return ($_GET['format'] ?? '') === 'json' || stripos((string) ($_SERVER['HTTP_ACCEPT'] ?? ''), 'application/json') !== false;
+}
+
+/** 記録に残す、要求の場所（パスだけ。問い合わせの中身（質問の文など）は残さない） */
+function request_path_for_log(): string
+{
+    return (string) parse_url((string) ($_SERVER['REQUEST_URI'] ?? ''), PHP_URL_PATH);
+}
+
 function app_log(string $message): void
 {
     $dir = cfg('log_dir');

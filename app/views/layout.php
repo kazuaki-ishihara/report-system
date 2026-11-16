@@ -61,7 +61,7 @@ $flashes = take_flashes();
   <?php if (($screenHelpText ?? '') !== ''): ?>
     <details class="screen-help no-print">
       <summary>？ この画面の使い方</summary>
-      <div class="screen-help-body"><?= h_lines($screenHelpText) ?> <a href="<?= h(url('/faq.php')) ?>">よくある質問</a></div>
+      <div class="screen-help-body"><?= h_lines($screenHelpText) ?> <a href="<?= h(url('/faq.php' . (($supportRequestScreenCode ?? null) !== null ? '?' . http_build_query(['screen' => $supportRequestScreenCode, 'from' => (string) ($_SERVER['REQUEST_URI'] ?? '')]) : ''))) ?>">よくある質問</a></div>
     </details>
   <?php endif; ?>
   <?php if (($user ?? null) !== null && maintenance_state() !== null): ?>

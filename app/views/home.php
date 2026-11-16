@@ -26,6 +26,17 @@ $editUrl = url('/reports/edit.php?period=' . rawurlencode($period));
 <?php if ($supportRequestStaffCounts !== null && ($supportRequestStaffCounts['open'] + $supportRequestStaffCounts['waiting_reply']) > 0): ?>
   <div class="flash flash-info"><a href="<?= h(url('/requests/index.php')) ?>"><?= h(msg('要望・依頼: 未受付 {open} 件、返信待ち {waiting} 件', ['open' => $supportRequestStaffCounts['open'], 'waiting' => $supportRequestStaffCounts['waiting_reply']])) ?></a></div>
 <?php endif; ?>
+<?php /** @var array{urgent: int, concern: int, retirement: int, credential: int}|null $faqDistressCounts まだ対応していない、知らせる質問の数（管理者はすべて、補佐は ID・パスワードだけ） */ ?>
+<?php if ($faqDistressCounts !== null && $faqDistressCounts['urgent'] + $faqDistressCounts['concern'] + $faqDistressCounts['retirement'] > 0): ?>
+  <div class="flash flash-error" role="alert"><a href="<?= h(url('/admin/faq_logs.php#distress')) ?>"><?= h(msg('よくある質問のチャットに、心の不調らしい文や退職に関わる質問があります（未対応 {count} 件。うち命に関わる言葉 {urgent} 件）。確かめて、対応してください', ['count' => $faqDistressCounts['urgent'] + $faqDistressCounts['concern'] + $faqDistressCounts['retirement'], 'urgent' => $faqDistressCounts['urgent']])) ?></a></div>
+<?php endif; ?>
+<?php /** @var int $unknownLoginCount まだ確かめていない、無い ID でのログインの数（システム管理者・補佐だけ） */ ?>
+<?php if ($unknownLoginCount > 0): ?>
+  <div class="flash flash-error" role="alert"><a href="<?= h(url('/admin/logs.php?kind=auth_unknown')) ?>"><?= h(msg('無い ID でログインしようとした記録があります（未確認 {count} 件）。なりすましのおそれがないか確かめてください', ['count' => $unknownLoginCount])) ?></a></div>
+<?php endif; ?>
+<?php if ($faqDistressCounts !== null && $faqDistressCounts['credential'] > 0): ?>
+  <div class="flash flash-error" role="alert"><a href="<?= h(url('/admin/faq_logs.php#distress')) ?>"><?= h(msg('よくある質問のチャットに、ID・パスワードを求める質問があります（未対応 {count} 件）。なりすましのおそれがないか確かめてください', ['count' => $faqDistressCounts['credential']])) ?></a></div>
+<?php endif; ?>
 <p class="greeting"><?= h($user['display_name'] !== '' ? $user['display_name'] : $user['login_id']) ?> さん</p>
 <?php /** @var array<int, array<string, mixed>> $activeNoticeList 出している更新のお知らせ */ ?>
 <?php if ($activeNoticeList): ?>

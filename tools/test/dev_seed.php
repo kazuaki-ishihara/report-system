@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 // ====================================================================
 // ローカル検証環境のテストデータを作り直す（本番では使わない）
-//   php tools/test/dev_seed.php --yes
+//   php tools/test/dev_seed.php --yes             （--with-faq を付けると、標準のよくある質問も入れる。ローカル検証環境の一式で使う）
 // config.local.php に 'allow_dev_seed' => true があるときだけ動く。DB を消して作り直す。
 // テスト用の利用者は決まったパスワードと 2 段階認証の秘密の値を持つ（検証の道具がコードを計算する）。
 // ====================================================================
@@ -20,7 +20,7 @@ if (empty($localCfg['allow_dev_seed']) || cfg('https') || cfg('base_path') !== '
     fwrite(STDERR, "ローカル検証環境でだけ使えます（config.local.php に allow_dev_seed => true）\n");
     exit(1);
 }
-$opt = getopt('', ['yes']);
+$opt = getopt('', ['yes', 'with-faq']);
 if (!isset($opt['yes'])) {
     fwrite(STDERR, "DB を消して作り直します。--yes を付けて実行してください\n");
     exit(1);
@@ -43,7 +43,9 @@ $deptA = (int) db()->lastInsertId();
 db_exec('INSERT INTO departments (name, sort_order, created_at, updated_at) VALUES (?, 20, ?, ?)', ['B課', $now, $now]);
 $deptB = (int) db()->lastInsertId();
 
-passthru(escapeshellarg(PHP_BINARY) . ' ' . escapeshellarg(APP_DIR . '/bin/seed_template.php') . ' --dept-a=' . $deptA . ' --dept-b=' . $deptB);
+// 様式を作る道具は、リポジトリの直下から相対の場所で呼ぶ（Windows で、置き場所に日本語などが入っていても開けるように）
+chdir(dirname(APP_DIR));
+passthru(escapeshellarg(PHP_BINARY) . ' ' . escapeshellarg('app/bin/seed_template.php') . ' --dept-a=' . $deptA . ' --dept-b=' . $deptB);
 
 $users = [
     ['admin01', '管理者', null, 1, null],
@@ -82,6 +84,19 @@ foreach ($projects as [$code, $alias, $dept]) {
 db_exec("INSERT INTO app_state (name, value) VALUES ('project_seq', '4')");
 // システムの管理担当の課（K-006。本番ではシステム 2 部システム 2 課）。検証では A課
 db_exec("INSERT INTO app_state (name, value) VALUES ('management_department_id', ?)", [(string) $deptA]);
+
+// 標準のよくある質問（G-25 §2.4）。自動検証は入れない（取り込みを検証するため）。ローカル検証環境の一式では入れる
+if (isset($opt['with-faq'])) {
+    require_once APP_DIR . '/lib/faq_standard.php';
+    $faqSortOrder = 10;
+    foreach (FAQ_STANDARD_ENTRIES as [$faqCategory, $faqQuestion, $faqAnswer]) {
+        db_exec('INSERT INTO faq_entries (category, question, answer, sort_order, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)',
+            [$faqCategory, $faqQuestion, $faqAnswer, $faqSortOrder, $now, $now]);
+        $faqSortOrder += 10;
+    }
+    echo '標準のよくある質問を入れました: ' . count(FAQ_STANDARD_ENTRIES) . " 件
+";
+}
 
 file_put_contents(__DIR__ . '/output_dev_users.json', json_encode(['dept_a' => $deptA, 'dept_b' => $deptB, 'users' => $out], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
 echo "テストデータを作りました: {$db}\n";

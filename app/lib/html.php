@@ -40,6 +40,7 @@ const ADMIN_SECTION_PATH_BY_TEMPLATE = [
     'admin_org'           => '/admin/org.php',
     'department_manage'   => '/admin/department.php',
     'admin_notices'       => '/admin/notices.php',
+    'admin_faq_logs'      => '/admin/faq_logs.php',
     'admin_user_edit'     => '/admin/org.php',
     'admin_logs'          => '/admin/logs.php',
     'admin_trash'         => '/admin/logs.php',
@@ -172,6 +173,16 @@ function error_page(int $code, ?string $message = null): void
         $GLOBALS['RK_CURRENT'] = null;
     }
     $msg = $message ?? ($messages[$code] ?? $messages[500]);
+    if (is_json_request()) {
+        // 画面の中からの問い合わせ: JSON で返し、記録に残す（500 は例外の処理で、中身を記録済み）
+        if ($code !== 500) {
+            app_log('WARN JSON の問い合わせのエラー ' . $code . ': ' . request_path_for_log());
+        }
+        while (ob_get_level() > 0) {
+            ob_end_clean();
+        }
+        json_response(['ok' => false, 'reason' => 'error', 'status' => $code, 'message' => $msg], $code);
+    }
     while (ob_get_level() > 0) {
         ob_end_clean();
     }

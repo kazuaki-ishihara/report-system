@@ -69,41 +69,9 @@ if (is_post()) {
         'body'        => trim(str_replace(["\r\n", "\r"], "\n", post_str('body', false))),
         'source_path' => support_request_clean_source_path(post_str('source_path')),
     ];
-    if (!isset(SUPPORT_REQUEST_KIND_LABELS[$typedValueByName['kind']])) {
-        $errorTextList[] = msg('種類を選んでください');
-    }
-    if (!isset(SUPPORT_REQUEST_URGENCY_LABELS[$typedValueByName['urgency']])) {
-        $errorTextList[] = msg('急ぎかどうかを選んでください');
-    }
-    if (!array_key_exists($typedValueByName['screen_code'], SUPPORT_REQUEST_SCREEN_LABELS)) {
-        $errorTextList[] = msg('関係する画面が正しくありません');
-    }
-    validate_text($typedValueByName['title'], msg('件名'), SUPPORT_REQUEST_TITLE_MAX_LENGTH, true, $errorTextList);
-    validate_text($typedValueByName['body'], msg('内容'), SUPPORT_REQUEST_BODY_MAX_LENGTH, true, $errorTextList, true);
-    $activeRequestCount = (int) db_val(
-        'SELECT COUNT(*) FROM support_requests WHERE user_id = ? AND status IN (' . support_request_active_status_sql() . ')', [$userId]
-    );
-    if ($activeRequestCount >= SUPPORT_REQUEST_ACTIVE_MAX_COUNT) {
-        $errorTextList[] = msg('続いている要望・依頼が {max} 件あります。終わったものが閉じられてから出してください', ['max' => SUPPORT_REQUEST_ACTIVE_MAX_COUNT]);
-    }
+    $errorTextList = support_request_validate($userId, $typedValueByName);
     if (!$errorTextList) {
-        $createdRequestId = tx(function () use ($userId, $user, $typedValueByName): int {
-            $createdAt = now();
-            db_exec(
-                'INSERT INTO support_requests (user_id, department_id, kind, urgency, screen_code, source_path, client_text, has_warning, status, last_activity_at, created_at, updated_at)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-                [$userId, $user['department_id'], $typedValueByName['kind'], $typedValueByName['urgency'], $typedValueByName['screen_code'],
-                 $typedValueByName['source_path'], support_request_client_text(),
-                 text_has_warning($typedValueByName['title'] . "\n" . $typedValueByName['body']) ? 1 : 0, 'open', $createdAt, $createdAt, $createdAt]
-            );
-            $newRequestId = (int) db()->lastInsertId();
-            db_exec(
-                'UPDATE support_requests SET title_enc = ?, body_enc = ? WHERE id = ?',
-                [enc($typedValueByName['title'], support_request_title_aad($newRequestId)), enc($typedValueByName['body'], support_request_body_aad($newRequestId)), $newRequestId]
-            );
-            return $newRequestId;
-        });
-        audit_log('admin', 'support_request:' . $createdRequestId . ':create');
+        $createdRequestId = support_request_create($user, $typedValueByName);
         flash('success', msg('要望・依頼を出しました。システム管理者から返信があると、ホームに出ます'));
         rk_done('/requests/view.php?id=' . $createdRequestId);
     }

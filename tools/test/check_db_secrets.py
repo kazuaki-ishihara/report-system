@@ -51,6 +51,13 @@ def main():
             if message_body_enc != "" and not str(message_body_enc).startswith("v1:"):
                 ng.append("要望・依頼の返信が平文: id=%s" % message_id)
 
+    # よくある質問のチャットの記録（G-25 §2.7）の質問の文は暗号化されている
+    has_faq_chat_table = con.execute("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'faq_chat_logs'").fetchone() is not None
+    if has_faq_chat_table:
+        for log_id, question_enc in con.execute("SELECT id, question_enc FROM faq_chat_logs"):
+            if question_enc != "" and not str(question_enc).startswith("v1:"):
+                ng.append("よくある質問のチャットの記録の質問が平文: id=%s" % log_id)
+
     # 記録にパスワードやコードらしいものが入っていない
     for lid, t in con.execute("SELECT id, target FROM access_logs"):
         if re.search(r"password=|code=|secret", t):

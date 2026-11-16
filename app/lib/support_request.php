@@ -114,7 +114,7 @@ const SUPPORT_REQUEST_SCREEN_CODE_BY_TEMPLATE = [
     'admin_fields' => 'G-12', 'admin_field_edit' => 'G-12', 'admin_field_options' => 'G-12', 'admin_field_preview' => 'G-12',
     'admin_projects' => 'G-13', 'admin_org' => 'G-14', 'admin_user_edit' => 'G-14', 'admin_logs' => 'G-15', 'admin_trash' => 'G-15',
     'account' => 'G-16', 'admin_messages' => 'G-17', 'comment_list' => 'G-18', 'comment_templates' => 'G-19', 'search' => 'G-20',
-    'admin_home' => 'G-21', 'department_manage' => 'G-23', 'admin_notices' => 'G-24', 'faq' => 'G-25',
+    'admin_home' => 'G-21', 'department_manage' => 'G-23', 'admin_notices' => 'G-24', 'faq' => 'G-25', 'admin_faq_logs' => 'G-25',
 ];
 
 /** 開いていた画面の URL に残す問い合わせの項目（番号・月・課など。検索のキーワードなど自由な文字は残さない） */
@@ -172,7 +172,64 @@ const SUPPORT_REQUEST_BODY_MAX_LENGTH = 2000;
 /** 1 人が続いている要望・依頼を持てる数（出しすぎを防ぐ） */
 const SUPPORT_REQUEST_ACTIVE_MAX_COUNT = 30;
 
-/** 要望・依頼を出せるか: 課長と確認者（課代・リーダー）。部下は課長を通す（K-044） */
+/**
+ * 新しく出す要望・依頼を確かめる（G-22 §5。G-25 の「質問として送る」からも使う）。
+ *
+ * @param array{kind: string, urgency: string, screen_code: string, title: string, body: string, source_path: string} $requestValueByName
+ * @return string[] 誤りの文（なければ空）
+ */
+function support_request_validate(int $userId, array $requestValueByName): array
+{
+    $errorTextList = [];
+    if (!isset(SUPPORT_REQUEST_KIND_LABELS[$requestValueByName['kind']])) {
+        $errorTextList[] = msg('種類を選んでください');
+    }
+    if (!isset(SUPPORT_REQUEST_URGENCY_LABELS[$requestValueByName['urgency']])) {
+        $errorTextList[] = msg('急ぎかどうかを選んでください');
+    }
+    if (!array_key_exists($requestValueByName['screen_code'], SUPPORT_REQUEST_SCREEN_LABELS)) {
+        $errorTextList[] = msg('関係する画面が正しくありません');
+    }
+    validate_text($requestValueByName['title'], msg('件名'), SUPPORT_REQUEST_TITLE_MAX_LENGTH, true, $errorTextList);
+    validate_text($requestValueByName['body'], msg('内容'), SUPPORT_REQUEST_BODY_MAX_LENGTH, true, $errorTextList, true);
+    $activeRequestCount = (int) db_val(
+        'SELECT COUNT(*) FROM support_requests WHERE user_id = ? AND status IN (' . support_request_active_status_sql() . ')', [$userId]
+    );
+    if ($activeRequestCount >= SUPPORT_REQUEST_ACTIVE_MAX_COUNT) {
+        $errorTextList[] = msg('続いている要望・依頼が {max} 件あります。終わったものが閉じられてから出してください', ['max' => SUPPORT_REQUEST_ACTIVE_MAX_COUNT]);
+    }
+    return $errorTextList;
+}
+
+/**
+ * 要望・依頼を 1 件出す（G-22 §6.1。確かめは support_request_validate() で済ませておく）。件名と本文は行の ID を含む文脈で暗号化する。
+ *
+ * @param array{kind: string, urgency: string, screen_code: string, title: string, body: string, source_path: string} $requestValueByName
+ * @return int 出した要望・依頼の ID
+ */
+function support_request_create(array $user, array $requestValueByName): int
+{
+    $createdRequestId = tx(function () use ($user, $requestValueByName): int {
+        $createdAt = now();
+        db_exec(
+            'INSERT INTO support_requests (user_id, department_id, kind, urgency, screen_code, source_path, client_text, has_warning, status, last_activity_at, created_at, updated_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [(int) $user['id'], $user['department_id'], $requestValueByName['kind'], $requestValueByName['urgency'], $requestValueByName['screen_code'],
+             $requestValueByName['source_path'], support_request_client_text(),
+             text_has_warning($requestValueByName['title'] . "\n" . $requestValueByName['body']) ? 1 : 0, 'open', $createdAt, $createdAt, $createdAt]
+        );
+        $newRequestId = (int) db()->lastInsertId();
+        db_exec(
+            'UPDATE support_requests SET title_enc = ?, body_enc = ? WHERE id = ?',
+            [enc($requestValueByName['title'], support_request_title_aad($newRequestId)), enc($requestValueByName['body'], support_request_body_aad($newRequestId)), $newRequestId]
+        );
+        return $newRequestId;
+    });
+    audit_log('admin', 'support_request:' . $createdRequestId . ':create');
+    return $createdRequestId;
+}
+
+/** 要望・依頼を出せるか: 課長と確認者（課長代理・リーダー）。部下は課長を通す（K-044） */
 function support_request_can_submit(array $user): bool
 {
     return (bool) reviewer_departments((int) $user['id']);

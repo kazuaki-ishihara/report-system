@@ -4,8 +4,9 @@
 /** @var int $page */
 /** @var array $q */
 /** @var bool $isOperatorDeputy 補佐（閲覧・出力の記録は見られない） */
-$kinds = $isOperatorDeputy ? ['' => 'すべて（管理・ログイン）', 'admin' => '管理', 'auth' => 'ログイン', 'auth_fail' => 'ログインの失敗']
-    : ['' => 'すべて', 'view' => '閲覧', 'export' => '出力', 'admin' => '管理', 'auth' => 'ログイン', 'auth_fail' => 'ログインの失敗'];
+/** @var int $unknownLoginCount まだ確かめていない、無い ID でのログインの数 */
+$kinds = $isOperatorDeputy ? ['' => 'すべて（管理・ログイン）', 'admin' => '管理', 'auth' => 'ログイン', 'auth_fail' => 'ログインの失敗', 'auth_unknown' => '無い ID でのログイン']
+    : ['' => 'すべて', 'view' => '閲覧', 'export' => '出力', 'admin' => '管理', 'auth' => 'ログイン', 'auth_fail' => 'ログインの失敗', 'auth_unknown' => '無い ID でのログイン'];
 $kindLabelByAction = ['view' => '閲覧', 'export' => '出力', 'admin' => '管理', 'auth' => 'ログイン'];
 $qs = http_build_query($q);
 ?>
@@ -15,6 +16,14 @@ $qs = http_build_query($q);
     <a href="<?= h(url('/admin/logs.php')) ?>" class="active">記録</a>
     <a href="<?= h(url('/admin/trash.php')) ?>">削除データ</a>
   </nav>
+  <?php if ($unknownLoginCount > 0): ?>
+    <div class="flash flash-error" role="alert">
+      <?= h(msg('無い ID でログインしようとした記録があります（未確認 {count} 件）。ID の打ち間違いか、なりすまし・総当たりのおそれがないか、ID と IP アドレスを確かめてください', ['count' => $unknownLoginCount])) ?>
+      <form method="post" action="<?= h(url('/admin/logs.php')) ?>" class="inline" data-confirm="<?= h(msg('今ある記録を、すべて確かめたことにします。よろしいですか？')) ?>">
+        <?= form_hidden() ?><button type="submit" name="action" value="unknown_login_checked" class="small">確かめた</button>
+      </form>
+    </div>
+  <?php endif; ?>
   <form method="get" action="<?= h(url('/admin/logs.php')) ?>" class="filters">
     <input type="date" name="from" value="<?= h($q['from']) ?>" aria-label="開始"> 〜 <input type="date" name="to" value="<?= h($q['to']) ?>" aria-label="終了">
     <select name="kind" aria-label="種類"><?php foreach ($kinds as $k => $l): ?><option value="<?= h($k) ?>" <?= $q['kind'] === $k ? 'selected' : '' ?>><?= h($l) ?></option><?php endforeach; ?></select>

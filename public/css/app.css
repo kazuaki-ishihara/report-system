@@ -722,6 +722,36 @@ form.wizard-active .sticky-actions button[value="submit"] { display: none; }
 .faq-item summary { color: var(--text); font-weight: 700; }
 .faq-answer { margin: 8px 0 4px 1em; }
 .faq-form { margin-top: 16px; }
+/* よくある質問のチャット（G-25 §2.1・§2.2） */
+.visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.faq-chat { margin: 12px 0 20px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); }
+.faq-chat-log { display: flex; flex-direction: column; gap: 8px; padding: 12px; max-height: 60vh; overflow-y: auto; overscroll-behavior: contain; }
+.chat-bubble { max-width: 85%; padding: 8px 12px; border-radius: 14px; line-height: 1.6; overflow-wrap: anywhere; }
+.chat-bot { align-self: flex-start; background: var(--panel-bg); color: var(--text); border: 1px solid var(--line); border-bottom-left-radius: 4px; }
+.chat-user { align-self: flex-end; background: var(--primary); color: var(--primary-text); border-bottom-right-radius: 4px; white-space: pre-wrap; }
+.chat-bubble p { margin: 0 0 4px; }
+.chat-question { font-weight: 700; }
+.chat-answer { white-space: pre-wrap; }
+.chat-more-title { margin-top: 8px !important; color: var(--muted); }
+.chat-choices { align-self: flex-start; display: flex; flex-wrap: wrap; gap: 6px; max-width: 95%; }
+.chat-choices button { border-radius: 999px; text-align: left; }
+.chat-choices button.chosen { outline: 2px solid var(--primary); }
+.chat-choice { display: inline-block; padding: 4px 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--button-bg); color: var(--text); text-decoration: none; font-size: .9rem; line-height: 1.5; }
+.chat-choice:hover { border-color: var(--primary); }
+.chat-choice.chosen { outline: 2px solid var(--primary); }
+.chat-choice-recommended { border-color: var(--primary); font-weight: 700; }
+.chat-choices-done .chat-choice { pointer-events: none; opacity: .7; }
+.faq-category-title { font-size: 1rem; margin: 18px 0 4px; padding-bottom: 2px; border-bottom: 2px solid var(--line); }
+.faq-standard-import { margin: 4px 0 12px; }
+.faq-log-summary { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.chat-care { border-color: var(--primary); border-width: 2px; }
+.chat-emergency { border-color: var(--danger); background: var(--err-bg); color: var(--text); font-weight: 700; }
+.faq-ask { max-width: 95%; }
+.faq-ask[hidden] { display: none; }
+.faq-ask .form { margin-top: 6px; }
+.faq-chat-input { display: flex; gap: 8px; padding: 10px 12px; border-top: 1px solid var(--line); }
+.faq-chat-input input { flex: 1 1 auto; min-width: 0; }
+.faq-chat-input button { flex: 0 0 auto; }
 .screen-help { margin: 0 0 12px; padding: 6px 12px; border: 1px dashed var(--line); border-radius: var(--radius); background: var(--card); font-size: 0.9rem; }
 .screen-help summary { font-weight: 700; }
 .screen-help-body { margin: 6px 0 2px; color: var(--text); }

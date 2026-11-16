@@ -666,4 +666,266 @@
         .then(function () { window.clearTimeout(timer); });
     }, 60000);
   }
+
+  // ---- よくある質問のチャット（G-25 §2.1〜§2.7。AI は使わない。サーバーの faq_search() が選んだ、載っている質問と答えを吹き出しで出す。
+  //      曖昧な質問（「使い方がわからない」など）は分野を聞き返し、分野の質問から選んでもらう。
+  //      システムに関係のない質問・不適切な表現には返答できないと返し、続けて 5 回になったら返事をしない（数えるのはサーバー）。
+  //      聞いた質問と返した答えはサーバーが記録し、ここからは反応（解決した・解決しない）を送る） ----
+  (function () {
+    var chatPanel = document.getElementById('faq-chat');
+    if (!chatPanel || !window.fetch) { return; }
+    var chatLog = chatPanel.querySelector('.faq-chat-log');
+    var chatForm = chatPanel.querySelector('form.faq-chat-input');
+    var questionInput = chatForm.querySelector('input[name="q"]');
+    var csrfInput = chatPanel.querySelector('.faq-chat-csrf');
+    var askRole = chatPanel.getAttribute('data-ask-role');
+    var askBlock = document.getElementById('faq-ask');
+    if (askBlock && !askBlock.hasAttribute('data-has-error')) { askBlock.hidden = true; }
+    var categoryRowTemplate = chatLog.querySelector('.chat-choices');   // サーバーが出した分野のボタンの並び（聞き返すときに写す）
+    var lastQuestionText = '';
+
+    function scrollToEnd() { chatLog.scrollTop = chatLog.scrollHeight; }
+    function addBubble(speaker, text) {
+      var bubble = document.createElement('div');
+      bubble.className = 'chat-bubble ' + (speaker === 'user' ? 'chat-user' : 'chat-bot');
+      if (text) { bubble.textContent = text; }
+      chatLog.appendChild(bubble);
+      scrollToEnd();
+      return bubble;
+    }
+    function addTextLine(parentElement, className, text) {
+      var lineElement = document.createElement(className === 'chat-answer' ? 'div' : 'p');
+      lineElement.className = className;
+      lineElement.textContent = text;
+      parentElement.appendChild(lineElement);
+    }
+    /** 選ぶボタンの並び（押したら並び全体を押せなくする） */
+    function addChoices(choiceList) {
+      var choiceRow = document.createElement('div');
+      choiceRow.className = 'chat-choices';
+      choiceList.forEach(function (choice) {
+        var choiceButton = document.createElement('button');
+        choiceButton.type = 'button';
+        choiceButton.className = 'small';
+        choiceButton.textContent = choice.label;
+        choiceButton.addEventListener('click', function () {
+          Array.prototype.forEach.call(choiceRow.querySelectorAll('button'), function (rowButton) { rowButton.disabled = true; });
+          choiceButton.classList.add('chosen');
+          choice.onChoose();
+        });
+        choiceRow.appendChild(choiceButton);
+      });
+      chatLog.appendChild(choiceRow);
+      scrollToEnd();
+    }
+    /** 分野のボタンの並びを、もう一度出す（曖昧な質問・見つからないとき） */
+    function addCategoryChoices() {
+      if (!categoryRowTemplate) { return; }
+      var categoryRow = categoryRowTemplate.cloneNode(true);
+      categoryRow.classList.remove('chat-choices-done');
+      Array.prototype.forEach.call(categoryRow.querySelectorAll('.chosen'), function (choiceLink) { choiceLink.classList.remove('chosen'); });
+      chatLog.appendChild(categoryRow);
+      scrollToEnd();
+    }
+    function showAnswer(faqEntry) {
+      var answerBubble = addBubble('bot', '');
+      addTextLine(answerBubble, 'chat-question', 'Q. ' + faqEntry.question);
+      addTextLine(answerBubble, 'chat-answer', faqEntry.answer);
+      scrollToEnd();
+    }
+    /** 反応を記録に送る（失敗しても画面は止めない） */
+    function sendFeedback(logId, feedbackCode, faqId) {
+      if (!logId || !csrfInput) { return; }
+      var feedbackData = new FormData();
+      feedbackData.append('csrf_token', csrfInput.value);
+      feedbackData.append('action', 'chat_feedback');
+      feedbackData.append('log_id', String(logId));
+      feedbackData.append('feedback', feedbackCode);
+      feedbackData.append('faq_id', faqId ? String(faqId) : '');
+      fetch(chatForm.action, { method: 'POST', body: feedbackData, credentials: 'same-origin', headers: { Accept: 'application/json' } }).catch(function () {});
+    }
+    /** 問い合わせの失敗をサーバーの記録（app.log）に残す（サーバーに届かないときは残せない） */
+    function reportClientError(failureKind, statusCode) {
+      if (!csrfInput) { return; }
+      var errorData = new FormData();
+      errorData.append('csrf_token', csrfInput.value);
+      errorData.append('action', 'chat_client_error');
+      errorData.append('kind', failureKind);
+      errorData.append('status', String(statusCode || 0));
+      fetch(chatForm.action, { method: 'POST', body: errorData, credentials: 'same-origin', headers: { Accept: 'application/json' } }).catch(function () {});
+    }
+    function askSolved(logId, faqId) {
+      addChoices([
+        { label: M('解決した'), onChoose: function () {
+          sendFeedback(logId, 'solved', faqId);
+          addBubble('bot', M('よかったです。ほかにも知りたいことがあれば入れてください。'));
+          questionInput.focus();
+        } },
+        { label: M('解決しない'), onChoose: function () { sendFeedback(logId, 'unsolved', faqId); offerAsk(logId); } }
+      ]);
+    }
+    /** 答えが見つからないとき: 課長・確認者には送る欄（送ったことは、この記録に残す）、ほかの人には案内 */
+    function offerAsk(logId) {
+      if (askRole === 'ask' && askBlock) {
+        var askTextarea = askBlock.querySelector('textarea[name="question"]');
+        var askLogInput = askBlock.querySelector('input[name="chat_log_id"]');
+        if (askTextarea) { askTextarea.value = lastQuestionText; }
+        if (askLogInput) { askLogInput.value = logId ? String(logId) : ''; }
+        askBlock.hidden = false;
+        chatLog.appendChild(askBlock);
+        scrollToEnd();
+        if (askTextarea && lastQuestionText === '') { askTextarea.focus(); }
+      } else if (askRole === 'staff') {
+        addBubble('bot', M('システム管理者・補佐は質問を受ける側のため、ここからは送れません。答えを「＋ 質問を載せる」で足してください。'));
+      } else {
+        addBubble('bot', M('課長・確認者（課長代理・リーダー）に聞いてください。課長・確認者が、この画面からシステム管理者に質問を送れます。'));
+      }
+    }
+    /** 質問の一覧から選んでもらう（選ぶと答えを出す。「この中にない」で送る欄・案内） */
+    function addQuestionChoices(faqEntryList, logId) {
+      addChoices(faqEntryList.map(function (faqEntry) {
+        return { label: faqEntry.question, onChoose: function () { addBubble('user', faqEntry.question); showAnswer(faqEntry); askSolved(logId, faqEntry.id); } };
+      }).concat([{ label: M('この中にない'), onChoose: function () { sendFeedback(logId, 'unsolved', null); offerAsk(logId); } }]));
+    }
+    /** サーバーに聞く（?format=json と、q か category。開いていた画面も付ける） */
+    function fetchFaq(queryName, queryValue, onResult) {
+      var waitingBubble = addBubble('bot', M('探しています…'));
+      waitingBubble.classList.add('chat-waiting');
+      var requestUrl = new URL(chatForm.action, window.location.href);
+      var screenInput = chatForm.querySelector('input[name="screen"]');
+      requestUrl.search = '?format=json&' + queryName + '=' + encodeURIComponent(queryValue)
+        + (screenInput ? '&screen=' + encodeURIComponent(screenInput.value) : '');
+      fetch(requestUrl.toString(), { credentials: 'same-origin', headers: { Accept: 'application/json' } })
+        .then(function (response) {
+          return response.json()
+            .catch(function () { return { ok: false, clientFailure: 'not_json' }; })
+            .then(function (result) { result.httpStatus = response.status; return result; });
+        })
+        .then(function (result) {
+          waitingBubble.remove();
+          if (result.ok) {
+            onResult(result);
+            return;
+          }
+          if (result.reason === 'login' || result.httpStatus === 401) {
+            // ログインが切れている（30 分操作しなかったときなど）。サーバーが記録に残している
+            addBubble('bot', M('ログインの有効期限が切れました。画面を開き直して、もう一度ログインしてください。'));
+            return;
+          }
+          addBubble('bot', M('通信エラー'));
+          if (result.clientFailure) { reportClientError(result.clientFailure, result.httpStatus); }   // サーバーのエラーは、サーバーが記録に残している
+        })
+        .catch(function () {
+          waitingBubble.remove();
+          addBubble('bot', M('通信エラー'));
+          reportClientError('network', 0);
+        });
+    }
+
+    // 分野を選んだ: その分野の質問を出す
+    chatLog.addEventListener('click', function (clickEvent) {
+      var categoryLink = clickEvent.target.closest && clickEvent.target.closest('a[data-category]');
+      if (!categoryLink) { return; }
+      clickEvent.preventDefault();
+      var categoryRow = categoryLink.parentNode;
+      if (categoryRow.classList.contains('chat-choices-done') && categoryRow !== categoryRowTemplate) { return; }
+      if (categoryRow !== categoryRowTemplate) { categoryRow.classList.add('chat-choices-done'); }
+      categoryLink.classList.add('chosen');
+      var categoryLabel = categoryLink.textContent.replace(/（\d+）$/, '');
+      lastQuestionText = '';
+      if (askBlock) { askBlock.hidden = true; }
+      addBubble('user', categoryLabel);
+      fetchFaq('category', categoryLink.getAttribute('data-category'), function (result) {
+        if (result.matches.length === 0) {
+          addBubble('bot', M('この分野の質問は、まだ載っていません。'));
+          offerAsk(result.log_id);
+          return;
+        }
+        addBubble('bot', M('「{category}」の質問です。近いものを選んでください。', { category: categoryLabel }));
+        addQuestionChoices(result.matches, result.log_id);
+      });
+    });
+
+    // 知りたいことを入れた
+    chatForm.addEventListener('submit', function (submitEvent) {
+      submitEvent.preventDefault();
+      var questionText = questionInput.value.trim();
+      if (questionText === '') { questionInput.focus(); return; }
+      lastQuestionText = questionText;
+      questionInput.value = '';
+      if (askBlock) { askBlock.hidden = true; }
+      addBubble('user', questionText);
+      fetchFaq('q', questionText, function (result) {
+        if (result.ignored) { return; }   // 関係のない質問・不適切な表現が続いた: 返事をしない
+        if (result.emergency) {
+          // 命・体の緊急の状態: 119 番を案内する
+          var emergencyBubble = addBubble('bot', M('命や体に関わる、急いだほうがよい状態かもしれません。少しでも危ないと感じたら、迷わず 119 番に電話して救急車を呼んでください。近くに人がいれば、すぐに助けを求めてください。救急車を呼ぶか迷うときは #7119（救急安心センター。地域によってはつながりません）、子どものことは #8000（子ども医療電話相談）に相談できます。このチャットでは、手当てのしかたにはお答えできません。'));
+          emergencyBubble.classList.add('chat-care', 'chat-emergency');
+          emergencyBubble.setAttribute('role', 'alert');
+          return;
+        }
+        if (result.retirement) {
+          // 自分の退職: 寄り添って上司（課長）への相談を促す（手続きは示さない）
+          addBubble('bot', M('大切なことを書いてくれて、ありがとうございます。退職のことは、一人で抱えたり決めたりせず、まず上司（課長）に相談してください。気持ちや事情を話すことで、ほかの道が見つかることもあります。')).classList.add('chat-care');
+          return;
+        }
+        if (result.distress) {
+          // 心の不調らしい文: 気づかいの言葉（サーバーがシステム管理者・補佐に知らせる）。心配な言葉なら、近い質問の答えも出す
+          var careBubble = addBubble('bot', result.distress === 'urgent'
+            ? M('つらい気持ちを書いてくれて、ありがとうございます。一人で抱えずに、上司やシステム管理者に相談してください。今すぐ危ないと感じるときは、ためらわずに周りの人に助けを求めてください。')
+            : M('おつかれさまです。無理をせず、つらいときは一人で抱えずに、上司やシステム管理者に相談してください。'));
+          careBubble.classList.add('chat-care');
+          if (result.matches.length > 0) {
+            showAnswer(result.matches[0]);
+            askSolved(result.log_id, result.matches[0].id);
+          }
+          return;
+        }
+        if (result.sensitive) {
+          // 要配慮個人情報に触れる文: 寄り添う返事（文は記録しない）。ほかにはっきり知りたいことがあれば、その答えも出す
+          addBubble('bot', M('大切なことを書いてくれて、ありがとうございます。体や家族のことなど、個人的な事情には、このチャットでは詳しくお答えできませんが、一人で抱えずに、上司や信頼できる人に相談してください。報告や締め日のことで困っているときは、課長に相談してください。')).classList.add('chat-care');
+          if (result.matches.length > 0) {
+            showAnswer(result.matches[0]);
+            askSolved(result.log_id, result.matches[0].id);
+          }
+          return;
+        }
+        if (result.abusive) {
+          addBubble('bot', M('不適切な表現が含まれているため、返答できません。'));
+          return;
+        }
+        if (result.unrelated) {
+          addBubble('bot', M('その質問には返答できません。'));
+          return;
+        }
+        if (result.vague) {
+          addBubble('bot', M('どのことについて知りたいですか？　分野を選ぶか、「パスワード」「提出」「コメント」のように、知りたいことの言葉を入れてください。'));
+          addCategoryChoices();
+          return;
+        }
+        if (result.matches.length === 0) {
+          var retryChoice = { label: M('言葉を変えて入れる'), onChoose: function () { questionInput.value = lastQuestionText; questionInput.focus(); } };
+          var categoryChoice = { label: M('分野から選ぶ'), onChoose: addCategoryChoices };
+          if (askRole === 'ask') {
+            addBubble('bot', M('近い質問は見つかりませんでした。言葉を変えて入れるか、分野から選ぶか、質問として送ってください。'));
+            addChoices([retryChoice, categoryChoice, { label: M('質問として送る'), onChoose: function () { offerAsk(result.log_id); } }]);
+          } else {
+            addBubble('bot', M('近い質問は見つかりませんでした。言葉を変えて入れるか、分野から選んでください。'));
+            offerAsk(result.log_id);
+            addChoices([retryChoice, categoryChoice]);
+          }
+          return;
+        }
+        showAnswer(result.matches[0]);
+        if (result.matches.length > 1) {
+          addBubble('bot', M('ほかに近い質問もあります。押すと答えを出します。'));
+          addQuestionChoices(result.matches.slice(1), result.log_id);
+          askSolved(result.log_id, result.matches[0].id);
+        } else {
+          askSolved(result.log_id, result.matches[0].id);
+        }
+      });
+    });
+    scrollToEnd();
+  })();
 })();

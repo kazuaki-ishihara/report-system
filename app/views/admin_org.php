@@ -48,7 +48,7 @@
     </form>
     </section>
     <section id="dept-final" data-tab-title="課長">
-    <p class="note">この課の課長（最終確認者）を決めます。課代・リーダー（確認者）・チェックする人・項目管理者・班・締め日・管理の仕方は、この課の課長が「課の管理」の画面で決めます（システム管理者は、個々の課の管理はしません）。</p>
+    <p class="note">この課の課長（最終確認者）を決めます。課長代理・リーダー（確認者）・チェックする人・項目管理者・班・締め日・管理の仕方は、この課の課長が「課の管理」の画面で決めます（システム管理者は、個々の課の管理はしません）。</p>
     <?php $currentFinalCandidate = null; foreach ($candidates as $candidateRow) { if ((int) $candidateRow['is_final'] === 1) { $currentFinalCandidate = $candidateRow; } } ?>
     <p>今の課長: <strong><?= $currentFinalCandidate === null ? h(msg('課長がいません（確認を完了にできません）')) : h($currentFinalCandidate['display_name']) ?></strong></p>
     <form method="post" action="<?= h(url('/admin/org.php?tab=departments&edit=' . (int) $edit['id'])) ?>" class="form"

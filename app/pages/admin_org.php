@@ -198,7 +198,7 @@ if (is_post() && post_str('action') === 'bulk_preview') {
         rk_done('/admin/org.php?tab=departments&edit=' . $successorDepartmentId . '#dept-succession');
 
     } elseif ($action === 'final_save') {
-        // 課長（最終確認者）を決める。課代・リーダー・項目管理者・班は、その課の課長が「課の管理」で決める（K-042）
+        // 課長（最終確認者）を決める。課長代理・リーダー・項目管理者・班は、その課の課長が「課の管理」で決める（K-042）
         $deptId = input_id('dept_id', 'POST');
         if (db_one('SELECT id FROM departments WHERE id = ?', [$deptId]) === null) {
             error_page(404);
@@ -212,7 +212,7 @@ if (is_post() && post_str('action') === 'bulk_preview') {
             $finalUserId = (int) $finalUserIdText;
         }
         tx(function () use ($deptId, $finalUserId): void {
-            // 今の課長は、課長の役を外す（課代・リーダーの役には残さない）
+            // 今の課長は、課長の役を外す（課長代理・リーダーの役には残さない）
             db_exec('DELETE FROM department_reviewers WHERE department_id = ? AND is_final = 1', [$deptId]);
             if ($finalUserId !== null) {
                 db_exec('DELETE FROM department_reviewers WHERE department_id = ? AND user_id = ?', [$deptId, $finalUserId]);

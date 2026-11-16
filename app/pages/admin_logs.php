@@ -9,6 +9,18 @@ declare(strict_types=1);
 $user = page_start();
 require_system_manager($user);
 
+// ---- 無い ID でのログインを「確かめた」（K-058。管理者・補佐） ----
+if (is_post()) {
+    if (post_str('action') !== 'unknown_login_checked') {
+        error_page(400);
+    }
+    rk_begin('access_log.unknown_login_checked', (int) $user['id']);
+    auth_unknown_login_mark_checked();
+    audit_log('admin', 'unknown_login:checked');
+    flash('success', msg('確かめたことを記録しました'));
+    rk_done('/admin/logs.php?kind=auth_unknown');
+}
+
 $from = (string) ($_GET['from'] ?? date('Y-m-d', strtotime('-7 days')));
 $to = (string) ($_GET['to'] ?? date('Y-m-d'));
 $kind = (string) ($_GET['kind'] ?? '');
@@ -27,7 +39,7 @@ if (strtotime($to) - strtotime($from) > 366 * 86400) {
 }
 // 補佐は「だれがどの報告を見た・出力した」は見られない（ログインと管理の操作の記録だけ。K-043）
 $isOperatorDeputy = !is_admin($user);
-$allowedKindList = $isOperatorDeputy ? ['admin', 'auth', 'auth_fail'] : ['view', 'export', 'admin', 'auth', 'auth_fail'];
+$allowedKindList = $isOperatorDeputy ? ['admin', 'auth', 'auth_fail', 'auth_unknown'] : ['view', 'export', 'admin', 'auth', 'auth_fail', 'auth_unknown'];
 if ($kind !== '' && !in_array($kind, $allowedKindList, true)) {
     error_page($isOperatorDeputy ? 403 : 400);
 }
@@ -37,6 +49,8 @@ $params = [$from . ' 00:00:00', date('Y-m-d', strtotime($to . ' +1 day')) . ' 00
 if ($kind === 'auth_fail') {
     // ログインの失敗（パスワード・2 段階認証の誤り、ロック、ロック中の試行）。K-041
     $where[] = "l.action = 'auth' AND l.target LIKE 'login:%' AND l.target <> 'login:ok'";
+} elseif ($kind === 'auth_unknown') {
+    $where[] = UNKNOWN_LOGIN_WHERE;   // 無い ID でのログイン（K-058）
 } elseif ($kind !== '') {
     $where[] = 'l.action = ?';
     $params[] = $kind;
@@ -81,4 +95,5 @@ render('admin_logs', [
     'title' => '記録', 'user' => $user, 'rows' => $rows, 'count' => $count, 'page' => $page,
     'q' => ['from' => $from, 'to' => $to, 'kind' => $kind, 'who' => $who, 'target' => $target],
     'isOperatorDeputy' => $isOperatorDeputy,
+    'unknownLoginCount' => auth_unknown_login_unchecked_count(),
 ]);

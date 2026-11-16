@@ -455,6 +455,9 @@ function schema_ensure(PDO $pdo): array
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL
         )",
+        // よくある質問のチャットの記録（G-25 §2.7。質問の文は暗号化。1 年で消す）
+        FAQ_CHAT_LOG_CREATE_SQL,
+        FAQ_CHAT_LOG_INDEX_SQL,
         // 組織の改訂の予約（便利機能 G。予約した日に一括の CSV を反映する）
         "CREATE TABLE IF NOT EXISTS org_schedules (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -486,6 +489,7 @@ function schema_ensure(PDO $pdo): array
             'merged_into_id' => 'INTEGER REFERENCES support_requests(id)',   // まとめた先（便利機能 C。重複の要望）
         ],
         'support_reply_templates' => ['kind' => "TEXT NOT NULL DEFAULT ''"],   // 要望の種類（便利機能 B。K-047。空はすべての種類）
+        'faq_entries'         => ['category' => "TEXT NOT NULL DEFAULT ''"],   // 分野（G-25 §2.3。空は「そのほか」）
     ];
     foreach ($addedColumnsByTable as $tableName => $columnDefinitionByName) {
         $existingColumnNameSet = [];

@@ -2,13 +2,13 @@
 """組織まわりの確認（ローカル検証環境専用。dev_seed.php の直後に実行する）。
 
 - K-025 課ごとの管理の仕方（課全体／班ごと）と班
-- K-033 班を移った人の過去の報告は、今の班の課代・リーダーが見る
+- K-033 班を移った人の過去の報告は、今の班の課長代理・リーダーが見る
 - K-032 課を移った人の、移る前の報告は、新しい課の確認者も見られる
 - K-006 メッセージを変えられるのは、管理担当の課の課長だけ
 - K-031 課長がいない課を、管理者のホームで知らせる
 - K-034 組織の一括の入れ替え（CSV）
 - K-042 課の管理は課長（締め日・管理の仕方・確認者・班）。管理者は課長を決める
-- K-039 課代・リーダーの「チェックする／しない」
+- K-039 課長代理・リーダーの「チェックする／しない」
 
     php tools/test/dev_seed.php --yes
     python3 tools/test/smoke_org.py --base http://127.0.0.1:8000 --db app/data/dev.sqlite
@@ -83,7 +83,7 @@ def main():
         return team_row[0] if team_row else 0
 
     def save_members_a(reviewer_team_by_login_id, member_team_by_login_id, does_check_login_id_set):
-        """課の管理の「確認者と課員」: 確認者（課代・リーダー）と担当の班・チェックする・課員の班をまとめて保存する"""
+        """課の管理の「確認者と課員」: 確認者（課長代理・リーダー）と担当の班・チェックする・課員の班をまとめて保存する"""
         form_values = {"action": "members_save"}
         for login_id, reviewer_team_id in reviewer_team_by_login_id.items():
             form_values["reviewer[%d]" % user_id_of(login_id)] = "1"
@@ -105,7 +105,7 @@ def main():
 
     # ---- K-042 課の管理は課長。管理者は個々の課を管理しない ----
     check("課長は「課の管理」を開ける", client_of("kacho_a").get(department_manage_path_a)[0] == 200)
-    check("課代は「課の管理」を開けない（403）", client_of("dairi_a").get(department_manage_path_a)[0] == 403)
+    check("課長代理は「課の管理」を開けない（403）", client_of("dairi_a").get(department_manage_path_a)[0] == 403)
     check("管理者は（課長でなければ）「課の管理」を開けない（403）", admin_client.get(department_manage_path_a)[0] == 403)
     check("ほかの課の課長は開けない（403）", client_of("kacho_b").get(department_manage_path_a)[0] == 403)
     status_code, _location, kacho_menu_html = client_of("kacho_a").get("/index.php")
@@ -155,8 +155,8 @@ def main():
             "SELECT id FROM report_records WHERE user_id = ? AND period = ?", (user_id_of(login_id), previous_month)).fetchone()[0]
     report_a1_id, report_a2_id = report_id_by_login_id["ippan_a1"], report_id_by_login_id["ippan_a2"]
 
-    check("班ごと: 課代（山田班）は自分の班の人の報告を開ける", status_of("dairi_a", report_a1_id) == 200)
-    check("班ごと: 課代（山田班）は隣の班の人の報告を開けない（404）", status_of("dairi_a", report_a2_id) == 404)
+    check("班ごと: 課長代理（山田班）は自分の班の人の報告を開ける", status_of("dairi_a", report_a1_id) == 200)
+    check("班ごと: 課長代理（山田班）は隣の班の人の報告を開けない（404）", status_of("dairi_a", report_a2_id) == 404)
     check("班ごと: リーダー（佐藤班）は自分の班の人の報告を開ける", status_of("leader_a", report_a2_id) == 200)
     check("班ごと: 課長は全員の報告を開ける", status_of("kacho_a", report_a1_id) == 200 and status_of("kacho_a", report_a2_id) == 200)
     status_code, _location, mine_html = client_of("ippan_a1").get("/reports/mine.php")
@@ -170,7 +170,7 @@ def main():
     # ---- K-033 班を移ると、過去の報告も今の班が見る ----
     save_members_a({"dairi_a": yamada_team_id, "leader_a": sato_team_id}, {"ippan_a1": sato_team_id, "ippan_a2": sato_team_id}, {"dairi_a", "leader_a"})
     client_by_login_id.clear()   # 1 回の要求の中で覚えた権限が残らないよう、ログインし直す（サーバー側は要求ごと）
-    check("班を移ると、前の班の課代は過去の報告を開けない", status_of("dairi_a", report_a1_id) == 404)
+    check("班を移ると、前の班の課長代理は過去の報告を開けない", status_of("dairi_a", report_a1_id) == 404)
     check("班を移ると、今の班のリーダーが過去の報告を開ける", status_of("leader_a", report_a1_id) == 200)
 
     # ---- K-032 課を移った人の、移る前の報告 ----
@@ -182,14 +182,14 @@ def main():
 
     # ---- 課全体に戻す ----
     save_department_a("department")
-    check("「課全体」に戻すと、課代は課の全員の報告を開ける", status_of("dairi_a", report_a1_id) == 200)
+    check("「課全体」に戻すと、課長代理は課の全員の報告を開ける", status_of("dairi_a", report_a1_id) == 200)
 
-    # ---- K-039 課代・リーダーの「チェックする／しない」（課長が決める） ----
+    # ---- K-039 課長代理・リーダーの「チェックする／しない」（課長が決める） ----
     save_members_a({"dairi_a": None, "leader_a": None}, {"ippan_a1": None}, {"dairi_a"})
     check("課長がリーダーを「チェックしない」にできる",
           database.execute("SELECT does_check FROM department_reviewers WHERE user_id = ? AND department_id = ?", (user_id_of("leader_a"), department_a_id)).fetchone()[0] == 0)
     status_code, _location, mine_html = client_of("ippan_a1").get("/reports/mine.php")
-    check("チェックしない人は「チェック n/m」の m に数えない（課長と課代の 0/2）", "チェック 0/2" in mine_html, mine_html.count("チェック"))
+    check("チェックしない人は「チェック n/m」の m に数えない（課長と課長代理の 0/2）", "チェック 0/2" in mine_html, mine_html.count("チェック"))
     status_code, _location, leader_view_html = client_of("leader_a").get("/reports/view.php?id=%d" % report_a1_id)
     check("チェックしない人も報告を見られ、コメントできるが、チェックのボタンは出ない",
           status_code == 200 and 'value="check"' not in leader_view_html and 'value="comment"' in leader_view_html, status_code)

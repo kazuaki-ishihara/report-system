@@ -18,7 +18,7 @@ $renderTeamOptions = function (?int $selectedTeamId, string $emptyLabel) use ($a
 ?>
 <section class="card wide">
   <h1>課の管理</h1>
-  <p class="note">自分が課長の課の、締め日・管理の仕方・確認者（課代・リーダー）・チェックする人・項目管理者・班を決めます。課の名前・課長・組織の改訂（引き継ぎ）は、システム管理者が決めます。</p>
+  <p class="note">自分が課長の課の、締め日・管理の仕方・確認者（課長代理・リーダー）・チェックする人・項目管理者・班を決めます。課の名前・課長・組織の改訂（引き継ぎ）は、システム管理者が決めます。</p>
   <?php if (count($manageableDepartmentById) > 1): ?>
     <form method="get" action="<?= h(url('/admin/department.php')) ?>" class="filters">
       <select name="dept" aria-label="課"><?php foreach ($manageableDepartmentById as $manageableDepartmentId => $manageableDepartment): ?><option value="<?= (int) $manageableDepartmentId ?>" <?= $manageableDepartmentId === $departmentId ? 'selected' : '' ?>><?= h($manageableDepartment['name']) ?></option><?php endforeach; ?></select>
@@ -35,10 +35,10 @@ $renderTeamOptions = function (?int $selectedTeamId, string $emptyLabel) use ($a
       <input type="hidden" name="action" value="settings_save">
       <label for="close_day">締め日（1〜31。31 は月末。空欄はなし）</label>
       <input id="close_day" name="close_day" type="number" min="1" max="31" value="<?= h((string) $department['close_day']) ?>">
-      <label>管理の仕方（課代・リーダーが見る報告の範囲）</label>
+      <label>管理の仕方（課長代理・リーダーが見る報告の範囲）</label>
       <div class="choices">
-        <label class="choice"><input type="radio" name="review_scope" value="department" <?= $isTeamScope ? '' : 'checked' ?>> 課全体（課代・リーダーは課の全員の報告を見る）</label>
-        <label class="choice"><input type="radio" name="review_scope" value="team" <?= $isTeamScope ? 'checked' : '' ?>> 班ごと（課代・リーダーは担当の班の報告だけを見る。課長は全員）</label>
+        <label class="choice"><input type="radio" name="review_scope" value="department" <?= $isTeamScope ? '' : 'checked' ?>> 課全体（課長代理・リーダーは課の全員の報告を見る）</label>
+        <label class="choice"><input type="radio" name="review_scope" value="team" <?= $isTeamScope ? 'checked' : '' ?>> 班ごと（課長代理・リーダーは担当の班の報告だけを見る。課長は全員）</label>
       </div>
       <button type="submit" class="primary">保存</button>
     </form>
@@ -83,7 +83,7 @@ $renderTeamOptions = function (?int $selectedTeamId, string $emptyLabel) use ($a
 
   <section id="dept-teams" data-tab-title="班">
     <?php if (!$isTeamScope): ?><p class="note">この課の管理の仕方は「課全体」です。班は「基本」で「班ごと」にしたときに使います。</p><?php endif; ?>
-    <p class="note">「班ごと」の課で使います。課代（課長代理）ごとの班を作り、「確認者と課員」で確認者の担当の班と、課員の班を選びます。班を移った人の過去の報告は、今の班の課代・リーダーが見ます。</p>
+    <p class="note">「班ごと」の課で使います。課長代理ごとの班を作り、「確認者と課員」で確認者の担当の班と、課員の班を選びます。班を移った人の過去の報告は、今の班の課長代理・リーダーが見ます。</p>
     <?php foreach ($teamList as $teamRow): ?>
       <form method="post" action="<?= h($selfUrl) ?>" class="filters">
         <?= form_hidden() ?>

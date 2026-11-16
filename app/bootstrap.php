@@ -42,5 +42,6 @@ require_once APP_DIR . '/lib/user_theme.php';
 require_once APP_DIR . '/lib/maintenance.php';
 require_once APP_DIR . '/lib/backup.php';
 require_once APP_DIR . '/lib/notice.php';
+require_once APP_DIR . '/lib/faq_chat_log.php';
 
 app_init_error_handling();

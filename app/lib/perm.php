@@ -39,7 +39,7 @@ function is_reviewer_of(int $userId, int $departmentId): bool
     return db_val('SELECT 1 FROM department_reviewers WHERE user_id = ? AND department_id = ?', [$userId, $departmentId]) !== null;
 }
 
-/** その課でチェックする確認者か（課長は常に。課代・リーダーは課長が決める。K-039） */
+/** その課でチェックする確認者か（課長は常に。課長代理・リーダーは課長が決める。K-039） */
 function reviewer_does_check(int $userId, int $departmentId): bool
 {
     return db_val('SELECT 1 FROM department_reviewers WHERE user_id = ? AND department_id = ? AND (does_check = 1 OR is_final = 1)', [$userId, $departmentId]) !== null;
@@ -220,7 +220,7 @@ function can_view_restricted(array $user, array $report): bool
 function report_expected_reviewer_ids(array $report): array
 {
     $expectedReviewerIdList = [];
-    // 「チェックしない」の課代・リーダーは数えない（K-039。課長は常にチェックする）
+    // 「チェックしない」の課長代理・リーダーは数えない（K-039。課長は常にチェックする）
     foreach (db_all('SELECT DISTINCT r.user_id FROM department_reviewers r JOIN users u ON u.id = r.user_id AND u.is_active = 1
                       WHERE r.user_id <> ? AND (r.does_check = 1 OR r.is_final = 1)', [(int) $report['user_id']]) as $reviewerRow) {
         if (reviewer_can_see_report((int) $reviewerRow['user_id'], $report, false, false)) {
@@ -341,6 +341,7 @@ function menu_items(array $user): array
     }
     if ($isAdmin) {
         $items[] = ['/admin/notices.php', '更新のお知らせ', '管理'];   // 便利機能 A
+        $items[] = ['/admin/faq_logs.php', 'よくある質問の記録', '管理'];   // G-25 §2.7
         $items[] = ['/admin/projects.php', '案件の管理', '管理'];
         $items[] = ['/admin/org.php', '組織・ユーザー', '管理'];
         $items[] = ['/admin/logs.php', '記録・削除データ', '管理'];

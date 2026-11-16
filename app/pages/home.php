@@ -50,7 +50,7 @@ foreach (reviewer_departments($uid) as $deptId => $isFinal) {
         continue;
     }
     // 未チェック: その課・対象月の、自分が見られる（班ごとの課では担当の班の）報告のうち、チェックしていない・更新ありのもの
-    // 「チェックしない」の課代・リーダーは数えない（K-039）
+    // 「チェックしない」の課長代理・リーダーは数えない（K-039）
     $doesCheck = reviewer_does_check($uid, (int) $deptId);
     $unchecked = 0;
     foreach (!$doesCheck ? [] : db_all(
@@ -97,11 +97,18 @@ $departmentsWithoutFinal = can_manage_system($user) ? db_all(
 // 要望・依頼（G-22）: 出した人には管理者側の返信、管理者・補佐には未受付・返信待ちの数
 $supportRequestAnsweredCount = support_request_can_submit($user) ? support_request_answered_count((int) $user['id']) : 0;
 $supportRequestStaffCounts = support_request_is_staff($user) ? support_request_staff_counts() : null;
+// よくある質問のチャットの、まだ対応していない心の不調らしい文・退職に関わる質問（G-25 §2.8・§2.10。システム管理者だけに知らせる）
+$faqNoticeLevels = faq_chat_log_notice_levels($user);   // 管理者はすべて、補佐は ID・パスワードを求める質問だけ
+$faqDistressCounts = $faqNoticeLevels ? faq_chat_log_unhandled_distress_counts($faqNoticeLevels) : null;
+// 無い ID でのログイン（なりすまし・総当たりのおそれ。システム管理者・補佐に知らせる。K-058）
+$unknownLoginCount = can_manage_system($user) ? auth_unknown_login_unchecked_count() : 0;
 
 render('home', [
     'activeNoticeList'            => notices_active(5),   // 更新のお知らせ（便利機能 A）
     'supportRequestAnsweredCount' => $supportRequestAnsweredCount,
     'supportRequestStaffCounts'   => $supportRequestStaffCounts,
+    'faqDistressCounts'           => $faqDistressCounts,
+    'unknownLoginCount'           => $unknownLoginCount,
     'departmentsWithoutFinal' => $departmentsWithoutFinal,
     'title'          => 'ホーム',
     'user'           => $user,

@@ -76,8 +76,26 @@ foreach ($adminMenuItemList as $adminMenuItem) {
     } elseif ($sectionPath === '/admin/notices.php') {
         $descriptionText = 'システムの改善や変更を、全員のホームに知らせる（出す期間の間だけ）';
         $statusList[] = ['text' => '出しているお知らせ ' . count(notices_active(100)) . ' 件', 'isAttention' => false];
+    } elseif ($sectionPath === '/admin/faq_logs.php') {
+        $descriptionText = 'よくある質問のチャットで聞かれた質問と返した答え。答えられなかった質問・解決しない答え・不適切な表現';
+        faq_chat_log_ensure_table();
+        $weekAgoText = date('Y-m-d H:i:s', time() - 7 * 86400);
+        $unansweredCount = (int) db_val("SELECT COUNT(*) FROM faq_chat_logs WHERE asked_at >= ? AND (result = 'no_match' OR feedback IN ('unsolved', 'asked'))", [$weekAgoText]);
+        $abusiveCount = (int) db_val("SELECT COUNT(*) FROM faq_chat_logs WHERE asked_at >= ? AND result = 'abusive'", [$weekAgoText]);
+        $faqDistressCounts = faq_chat_log_unhandled_distress_counts(faq_chat_log_notice_levels($user));   // 補佐は ID・パスワードだけ
+        $distressRetirementCount = $faqDistressCounts['urgent'] + $faqDistressCounts['concern'] + $faqDistressCounts['retirement'];
+        if ($distressRetirementCount > 0) {
+            $statusList[] = ['text' => '心の不調・退職に関わる質問（未対応） ' . $distressRetirementCount . ' 件', 'isAttention' => true];
+        }
+        if ($faqDistressCounts['credential'] > 0) {
+            $statusList[] = ['text' => 'ID・パスワードを求める質問（未対応） ' . $faqDistressCounts['credential'] . ' 件', 'isAttention' => true];
+        }
+        $statusList[] = ['text' => '答えられなかった質問（7 日） ' . $unansweredCount . ' 件', 'isAttention' => false];
+        if ($abusiveCount > 0) {
+            $statusList[] = ['text' => '不適切な表現（7 日） ' . $abusiveCount . ' 件', 'isAttention' => true];
+        }
     } elseif ($sectionPath === '/admin/department.php') {
-        $descriptionText = '自分の課の締め日・管理の仕方・確認者（課代・リーダー）・チェックする人・項目管理者・班';
+        $descriptionText = '自分の課の締め日・管理の仕方・確認者（課長代理・リーダー）・チェックする人・項目管理者・班';
         $finalDepartmentCount = (int) db_val('SELECT COUNT(*) FROM department_reviewers r JOIN departments d ON d.id = r.department_id AND d.is_active = 1 WHERE r.user_id = ? AND r.is_final = 1', [(int) $user['id']]);
         $statusList[] = ['text' => '管理する課 ' . $finalDepartmentCount, 'isAttention' => false];
     } elseif ($sectionPath === '/requests/index.php') {
@@ -139,6 +157,10 @@ foreach ($adminMenuItemList as $adminMenuItem) {
             [date('Y-m-d H:i:s', strtotime('-1 day'))]);
         if ($loginFailureCount > 0) {
             $statusList[] = ['text' => 'ログインの失敗（24 時間） ' . $loginFailureCount . ' 件', 'isAttention' => true];
+        }
+        $unknownLoginCount = auth_unknown_login_unchecked_count();   // 無い ID でのログイン（K-058）
+        if ($unknownLoginCount > 0) {
+            $statusList[] = ['text' => '無い ID でのログイン（未確認） ' . $unknownLoginCount . ' 件', 'isAttention' => true];
         }
     }
     $cardList[] = ['path' => $sectionPath, 'label' => $sectionLabel, 'description' => $descriptionText, 'statusList' => $statusList];

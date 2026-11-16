@@ -66,6 +66,7 @@ SQLite 3。テーブルは `app/lib/schema.php` の `schema_ensure()` で作る�
 | | `support_reply_templates` | 要望・依頼の返信の定型文（便利機能 B） |
 | 便利機能 | `update_notices` | 更新のお知らせ（G-24） |
 | | `faq_entries` | よくある質問（G-25） |
+| | `faq_chat_logs` | よくある質問のチャットの記録（G-25 §2.7。質問の文は暗号化。1 年で消す） |
 | | `org_schedules` | 組織の改訂の予約（G-14 §6.10。取り込んだ CSV を持つ） |
 | 移行 | `legacy_reports`・`legacy_comments` | 移行前の `reports`・`comments` の名前を変えて残したもの（§6。`schema_ensure()` では作らない） |
 
@@ -502,6 +503,14 @@ CREATE TABLE IF NOT EXISTS update_notices (id INTEGER PRIMARY KEY AUTOINCREMENT,
     created_by INTEGER REFERENCES users(id), updated_by INTEGER REFERENCES users(id), created_at TEXT NOT NULL, updated_at TEXT NOT NULL);   -- A 更新のお知らせ
 CREATE TABLE IF NOT EXISTS faq_entries (id INTEGER PRIMARY KEY AUTOINCREMENT, question TEXT NOT NULL, answer TEXT NOT NULL, sort_order INTEGER NOT NULL DEFAULT 0,
     source_request_id INTEGER REFERENCES support_requests(id), updated_by INTEGER REFERENCES users(id), created_at TEXT NOT NULL, updated_at TEXT NOT NULL);   -- J よくある質問
+CREATE TABLE IF NOT EXISTS faq_chat_logs (id INTEGER PRIMARY KEY AUTOINCREMENT, asked_at TEXT NOT NULL, user_id INTEGER REFERENCES users(id),
+    role TEXT NOT NULL CHECK (role IN ('member', 'reviewer', 'final', 'staff')), screen_code TEXT NOT NULL DEFAULT '', question_enc TEXT NOT NULL DEFAULT '', category TEXT,
+    result TEXT NOT NULL CHECK (result IN ('matched', 'no_match', 'vague', 'unrelated', 'abusive', 'distress', 'sensitive', 'emergency', 'retirement', 'category')), is_ignored INTEGER NOT NULL DEFAULT 0 CHECK (is_ignored IN (0, 1)),
+    distress_level TEXT CHECK (distress_level IN ('urgent', 'concern', 'retirement')), handled_at TEXT, handled_by INTEGER REFERENCES users(id),
+    shown_faq_ids TEXT NOT NULL DEFAULT '', feedback TEXT NOT NULL DEFAULT '' CHECK (feedback IN ('', 'solved', 'unsolved', 'asked')), feedback_faq_id INTEGER,
+    request_id INTEGER REFERENCES support_requests(id), feedback_at TEXT);   -- G-25 §2.7 チャットの記録（question_enc は「faq_chat:<ID>」で暗号化）
+CREATE INDEX IF NOT EXISTS ix_faq_chat_logs_asked_at ON faq_chat_logs (asked_at);
+-- あとから足した列: faq_entries.category TEXT NOT NULL DEFAULT ''（分野。G-25 §2.3。空は「そのほか」。画面を開いたときにも無ければ足す）
 CREATE TABLE IF NOT EXISTS org_schedules (id INTEGER PRIMARY KEY AUTOINCREMENT, apply_on TEXT NOT NULL, csv_text TEXT NOT NULL, change_count INTEGER NOT NULL DEFAULT 0,
     status TEXT NOT NULL DEFAULT 'scheduled' CHECK (status IN ('scheduled', 'applied', 'failed', 'cancelled')), result_text TEXT NOT NULL DEFAULT '',
     created_by INTEGER REFERENCES users(id), created_at TEXT NOT NULL, finished_at TEXT);   -- G 組織の改訂の予約（取り込んだ CSV を持つ）

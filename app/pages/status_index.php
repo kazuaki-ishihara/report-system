@@ -22,7 +22,7 @@ if (!isset($depts[$deptId])) {
     error_page(403);
 }
 $isReviewerOfDept = is_reviewer_of($uid, $deptId);
-$doesCheckInDept = $isReviewerOfDept && reviewer_does_check($uid, $deptId);   // 「チェックしない」の課代・リーダー（K-039）
+$doesCheckInDept = $isReviewerOfDept && reviewer_does_check($uid, $deptId);   // 「チェックしない」の課長代理・リーダー（K-039）
 // 補佐は、確認者でない課では人ごとの行を出さない（課ごとの件数だけ。K-043）
 $isPersonRowsShown = is_admin($user) || !is_admin_deputy($user) || $isReviewerOfDept;
 

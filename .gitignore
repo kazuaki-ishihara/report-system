@@ -13,6 +13,13 @@
 /tools/test/output/
 /tools/test/output_*.json
 
+# ほかの端末から受け取った検証の記録（DB・鍵を含む。リポジトリに入れない）
+/他端末検証/
+
+# チャットの記録の書き出し（tools/test/export_faq_chat_log.php の出力）
+/faq_chat_log_*.csv
+/app_log_errors_*.txt
+
 # 反映用の一式（tools/deploy/build_package.py の出力）
 /tools/deploy/output/
 __pycache__/

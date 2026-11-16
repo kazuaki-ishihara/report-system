@@ -252,6 +252,27 @@ function auth_forget_all_devices(int $userId): void
     db_exec('UPDATE users SET session_version = session_version + 1 WHERE id = ?', [$userId]);
 }
 
+// ---- 無い ID でのログインの知らせ（G-15 §2.x。K-058。システム管理者・補佐に知らせる） ----------
+// 無い ID（または使えなくなった ID）にパスワードを入れてログインしようとした記録（access_logs の login:fail;id=...）を数える。
+// 管理者か補佐が「確かめた」を押すと、そこまでの記録の番号を app_state の unknown_login_checked_id に残し、知らせを消す。
+
+/** 無い ID でのログインの記録の条件（SQL。access_logs を l と呼ぶ） */
+const UNKNOWN_LOGIN_WHERE = "l.action = 'auth' AND l.user_id IS NULL AND l.target LIKE 'login:fail;id=%'";
+
+/** まだ確かめていない、無い ID でのログインの数 */
+function auth_unknown_login_unchecked_count(): int
+{
+    $checkedLogId = (int) (db_val("SELECT value FROM app_state WHERE name = 'unknown_login_checked_id'") ?? 0);
+    return (int) db_val('SELECT COUNT(*) FROM access_logs l WHERE ' . UNKNOWN_LOGIN_WHERE . ' AND l.id > ?', [$checkedLogId]);
+}
+
+/** 今ある無い ID でのログインの記録を、すべて確かめたことにする */
+function auth_unknown_login_mark_checked(): void
+{
+    $lastLogId = (int) (db_val('SELECT MAX(l.id) FROM access_logs l WHERE ' . UNKNOWN_LOGIN_WHERE) ?? 0);
+    db_exec("INSERT INTO app_state (name, value) VALUES ('unknown_login_checked_id', ?) ON CONFLICT(name) DO UPDATE SET value = excluded.value", [(string) $lastLogId]);
+}
+
 // ---- 1 日 1 回の後片付け（詳細設計書 DB 編 §5 の一部） -------------------
 
 function housekeeping_daily(): void

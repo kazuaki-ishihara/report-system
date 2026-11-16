@@ -99,6 +99,11 @@ function page_start(array $opt = []): ?array
     }
 
     $user = session_user();
+    if ($user === null && is_json_request()) {
+        // 画面の中からの問い合わせ（チャットなど）: ログインの画面に転送すると、受け取る側が読めず「通信エラー」になるため、JSON で知らせる
+        app_log('WARN JSON の問い合わせで、ログインが切れていた: ' . request_path_for_log());
+        json_response(['ok' => false, 'reason' => 'login'], 401);
+    }
     if ($user === null) {
         $next = (string) ($_SERVER['REQUEST_URI'] ?? '');
         $base = cfg('base_path');

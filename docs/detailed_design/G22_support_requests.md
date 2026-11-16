@@ -4,7 +4,7 @@
 |---|---|
 | URL | `/requests/index.php`（GET・POST。一覧と新しく出す）、`/requests/view.php?id=<ID>`（GET・POST。詳細とやり取り） |
 | ファイル | `app/pages/support_request_list.php`、`app/pages/support_request_view.php`、`app/views/support_request_list.php`、`app/views/support_request_view.php`、`app/lib/support_request.php`、`app/views/layout.php`（各画面のリンク） |
-| 利用者 | 出す人: 課長・確認者（課代・リーダー）。受ける人: システム管理者・システム管理者補佐（代行） |
+| 利用者 | 出す人: 課長・確認者（課長代理・リーダー）。受ける人: システム管理者・システム管理者補佐（代行） |
 | 主な端末 | PC・スマートフォン |
 | 段階 | 3 |
 
@@ -25,6 +25,7 @@
 - 詳細は、出した本人と管理者・補佐だけが開ける（ほかの人は 403）。
 - 管理者・補佐が確認者でもあるときは、自分でも出せる（一覧にタブ「すべての要望・依頼」「自分が出したもの」）。
 - メニュー: 管理者・補佐は見出し「管理」、課長・確認者は見出し「確認」に「要望・依頼」。管理のトップ（G-21）にカード。
+- よくある質問（G-25 §2.2）で探して見つからない質問も、課長・確認者はその画面から種類「質問」で出せる（入れた文がそのまま件名と内容になる）。
 - 課長・確認者には、各画面（`SUPPORT_REQUEST_SCREEN_CODE_BY_TEMPLATE` に載っている画面）の下に「この画面について要望・依頼を出す」を出す。押すと、その画面の番号と開いていた画面（`from`）を付けて一覧を開き、新しく出す欄を開いて画面のボタンを選んでおく（§6.1）。
 
 ## 3. 画面の配置
@@ -73,7 +74,7 @@
 
 ### 6.1 新しく出す
 
-`support_requests` に 1 行（状態 `open`、出した人の今の課、開いていた画面、端末）。件名と内容は行の ID を含む文脈で暗号化する（`sreq_title:<ID>`・`sreq_body:<ID>`）。記録 `admin support_request:<ID>:create`。詳細へ移り「要望・依頼を出しました。システム管理者から返信があると、ホームに出ます」。
+`support_requests` に 1 行（状態 `open`、出した人の今の課、開いていた画面、端末）。確かめと出す処理は `support_request_validate()`・`support_request_create()`（G-25 §2.2 と共通）。件名と内容は行の ID を含む文脈で暗号化する（`sreq_title:<ID>`・`sreq_body:<ID>`）。記録 `admin support_request:<ID>:create`。詳細へ移り「要望・依頼を出しました。システム管理者から返信があると、ホームに出ます」。
 
 ### 6.2 出した人の返信
 
