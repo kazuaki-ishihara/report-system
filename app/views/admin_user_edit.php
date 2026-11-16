@@ -22,7 +22,8 @@ $selfUrl = $target === null ? '/admin/user_edit.php' : '/admin/user_edit.php?id=
     <div class="flash flash-info">
       仮のパスワード: <strong class="secret" id="temp-password"><?= h($temp) ?></strong>
       <button type="button" class="small copy-text" data-copy-from="temp-password">コピー</button> <span class="copy-result" aria-live="polite"></span><br>
-      この画面を閉じると二度と表示されません。本人に伝えてください。初回のログインで 2 段階認証の設定とパスワードの変更を求めます。
+      この画面を閉じると二度と表示されません。本人に伝えてください。初回のログインで 2 段階認証の設定とパスワードの変更を求めます。<br>
+      2 段階認証の設定がまだの人には、はじめてのログインの前にスマートフォンに認証アプリ（Google Authenticator など）を入れ、はじめてのログインはスマートフォンで行うよう伝えてください。
     </div>
   <?php endif; ?>
   <?php foreach ($errors as $e): ?>

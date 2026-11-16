@@ -131,6 +131,9 @@ def main():
     s, _, body, _ = c.get("/account.php?tab=totp")
     m = re.search(r'<p class="secret">([A-Z2-7 ]+)</p>', body)
     check("秘密の値が表示される", m is not None)
+    check("初回の設定の画面に、スマートフォンで認証アプリを入れる案内と、PC 向けの案内（スマートフォンで開くアドレス）が出る",
+          'class="setup-guide"' in body and "スマートフォンを用意してください" in body and 'class="setup-pc-hint"' in body and "/login.php</span>" in body)
+    check("初回の設定の画面に、使える認証アプリの一覧が出る", "使える認証アプリ" in body and "Google Authenticator" in body and "Microsoft Authenticator" in body)
     secret = m.group(1) if m else ""
     s, _, body2, _ = c.post("/account.php?tab=totp", {"csrf_token": csrf(body), "action": "totp_confirm", "code": "000000"})
     check("違うコードでは設定できない", "コードが違います" in body2)

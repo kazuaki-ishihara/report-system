@@ -52,6 +52,9 @@ a { color: var(--primary); }
   position: absolute; right: 16px; top: 52px; min-width: 200px;
   background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
   box-shadow: 0 4px 12px var(--shadow); display: flex; flex-direction: column;
+  /* 項目の多い役割（管理者・補佐・課長）でも一番下の「ログアウト」まで届くように、表示領域の高さに収めてメニューの中でスクロールする */
+  max-height: calc(100vh - 64px); max-height: calc(100dvh - 64px);
+  overflow-y: auto; overscroll-behavior: contain;
 }
 .app-menu nav a, .app-menu nav .link-button { padding: 12px 16px; text-decoration: none; color: var(--text); text-align: left; }
 .app-menu nav a:hover { background: var(--bg); }
@@ -94,6 +97,17 @@ button.danger { color: var(--danger); border-color: var(--danger); background: v
 .tabs a.active { background: var(--primary); color: var(--primary-text); border-color: var(--primary); }
 .steps { padding-left: 20px; }
 .steps li { margin-bottom: 12px; }
+.setup-guide { border: 1px solid var(--line); border-left: 4px solid var(--primary); border-radius: var(--radius); padding: 8px 12px; margin: 12px 0; background: var(--bg); }
+.setup-guide p { margin: 6px 0; }
+.setup-guide ol { padding-left: 20px; margin: 6px 0; }
+.setup-guide .authenticator-apps { margin: 6px 0; }
+.setup-guide .app-list { list-style: none; padding: 0; margin: 6px 0; }
+.setup-guide .app-list li { display: flex; flex-wrap: wrap; gap: 2px 12px; padding: 6px 0; border-bottom: 1px solid var(--line); }
+.setup-guide .app-list li strong { min-width: 14em; }
+.setup-guide .app-list li span { color: var(--muted); flex: 1 1 18em; }
+/* PC 向けの案内: スマートフォン・タブレット（指で操作する端末）では出さない */
+.setup-pc-hint { display: none; border-top: 1px dashed var(--line); margin-top: 8px; padding-top: 4px; }
+@media (hover: hover) and (pointer: fine) { .setup-pc-hint { display: block; } }
 .secret { font-family: ui-monospace, Consolas, monospace; font-size: 1.1rem; letter-spacing: 1px; background: var(--bg); padding: 8px; border-radius: var(--radius); word-break: break-all; }
 .codes { font-family: ui-monospace, Consolas, monospace; font-size: 1.1rem; columns: 2; padding-left: 20px; }
 form.inline { display: inline; }

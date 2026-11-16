@@ -27,8 +27,33 @@ $full = $stage === 'full' && (int) $user['must_change_password'] !== 1;
       <?php if ($stage === 'setup'): ?>
         <p>はじめてのログインです。安全のため、2 段階認証を設定してください。設定が終わるまで、ほかの画面は使えません。</p>
       <?php endif; ?>
+      <div class="setup-guide">
+        <p><strong>スマートフォンを用意してください。</strong>2 段階認証では、ログインのたびにスマートフォンの認証アプリ（Google Authenticator・Microsoft Authenticator など。無料）に出る 6 桁の数字を入れます。先に、App Store または Google Play から認証アプリを入れてください。</p>
+        <details class="authenticator-apps">
+          <summary>使える認証アプリ</summary>
+          <p class="note">「時間ベース」の 6 桁のコードを出すアプリなら使えます。迷ったら、iPhone・Android のどちらでも同じ名前で入れられる Google Authenticator か Microsoft Authenticator を選んでください。</p>
+          <ul class="app-list">
+            <li><strong>Google Authenticator</strong><span>iPhone・Android／無料</span></li>
+            <li><strong>Microsoft Authenticator</strong><span>iPhone・Android／無料。Microsoft のアカウントがなくても使える</span></li>
+            <li><strong>IIJ SmartKey</strong><span>iPhone・Android／無料。画面が日本語</span></li>
+            <li><strong>Authy</strong><span>iPhone・Android／無料</span></li>
+            <li><strong>iPhone の「パスワード」</strong><span>iPhone だけ／最初から入っている（iOS 18 以降。iOS 15〜17 は「設定」の「パスワード」）</span></li>
+            <li><strong>Aegis</strong><span>Android だけ／無料</span></li>
+          </ul>
+          <p class="note">SMS でコードを受け取る方式や、ボタンを押して承認するだけの方式には対応していません。</p>
+        </details>
+        <div class="setup-pc-hint">
+          <p><strong>いまは PC で開いています。この設定は、スマートフォンで行うのがおすすめです。</strong>スマートフォンで開くと、ボタン 1 つで認証アプリに登録できます（PC では、32 文字をスマートフォンに手で打つことになります）。</p>
+          <ol>
+            <li>スマートフォンのブラウザーで、次のアドレスを開きます。<br><span class="secret"><?= h($loginUrl) ?></span></li>
+            <li>同じログイン ID とパスワードでログインし、出てきた画面で設定します。</li>
+            <li>設定が終わったら、PC でもう一度ログインしてください。</li>
+          </ol>
+          <p class="note">スマートフォンからこのアドレスを開けないときは、このまま PC で下の手順に進んでください。</p>
+        </div>
+      </div>
       <ol class="steps">
-        <li>スマートフォンに認証アプリ（Google Authenticator など）を入れてください。</li>
+        <li>スマートフォンに認証アプリ（Google Authenticator・Microsoft Authenticator など）を入れてください。</li>
         <li>下のボタンを押すと、認証アプリに登録されます。<br>
           <a class="button" href="<?= h($totpUri) ?>">認証アプリに登録する</a>
           <p class="note">うまくいかないときは、認証アプリで「セットアップキーを入力」を選び、次の文字を入れます（時間ベース）。</p>
