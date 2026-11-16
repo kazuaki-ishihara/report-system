@@ -199,7 +199,10 @@ def main():
     out = os.path.join(rec_root, stamp)
     os.makedirs(out, exist_ok=True)
     r = Runner(out)
-    db = os.path.join(ROOT, "app", "data", "dev.sqlite")
+    # 検証は自分用の DB を使う（画面を見ている dev.sqlite のテーマ・ログインに触れない）。
+    # PHP（サーバー・dev_seed.php など）は環境変数 MR_VERIFY_DB を見て、この DB と「2 段階認証を飛ばさない」設定で動く（app/config/config.php）
+    db = os.path.join(ROOT, "app", "data", "verify.sqlite")
+    os.environ["MR_VERIFY_DB"] = db
     py = sys.executable
     print("自動検証 %s（PHP: %s）" % (stamp, php))
 

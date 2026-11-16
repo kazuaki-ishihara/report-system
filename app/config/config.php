@@ -47,7 +47,7 @@ $config = [
     'report_period_rule'    => 'previous',
 
     // 開発用: true で 2 段階認証を飛ばす（https => false のときだけ効く）。
-    // 自動検証（verify_all.py）は 2 段階認証を前提にするので、検証のときは false にする
+    // 自動検証（verify_all.py）は、下の MR_VERIFY_DB で自分用の DB を使い、このとき自動で false にする
     'dev_skip_2fa'          => false,
 ];
 
@@ -56,6 +56,13 @@ if (is_file($local)) {
     $override = require $local;
     if (is_array($override)) {
         $config = array_merge($config, $override);
+    }
+    // 自動検証（tools/test/verify_all.py）: ローカル検証環境（allow_dev_seed が有効）だけ、環境変数 MR_VERIFY_DB があれば
+    // 検証用の DB を使い、2 段階認証を飛ばさない。画面を見ている DB（テーマ・ログイン）と設定には触れない。本番では効かない
+    $verifyDatabasePath = getenv('MR_VERIFY_DB');
+    if (is_string($verifyDatabasePath) && $verifyDatabasePath !== '' && ($config['allow_dev_seed'] ?? false) === true && ($config['https'] ?? true) === false) {
+        $config['db_path'] = $verifyDatabasePath;
+        $config['dev_skip_2fa'] = false;
     }
 }
 

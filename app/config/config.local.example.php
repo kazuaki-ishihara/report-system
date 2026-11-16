@@ -13,8 +13,8 @@
 //   allow_dev_seed => true で dev_seed.php が DB を消して作り直せるようになる。
 // - config.local.php はリポジトリに入れない（.gitignore 済み。verify_all.py も入っていないことを確かめる）。
 //   設定を変えたいときは、このひな形を直してコミットする。
-// - dev_skip_2fa => true のままだと、verify_all.py のログインを使う検証が失敗する。
-//   自動検証のときは false にし、終わったら true に戻す。
+// - verify_all.py は、検証用の DB（app/data/verify.sqlite）を使い、2 段階認証を飛ばさない設定で動く（環境変数 MR_VERIFY_DB）。
+//   dev_skip_2fa を切り替える必要はなく、画面を見ている DB（テーマ・ログイン）にも触れない。
 // ====================================================================
 
 return [
@@ -22,5 +22,5 @@ return [
     'https'          => false,                               // ローカルは http
     'allow_dev_seed' => true,                                // tools/test/dev_seed.php を使えるようにする
     'db_path'        => dirname(__DIR__) . '/data/dev.sqlite', // テスト用の DB（app/data/ はリポジトリに入れない）
-    'dev_skip_2fa'   => true,                                // 画面を見るため 2 段階認証を飛ばす（検証のときは false）
+    'dev_skip_2fa'   => true,                                // 画面を見るため 2 段階認証を飛ばす（自動検証は自動で飛ばさない）
 ];
