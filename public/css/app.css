@@ -330,6 +330,37 @@ fieldset.sub legend { font-weight: 700; padding: 0 6px; }
   color-scheme: dark;
 }
 :root[data-theme^="yozakura"] .app-title::before { content: "🌙 "; }
+/* 見分けやすい色（cud。カラーユニバーサルデザイン）: 色覚の型に関係なく見分けやすい配色。赤と緑の対比をやめ、青（済み・強調）・黄（注意・待ち）・朱（エラー・限定）で分ける。文字と背景の明るさの比は 7 以上。札には形の印（下の「見分けやすい色の形の印」） */
+:root[data-theme="cud"] {
+  --bg: #f4f5f2;
+  --card: #ffffff;
+  --text: #111111;
+  --muted: #3b3b3b;
+  --line: #8c8c8c;
+  --primary: #0039b3;
+  --primary-text: #ffffff;
+  --danger: #9a2600;
+  --warn-bg: #ffefb0;
+  --warn-line: #b37a00;
+  --ok-bg: #e3edff;
+  --err-bg: #ffe7dc;
+  --input-bg: #ffffff;
+  --button-bg: #f1f1ef;
+  --info-bg: #e4f5fb;
+  --row-alt-bg: #f8f8f6;
+  --row-hover-bg: #e3edff;
+  --panel-bg: #f7f9ff;
+  --shadow: rgba(0, 0, 0, .16);
+  --tag-neutral-bg: #f1f1ef; --tag-neutral-text: #2b2b2b; --tag-neutral-line: #6e6e6e;
+  --tag-info-bg: #e4f5fb; --tag-info-text: #003a52; --tag-info-line: #1a8ab8;
+  --tag-ok-bg: #e3edff; --tag-ok-text: #002a80; --tag-ok-line: #005aff;
+  --tag-ok-strong-bg: #00308f; --tag-ok-strong-text: #ffffff;
+  --tag-warn-bg: #ffefb0; --tag-warn-text: #3d2900; --tag-warn-line: #b37a00;
+  --tag-danger-bg: #ffe7dc; --tag-danger-text: #7a1f00; --tag-danger-line: #d64000;
+  --tag-restricted-bg: #9a2600; --tag-restricted-text: #ffffff;
+  --tag-internal-bg: #ececec; --tag-internal-text: #1f1f1f; --tag-internal-line: #4d4d4d;
+  color-scheme: light;
+}
 /* 若葉・若葉2（wakaba・wakaba2）: 落ち着いた緑。見出しに葉を一枚。若葉2 は画面の下に清流が流れる（下の「テーマの飾り」） */
 :root[data-theme^="wakaba"] {
   --bg: #f3f8f2;
@@ -356,6 +387,7 @@ fieldset.sub legend { font-weight: 700; padding: 0 6px; }
 .theme-swatch-sakura span:nth-child(1) { background: #fff5f8; } .theme-swatch-sakura span:nth-child(2) { background: #f1cad8; } .theme-swatch-sakura span:nth-child(3) { background: #c2185b; }
 .theme-swatch-yozakura span:nth-child(1) { background: #0e1630; } .theme-swatch-yozakura span:nth-child(2) { background: #3a2f4a; } .theme-swatch-yozakura span:nth-child(3) { background: #f48fb1; }
 .theme-swatch-yozakura2 span:nth-child(1) { background: #0e1630; } .theme-swatch-yozakura2 span:nth-child(2) { background: #3a2f4a; } .theme-swatch-yozakura2 span:nth-child(3) { background: #fbe6ee; }
+.theme-swatch-cud span:nth-child(1) { background: #005aff; } .theme-swatch-cud span:nth-child(2) { background: #f6aa00; } .theme-swatch-cud span:nth-child(3) { background: #d64000; }
 .theme-swatch-wakaba2 span:nth-child(1) { background: #f3f8f2; } .theme-swatch-wakaba2 span:nth-child(2) { background: #c9dccb; } .theme-swatch-wakaba2 span:nth-child(3) { background: #6bbcc8; }
 .theme-swatch-wakaba span:nth-child(1) { background: #f3f8f2; } .theme-swatch-wakaba span:nth-child(2) { background: #c9dccb; } .theme-swatch-wakaba span:nth-child(3) { background: #2e7d32; }
 .theme-swatch-auto span:nth-child(1) { background: #f5f6f8; } .theme-swatch-auto span:nth-child(2) { background: #0d1117; } .theme-swatch-auto span:nth-child(3) { background: #1f6feb; }
@@ -695,3 +727,34 @@ form.wizard-active .sticky-actions button[value="submit"] { display: none; }
 .screen-help-body { margin: 6px 0 2px; color: var(--text); }
 .support-staff-extra { margin-top: 12px; }
 .reply-templates { margin-top: 16px; }
+
+/* ---- 見分けやすい色の形の印（cud）。色が見分けにくくても、札の頭の印・枠の線・模様で状態が分かるように ---- */
+:root[data-theme="cud"] .tag, :root[data-theme="cud"] .badge { border-width: 2px; }
+:root[data-theme="cud"] .status-none::before { content: "－ "; }
+:root[data-theme="cud"] .status-draft { border-style: dashed; }
+:root[data-theme="cud"] .status-draft::before { content: "✎ "; }
+:root[data-theme="cud"] .status-submitted::before { content: "● "; }
+:root[data-theme="cud"] .status-confirmed::before { content: "✓ "; }
+:root[data-theme="cud"] .tag-open::before, :root[data-theme="cud"] .support-status-open::before { content: "… "; font-weight: 700; }
+:root[data-theme="cud"] .tag-resolved::before, :root[data-theme="cud"] .support-status-released::before, :root[data-theme="cud"] .support-status-done::before { content: "✓ "; }
+:root[data-theme="cud"] .tag-changed::before, :root[data-theme="cud"] .tag-answered::before { content: "◆ "; }
+:root[data-theme="cud"] .support-status-reviewing::before, :root[data-theme="cud"] .support-status-in_progress::before, :root[data-theme="cud"] .support-status-testing::before, :root[data-theme="cud"] .support-status-release_waiting::before { content: "◆ "; }
+:root[data-theme="cud"] .badge-required::before { content: "＊"; }
+:root[data-theme="cud"] .badge-restricted::before { content: "■ "; }
+:root[data-theme="cud"] .badge-internal { border-style: dotted; }
+:root[data-theme="cud"] .badge-internal::before { content: "◇ "; }
+:root[data-theme="cud"] .flash { border-width: 2px; border-left-width: 6px; }
+:root[data-theme="cud"] .flash-error::before { content: "× "; font-weight: 700; }
+:root[data-theme="cud"] .flash-success::before { content: "✓ "; font-weight: 700; }
+:root[data-theme="cud"] .field-warning { border-style: dashed; }
+:root[data-theme="cud"] .table tbody tr.log-failure td:first-child::before { content: "× "; font-weight: 700; }
+/* 提出状況の棒: 斜線の模様で、地との差を形で分かるように。地は白で、枠を濃く */
+:root[data-theme="cud"] .progress-label progress { border: 1.5px solid #4a4a4a; background: #ffffff; }
+:root[data-theme="cud"] .progress-label progress::-webkit-progress-bar { background: #ffffff; }
+:root[data-theme="cud"] .progress-label progress::-webkit-progress-value { background: repeating-linear-gradient(45deg, #005aff 0 5px, #8db8ff 5px 10px); }
+:root[data-theme="cud"] .progress-label progress::-moz-progress-bar { background: repeating-linear-gradient(45deg, #005aff 0 5px, #8db8ff 5px 10px); }
+:root[data-theme="cud"] .progress-label progress.progress-confirmed::-webkit-progress-value { background: repeating-linear-gradient(-45deg, #00308f 0 3px, #ffffff 3px 5px); }
+:root[data-theme="cud"] .progress-label progress.progress-confirmed::-moz-progress-bar { background: repeating-linear-gradient(-45deg, #00308f 0 3px, #ffffff 3px 5px); }
+/* 押せるところの枠（キーボードで選んだとき）をはっきり */
+:root[data-theme="cud"] :focus-visible { outline: 3px solid #f6aa00; outline-offset: 2px; }
+:root[data-theme="cud"] .card { border-color: #b5b5b5; }

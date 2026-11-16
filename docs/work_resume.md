@@ -106,7 +106,7 @@ python tools\test\verify_all.py --ui     # 画面の自動操作検証も行う�
   python tools\test\verify_all.py --ui --browser-port 29777
   ```
 
-- 2 段階認証を飛ばす一時的な設定（§8）が `true` のままだと、ログインを使う検証が失敗する。検証のときは `config.local.php` の `dev_skip_2fa` を `false` にする。
+- 検証は自分用の DB（`app/data/verify.sqlite`）を使い、2 段階認証を飛ばさない設定で動く（環境変数 `MR_VERIFY_DB`。`app/config/config.php`）。画面を見ている `dev.sqlite`（テーマ・ログイン）と `config.local.php` には触れないので、`dev_skip_2fa` を切り替える必要はなく、検証の途中でもローカルの画面を見られる。
 - 直近の結果: すべて成功（OK 1461 / NG 0。画面の自動操作を含む）。このときは反映用の一式（`tools/deploy/output/`）の PHP の写しも数えていた。今は数えないように直したので、次からは 1171 件前後になる。
 
 ## 7. 未完了・確認待ち
@@ -138,7 +138,7 @@ python tools\test\verify_all.py --ui     # 画面の自動操作検証も行う�
    - 画面の確かめ方は次のとおり。
    - 準備: §5 のとおりテストデータを作り直してサーバーを起動し、`http://127.0.0.1:8000/` を開く。2 段階認証を飛ばす一時的な設定（下の 5.）が入っているので、ログインはパスワードだけでよい。
    - 画面確認の道具: `python tools\test\screen_gallery.py --db app\data\dev.sqlite` で、役割ごとに全画面を PC とスマートフォンの幅で撮り、一覧のページ（`tools/test/output/画面一覧/<日時>/index.html`）を作る。一覧で画面ごとに「確認済み」の印とメモを付け、「メモを書き出す」で課題管理に貼る。横のはみ出し・403・PHP やブラウザーのエラーは赤字で自動で出る。
-     - `--themes light,dark,sakura,yozakura,yozakura2,wakaba,wakaba2` でテーマごと、`--roles kacho_b,ippan_b1` で別の役割、`--screens G-22` で画面を絞って撮る。報告・要望がないときは、見本の報告・コメント・要望と返信を画面の操作で作る（`--no-prepare` で作らない）。
+     - `--themes light,dark,sakura,yozakura,yozakura2,wakaba,wakaba2,cud` でテーマごと、`--vision none,deuteranopia,protanopia,tritanopia,achromatopsia` で色覚の型の見え方を真似て、`--roles kacho_b,ippan_b1` で別の役割、`--screens G-22` で画面を絞って撮る。報告・要望がないときは、見本の報告・コメント・要望と返信を画面の操作で作る（`--no-prepare` で作らない）。
      - 既定で撮る役割は部下・確認者・課長・管理者・補佐（`ippan_a1`・`leader_a`・`kacho_a`・`admin01`・`hosa01`）。
      - 作業端末の Claude Code から動かすときは、§6 のとおり Edge を先に起動して `--browser-port 29777` を付ける。
      - 画像で全体を見て、気になる画面だけブラウザーで実際に操作する（入力・ボタン・タブの動きは画像では分からない）。
@@ -171,7 +171,7 @@ python tools\test\verify_all.py --ui     # 画面の自動操作検証も行う�
 3. **仕様決め**: 済み（K-001〜K-047 すべて決定。`C:\ReportSystem\仮設定.md`）。新しく推奨案で仮に決めたものが出たら、同じく選択式で決める。
 4. **本番予定環境の指摘**: `課題管理.md` の ENV-003（旧システムの DB が公開されたまま）。`公開操作指示書.txt` の手順 0 で控えを取って消し、「Not Found」になることを確かめる手順にしてある。実データを入れる前に、`check_prod.py` で必ず確かめる。
 5. **作っていない機能の判断**: `C:\ReportSystem\課題管理.md` の APP-013（代理編集、コメントを直す、自由記述の検索など）を、作るか課長と決める。
-6. **2 段階認証を飛ばす設定**: ローカルで画面を見るため、設定 `dev_skip_2fa` で 2 段階認証を飛ばせる（自動検証のときは一時的に `false` にして、終わったら `true` に戻す）。
+6. **2 段階認証を飛ばす設定**: ローカルで画面を見るため、設定 `dev_skip_2fa` で 2 段階認証を飛ばせる（自動検証は自分用の DB で、自動で飛ばさない設定になる。§6）。
    - `app/pages/login.php` の `dev_skip_2fa` の 4 行はコミット済み。既定は `false`（`app/config/config.php`）で、`https => true`（本番）では `true` にしても効かない。
    - ひな形 `app/config/config.local.example.php` は `'dev_skip_2fa' => true` になっている。写した `config.local.php`（リポジトリ外）で切り替える。
 7. **PHP 環境のアンインストール用バッチを作る**: 検証環境の準備（`dev_check_report` ブランチの `tools/verify/setup_devenv.ps1`。winget で `PHP.PHP.8.3` を入れ、php.ini を作る）で入れた PHP と設定を、端末から取り除くためのもの。

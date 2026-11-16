@@ -495,6 +495,11 @@ def main():
     save_theme(member_a1_client, "wakaba2")
     status_code, _location, home_html = member_a1_client.get("/index.php")
     check("若葉2 を選ぶと、画面の html に data-theme=\"wakaba2\" が付く", status_code == 200 and 'data-theme="wakaba2"' in home_html, status_code)
+    # 見分けやすい色（カラーユニバーサルデザイン）も選べる
+    check("テーマの選択肢に「見分けやすい色」がある", 'name="ui_theme" value="cud"' in account_html and "見分けやすい色" in account_html)
+    save_theme(member_a1_client, "cud")
+    status_code, _location, home_html = member_a1_client.get("/index.php")
+    check("見分けやすい色を選ぶと、画面の html に data-theme=\"cud\" が付く", status_code == 200 and 'data-theme="cud"' in home_html, status_code)
     save_theme(member_a1_client, "sakura")
     status_code, _location, _page_html = save_theme(member_a1_client, "rainbow")
     check("知らないテーマは 400", status_code == 400, status_code)

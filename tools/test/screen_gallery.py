@@ -7,6 +7,7 @@
 
     python tools/test/screen_gallery.py --db app/data/dev.sqlite
     python tools/test/screen_gallery.py --db app/data/dev.sqlite --themes light,dark,sakura --roles ippan_a1,kacho_a
+    python tools/test/screen_gallery.py --db app/data/dev.sqlite --themes light,cud --vision none,deuteranopia,protanopia --screens G-08
     python tools/test/screen_gallery.py --db app/data/dev.sqlite --screens G-22 --roles kacho_a,admin01,hosa01   # 画面を絞る
     python tools/test/screen_gallery.py --db app/data/dev.sqlite --browser-port 29777   # 起動済みの Edge につなぐ
 
@@ -37,7 +38,16 @@ MOBILE_USER_AGENT = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) Appl
 MAX_CAPTURE_HEIGHT_PIXELS = 16000
 
 WIDTH_LABEL_BY_NAME = {"pc": "PC", "mobile": "スマートフォン"}
-THEME_LABEL_BY_NAME = {"light": "既定", "dark": "ダーク", "sakura": "さくら", "yozakura": "夜桜1", "yozakura2": "夜桜2", "wakaba": "若葉", "wakaba2": "若葉2"}
+THEME_LABEL_BY_NAME = {"light": "既定", "dark": "ダーク", "sakura": "さくら", "yozakura": "夜桜1", "yozakura2": "夜桜2", "wakaba": "若葉", "wakaba2": "若葉2", "cud": "見分けやすい色"}
+# 色覚の型の見え方を真似て撮る（ブラウザーの機能 Emulation.setEmulatedVisionDeficiency）。none は真似ない
+VISION_LABEL_BY_NAME = {"none": "", "protanopia": "P 型の見え方", "deuteranopia": "D 型の見え方",
+                        "tritanopia": "T 型の見え方", "achromatopsia": "色の区別なしの見え方"}
+
+
+def variant_label(variant_key):
+    """テーマと見え方の組（「cud@deuteranopia」など）の表示名"""
+    theme_name, _separator, vision_name = variant_key.partition("@")
+    return THEME_LABEL_BY_NAME.get(theme_name, theme_name) + ("・" + VISION_LABEL_BY_NAME.get(vision_name, vision_name) if vision_name else "")
 ROLE_LABEL_BY_LOGIN_ID = {
     "ippan_a1": "部下（A課）", "leader_a": "確認者（A課 リーダー）", "dairi_a": "確認者（A課 課長代理）",
     "kacho_a": "課長（A課・管理担当）", "kacho_b": "課長（B課）", "ippan_b1": "部下（B課）", "admin01": "管理者",
@@ -164,7 +174,7 @@ class ScreenGallery:
         self.browser.call("Emulation.setDeviceMetricsOverride", self.current_width_metrics)
         return page_height_pixels > MAX_CAPTURE_HEIGHT_PIXELS
 
-    def shoot_screen(self, login_id, screen_number, screen_name, url_path, width_name, theme_names):
+    def shoot_screen(self, login_id, screen_number, screen_name, url_path, width_name, theme_names, vision_names=("none",)):
         error_count_before = len(self.browser.errors)
         self.browser.goto(self.base_url + url_path)
         page_title_text = self.browser.eval("document.title") or ""
@@ -183,14 +193,18 @@ class ScreenGallery:
             automatic_notes.append("ブラウザーのエラー: " + " / ".join(page_errors[:3]))
         for theme_name in theme_names:
             self.browser.eval("document.documentElement.setAttribute('data-theme', %s)" % json.dumps(theme_name))
-            time.sleep(0.1)
-            image_file_name = "%s_%03d_%s_%s.png" % (login_id, len(self.shot_records) + 1, width_name, theme_name)
-            was_cut = self.capture_full_page(os.path.join(self.output_directory, image_file_name))
-            self.shot_records.append({
-                "login_id": login_id, "screen_number": screen_number, "screen_name": screen_name, "url_path": url_path,
-                "width_name": width_name, "theme_name": theme_name, "image_file_name": image_file_name,
-                "automatic_notes": automatic_notes + (["長いため途中まで"] if was_cut else []),
-            })
+            for vision_name in vision_names:
+                self.browser.call("Emulation.setEmulatedVisionDeficiency", {"type": vision_name})
+                time.sleep(0.1)
+                variant_key = theme_name if vision_name == "none" else theme_name + "@" + vision_name
+                image_file_name = "%s_%03d_%s_%s.png" % (login_id, len(self.shot_records) + 1, width_name, variant_key.replace("@", "_"))
+                was_cut = self.capture_full_page(os.path.join(self.output_directory, image_file_name))
+                self.shot_records.append({
+                    "login_id": login_id, "screen_number": screen_number, "screen_name": screen_name, "url_path": url_path,
+                    "width_name": width_name, "theme_name": variant_key, "image_file_name": image_file_name,
+                    "automatic_notes": automatic_notes + (["長いため途中まで"] if was_cut else []),
+                })
+        self.browser.call("Emulation.setEmulatedVisionDeficiency", {"type": "none"})
         print("  %-8s %-6s %s %s%s" % (width_name, screen_number, screen_name, url_path,
                                        ("  ※ " + "、".join(automatic_notes)) if automatic_notes else ""))
 
@@ -325,7 +339,7 @@ def write_index_page(output_directory, shot_records, role_login_ids, width_names
                     '<figure class="shot shot-%s" data-width="%s" data-theme="%s"><figcaption>%s・%s</figcaption>'
                     '<a href="%s" target="_blank"><img loading="lazy" src="%s" alt=""></a>%s</figure>' % (
                         record["width_name"], record["width_name"], record["theme_name"],
-                        WIDTH_LABEL_BY_NAME[record["width_name"]], THEME_LABEL_BY_NAME.get(record["theme_name"], record["theme_name"]),
+                        WIDTH_LABEL_BY_NAME[record["width_name"]], variant_label(record["theme_name"]),
                         html.escape(record["image_file_name"]), html.escape(record["image_file_name"]),
                         ('<ul class="auto-notes">%s</ul>' % automatic_notes_html) if automatic_notes_html else ""))
             has_automatic_notes = any(record["automatic_notes"] for record in role_records
@@ -341,7 +355,7 @@ def write_index_page(output_directory, shot_records, role_login_ids, width_names
     width_buttons_html = "".join('<label><input type="checkbox" class="filter-width" value="%s" checked> %s</label>' % (
         width_name, WIDTH_LABEL_BY_NAME[width_name]) for width_name in width_names)
     theme_buttons_html = "".join('<label><input type="checkbox" class="filter-theme" value="%s" checked> %s</label>' % (
-        theme_name, THEME_LABEL_BY_NAME.get(theme_name, theme_name)) for theme_name in theme_names)
+        theme_name, variant_label(theme_name)) for theme_name in theme_names)
     page_html = INDEX_TEMPLATE.replace("{{created_at}}", html.escape(created_at_text)) \
         .replace("{{storage_key}}", json.dumps("screen_gallery:" + created_at_text)) \
         .replace("{{width_buttons}}", width_buttons_html).replace("{{theme_buttons}}", theme_buttons_html) \
@@ -462,7 +476,9 @@ def main():
     argument_parser.add_argument("--roles", default=",".join(DEFAULT_ROLE_LOGIN_IDS),
                                  help="撮る役割のログイン ID（カンマ区切り）。使える ID: " + ",".join(ROLE_LABEL_BY_LOGIN_ID))
     argument_parser.add_argument("--widths", default="pc,mobile", help="pc,mobile")
-    argument_parser.add_argument("--themes", default="light", help="light,dark,sakura,yozakura,yozakura2,wakaba,wakaba2")
+    argument_parser.add_argument("--themes", default="light", help="light,dark,sakura,yozakura,yozakura2,wakaba,wakaba2,cud")
+    argument_parser.add_argument("--vision", default="none",
+                                 help="色覚の型の見え方を真似て撮る（カンマ区切り）: none,protanopia,deuteranopia,tritanopia,achromatopsia。例: --themes light,cud --vision none,deuteranopia")
     argument_parser.add_argument("--screens", default="", help="撮る画面の番号（カンマ区切り。例: G-22）。空ならすべて")
     argument_parser.add_argument("--no-prepare", action="store_true", help="見本の報告を作らない")
     argument_parser.add_argument("--show", action="store_true", help="ブラウザーを表示して実行する")
@@ -475,6 +491,8 @@ def main():
     role_login_ids = [login_id.strip() for login_id in arguments.roles.split(",") if login_id.strip()]
     width_names = [width_name.strip() for width_name in arguments.widths.split(",") if width_name.strip() in WIDTH_LABEL_BY_NAME]
     theme_names = [theme_name.strip() for theme_name in arguments.themes.split(",") if theme_name.strip() in THEME_LABEL_BY_NAME]
+    vision_names = [vision_name.strip() for vision_name in arguments.vision.split(",") if vision_name.strip() in VISION_LABEL_BY_NAME] or ["none"]
+    variant_keys = [theme_name if vision_name == "none" else theme_name + "@" + vision_name for theme_name in theme_names for vision_name in vision_names]
     unknown_login_ids = [login_id for login_id in role_login_ids if login_id not in ROLE_LABEL_BY_LOGIN_ID]
     screen_number_filter_set = set(screen_number.strip() for screen_number in arguments.screens.split(",") if screen_number.strip())
     if unknown_login_ids or not width_names or not theme_names:
@@ -512,12 +530,12 @@ def main():
                     if screen_number_filter_set and screen_number not in screen_number_filter_set:
                         continue
                     try:
-                        gallery.shoot_screen(login_id, screen_number, screen_name, url_path, width_name, theme_names)
+                        gallery.shoot_screen(login_id, screen_number, screen_name, url_path, width_name, theme_names, vision_names)
                     except Exception as error:  # noqa: BLE001
                         print("  撮れませんでした: %s %s: %r" % (screen_number, url_path, error))
     finally:
         browser.quit()
-        write_index_page(output_directory, gallery.shot_records, role_login_ids, width_names, theme_names, created_at_text)
+        write_index_page(output_directory, gallery.shot_records, role_login_ids, width_names, variant_keys, created_at_text)
     print("\n%d 枚。一覧: %s" % (len(gallery.shot_records), os.path.join(output_directory, "index.html")))
     return 0
 
