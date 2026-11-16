@@ -23,6 +23,9 @@ if ($field === null) {
     exit('指定された項目が見つかりません。');
 }
 
+// 入力エラーで戻ってきた場合は、入力した値を入力欄に入れ直す
+$oldInput = takeFormInput('report_field_edit_' . $id);
+
 $csrfToken = getCsrfToken();
 list($message, $error) = getFlashMessages();
 
@@ -52,7 +55,7 @@ list($message, $error) = getFlashMessages();
         <div class="rf-warning">この項目は非表示になっています。</div>
     <?php endif; ?>
 
-    <form method="post" action="update.php">
+    <form method="post" action="update.php" class="rf-field-form">
         <input type="hidden" name="id" value="<?= (int) $field['id'] ?>">
 
         <?php require __DIR__ . '/_form.php'; ?>

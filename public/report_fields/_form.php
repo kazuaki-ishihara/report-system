@@ -8,6 +8,7 @@ declare(strict_types=1);
 // 呼び出し側で次の変数を用意する。
 //   $field     : 編集時は今の項目（配列）。追加時は null
 //   $csrfToken : CSRF トークン
+//   $oldInput  : 入力エラーで戻ってきたときの入力値（なければ null）
 // ==================================================
 
 // このファイルを URL で直接開いた場合は何も表示しない
@@ -17,6 +18,7 @@ if (!isset($csrfToken) || !function_exists('reportFieldTypeLabel')) {
 }
 
 $isEdit = $field !== null;
+$oldInput = isset($oldInput) && is_array($oldInput) ? $oldInput : null;
 $isSystem = $isEdit && (int) $field['is_system'] === 1;
 $currentType = $isEdit ? (string) $field['field_type'] : '';
 
@@ -24,21 +26,36 @@ $currentType = $isEdit ? (string) $field['field_type'] : '';
 $showTextRules = !$isEdit || in_array($currentType, REPORT_FIELD_TEXT_TYPES, true);
 $showNumberRules = !$isEdit || $currentType === 'number';
 
-$value = function (string $key, string $default = '') use ($field): string {
+// 入力欄に出す値：入力エラーで戻ってきた場合は入力した値、編集時は今の値
+$value = function (string $key, string $default = '') use ($field, $oldInput): string {
+    if ($oldInput !== null) {
+        return isset($oldInput[$key]) ? (string) $oldInput[$key] : $default;
+    }
+
     if ($field === null || !array_key_exists($key, $field) || $field[$key] === null) {
         return $default;
+    }
+
+    if ($key === 'min_value' || $key === 'max_value') {
+        return formatReportFieldNumber($field[$key]);
     }
 
     return (string) $field[$key];
 };
 
-$checked = function (string $key, bool $default = false) use ($field): string {
+$checked = function (string $key, bool $default = false) use ($field, $oldInput): string {
+    if ($oldInput !== null) {
+        return ($oldInput[$key] ?? '') === '1' ? 'checked' : '';
+    }
+
     if ($field === null) {
         return $default ? 'checked' : '';
     }
 
     return (int) $field[$key] === 1 ? 'checked' : '';
 };
+
+$selectedType = $value('field_type');
 ?>
 <input type="hidden" name="csrf_token" value="<?= h($csrfToken) ?>">
 
@@ -66,7 +83,7 @@ $checked = function (string $key, bool $default = false) use ($field): string {
         <select id="field_type" name="field_type" class="rf-select" required>
             <option value="">選んでください</option>
             <?php foreach (REPORT_FIELD_TYPES as $typeCode => $typeLabel): ?>
-                <option value="<?= h($typeCode) ?>"><?= h($typeLabel) ?></option>
+                <option value="<?= h($typeCode) ?>" <?= $selectedType === $typeCode ? 'selected' : '' ?>><?= h($typeLabel) ?></option>
             <?php endforeach; ?>
         </select>
         <p class="rf-help">
@@ -103,7 +120,7 @@ $checked = function (string $key, bool $default = false) use ($field): string {
     </fieldset>
 
     <?php if ($showTextRules): ?>
-        <fieldset class="rf-fieldset">
+        <fieldset class="rf-fieldset rf-type-settings rf-text-settings">
             <legend>
                 テキストの設定
                 <?php if (!$isEdit): ?>（1行テキスト・複数行テキストのみ）<?php endif; ?>
@@ -136,7 +153,7 @@ $checked = function (string $key, bool $default = false) use ($field): string {
     <?php endif; ?>
 
     <?php if ($showNumberRules): ?>
-        <fieldset class="rf-fieldset">
+        <fieldset class="rf-fieldset rf-type-settings rf-number-settings">
             <legend>
                 数値の設定
                 <?php if (!$isEdit): ?>（数値のみ）<?php endif; ?>
@@ -155,7 +172,7 @@ $checked = function (string $key, bool $default = false) use ($field): string {
                     type="text"
                     id="min_value"
                     name="min_value"
-                    value="<?= $field !== null && $field['min_value'] !== null ? h(formatReportFieldNumber($field['min_value'])) : '' ?>"
+                    value="<?= h($value('min_value')) ?>"
                     inputmode="decimal"
                 >
             </div>
@@ -166,7 +183,7 @@ $checked = function (string $key, bool $default = false) use ($field): string {
                     type="text"
                     id="max_value"
                     name="max_value"
-                    value="<?= $field !== null && $field['max_value'] !== null ? h(formatReportFieldNumber($field['max_value'])) : '' ?>"
+                    value="<?= h($value('max_value')) ?>"
                     inputmode="decimal"
                 >
                 <p class="rf-help">最小値・最大値は空欄にすると制限しません。</p>

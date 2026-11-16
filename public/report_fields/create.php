@@ -16,6 +16,10 @@ requireReportFieldAdmin($pdo);
 requireReportFieldTables($pdo);
 
 $field = null;
+
+// 入力エラーで戻ってきた場合は、入力した値を入力欄に入れ直す
+$oldInput = takeFormInput('report_field_create');
+
 $csrfToken = getCsrfToken();
 list($message, $error) = getFlashMessages();
 
@@ -41,7 +45,7 @@ list($message, $error) = getFlashMessages();
         <div class="rf-error" role="alert"><?= h($error) ?></div>
     <?php endif; ?>
 
-    <form method="post" action="store.php">
+    <form method="post" action="store.php" class="rf-field-form">
         <?php require __DIR__ . '/_form.php'; ?>
 
         <div class="rf-toolbar">

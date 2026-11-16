@@ -29,6 +29,8 @@ verifyCsrfToken();
 list($values, $error) = readReportFieldForm(null);
 
 if ($error !== null) {
+    // 入力した値を入力欄に戻す
+    rememberFormInput('report_field_create', postedReportFieldForm());
     redirectWithMessage('create.php', 'error', $error);
 }
 
@@ -94,6 +96,7 @@ try {
 
     error_log('項目の追加エラー: ' . $e->getMessage());
 
+    rememberFormInput('report_field_create', postedReportFieldForm());
     redirectWithMessage('create.php', 'error', '項目を追加できませんでした。');
 }
 

@@ -32,6 +32,9 @@ if (!isChoiceFieldType((string) $field['field_type'])) {
 }
 
 $csrfToken = getCsrfToken();
+
+// 入力エラーで戻ってきた場合は、入力した値を入力欄に入れ直す
+$newOptionInput = takeFormInput('report_field_option_new_' . $fieldId);
 list($message, $error) = getFlashMessages();
 
 $stmt = $pdo->prepare(
@@ -116,6 +119,8 @@ foreach ($options as $option) {
                 <?php
                 $optionId = (int) $option['id'];
                 $isActive = (int) $option['is_active'] === 1;
+                $renameInput = takeFormInput('report_field_option_' . $optionId);
+                $labelValue = $renameInput !== null ? (string) ($renameInput['label'] ?? '') : (string) $option['label'];
                 ?>
                 <tr class="<?= $isActive ? '' : 'rf-inactive' ?>">
 
@@ -151,7 +156,7 @@ foreach ($options as $option) {
                             <input
                                 type="text"
                                 name="label"
-                                value="<?= h($option['label']) ?>"
+                                value="<?= h($labelValue) ?>"
                                 maxlength="<?= REPORT_FIELD_LABEL_MAX_LENGTH ?>"
                                 class="rf-option-label-input"
                                 aria-label="選択肢の名前"
@@ -217,6 +222,7 @@ foreach ($options as $option) {
                 type="text"
                 id="new_label"
                 name="label"
+                value="<?= h($newOptionInput !== null ? (string) ($newOptionInput['label'] ?? '') : '') ?>"
                 maxlength="<?= REPORT_FIELD_LABEL_MAX_LENGTH ?>"
                 required
                 autocomplete="off"

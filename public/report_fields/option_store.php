@@ -44,6 +44,7 @@ $label = trim(postString('label'));
 $error = validateReportFieldLabel($label, '選択肢の名前');
 
 if ($error !== null) {
+    rememberFormInput('report_field_option_new_' . $fieldId, ['label' => postString('label')]);
     redirectWithMessage($backTo, 'error', $error);
 }
 
@@ -66,6 +67,8 @@ try {
 
     if ($existing !== false) {
         $pdo->rollBack();
+
+        rememberFormInput('report_field_option_new_' . $fieldId, ['label' => $label]);
 
         redirectWithMessage(
             $backTo,

@@ -41,6 +41,7 @@ $label = trim(postString('label'));
 $error = validateReportFieldLabel($label, '選択肢の名前');
 
 if ($error !== null) {
+    rememberFormInput('report_field_option_' . $id, ['label' => postString('label')]);
     redirectWithMessage($backTo, 'error', $error);
 }
 
@@ -64,6 +65,8 @@ try {
 
     if ((int) $check->fetchColumn() > 0) {
         $pdo->rollBack();
+
+        rememberFormInput('report_field_option_' . $id, ['label' => $label]);
 
         redirectWithMessage($backTo, 'error', '同じ名前の選択肢がすでにあります（非表示のものを含む）。');
     }

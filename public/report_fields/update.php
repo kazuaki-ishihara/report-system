@@ -37,6 +37,8 @@ if ($field === null) {
 list($values, $error) = readReportFieldForm($field);
 
 if ($error !== null) {
+    // 入力した値を入力欄に戻す
+    rememberFormInput('report_field_edit_' . $id, postedReportFieldForm());
     redirectWithMessage('edit.php?id=' . $id, 'error', $error);
 }
 
@@ -77,6 +79,7 @@ try {
 } catch (PDOException $e) {
     error_log('項目の更新エラー: ' . $e->getMessage());
 
+    rememberFormInput('report_field_edit_' . $id, postedReportFieldForm());
     redirectWithMessage('edit.php?id=' . $id, 'error', '項目を更新できませんでした。');
 }
 

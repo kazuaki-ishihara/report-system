@@ -694,6 +694,55 @@ function getFlashMessages(): array
 }
 
 /**
+ * 入力エラーで画面に戻すときに、入力した値を一時的に保存する
+ *
+ * 次に画面を開いたときに takeFormInput() で取り出し、入力欄に入れ直す。
+ *
+ * @param array<string, mixed> $data
+ */
+function rememberFormInput(string $key, array $data): void
+{
+    startSession();
+
+    $_SESSION['report_field_form_input'][$key] = $data;
+}
+
+/**
+ * rememberFormInput() で保存した値を取り出す（取り出したら消す）
+ *
+ * @return array<string, mixed>|null
+ */
+function takeFormInput(string $key): ?array
+{
+    startSession();
+
+    $data = $_SESSION['report_field_form_input'][$key] ?? null;
+    unset($_SESSION['report_field_form_input'][$key]);
+
+    return is_array($data) ? $data : null;
+}
+
+/**
+ * 項目の追加・編集フォームで送られた値（入力エラー時に入力欄へ戻す分）
+ *
+ * @return array<string, string>
+ */
+function postedReportFieldForm(): array
+{
+    $keys = [
+        'label', 'field_type', 'is_required', 'show_in_list', 'is_searchable',
+        'max_length', 'min_value', 'max_value', 'allow_decimal',
+    ];
+    $data = [];
+
+    foreach ($keys as $key) {
+        $data[$key] = postString($key);
+    }
+
+    return $data;
+}
+
+/**
  * 管理画面の共通の前処理
  *
  * 管理者のみ利用可。ログインユーザーIDを返す。
