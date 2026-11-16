@@ -78,6 +78,8 @@ const UI_THEMES = [
     'light'  => '既定（明るい）',
     'dark'   => 'ダーク',
     'sakura' => 'さくら',
+    'yozakura' => '夜桜1',
+    'yozakura2' => '夜桜2',
     'wakaba' => '若葉',
     'custom' => '自分の色',
 ];
@@ -88,6 +90,8 @@ const UI_THEME_COLOR_NAMES = [
     'light'  => '灰・白・青',
     'dark'   => '黒・濃い灰・青',
     'sakura' => '淡い桜色・白・紅',
+    'yozakura' => '夜空の紺・紫・桜色（暗い）',
+    'yozakura2' => '夜空の紺・紫・ソメイヨシノの淡い桜（暗い）',
     'wakaba' => '淡い緑・白・緑',
     'custom' => '土台・強調の色・背景の色を自分で選ぶ',
 ];

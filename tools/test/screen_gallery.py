@@ -37,7 +37,7 @@ MOBILE_USER_AGENT = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) Appl
 MAX_CAPTURE_HEIGHT_PIXELS = 16000
 
 WIDTH_LABEL_BY_NAME = {"pc": "PC", "mobile": "スマートフォン"}
-THEME_LABEL_BY_NAME = {"light": "既定", "dark": "ダーク", "sakura": "さくら", "wakaba": "若葉"}
+THEME_LABEL_BY_NAME = {"light": "既定", "dark": "ダーク", "sakura": "さくら", "yozakura": "夜桜1", "yozakura2": "夜桜2", "wakaba": "若葉"}
 ROLE_LABEL_BY_LOGIN_ID = {
     "ippan_a1": "部下（A課）", "leader_a": "確認者（A課 リーダー）", "dairi_a": "確認者（A課 課長代理）",
     "kacho_a": "課長（A課・管理担当）", "kacho_b": "課長（B課）", "ippan_b1": "部下（B課）", "admin01": "管理者",
@@ -462,7 +462,7 @@ def main():
     argument_parser.add_argument("--roles", default=",".join(DEFAULT_ROLE_LOGIN_IDS),
                                  help="撮る役割のログイン ID（カンマ区切り）。使える ID: " + ",".join(ROLE_LABEL_BY_LOGIN_ID))
     argument_parser.add_argument("--widths", default="pc,mobile", help="pc,mobile")
-    argument_parser.add_argument("--themes", default="light", help="light,dark,sakura,wakaba")
+    argument_parser.add_argument("--themes", default="light", help="light,dark,sakura,yozakura,yozakura2,wakaba")
     argument_parser.add_argument("--screens", default="", help="撮る画面の番号（カンマ区切り。例: G-22）。空ならすべて")
     argument_parser.add_argument("--no-prepare", action="store_true", help="見本の報告を作らない")
     argument_parser.add_argument("--show", action="store_true", help="ブラウザーを表示して実行する")
