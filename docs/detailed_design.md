@@ -5,6 +5,7 @@
 | 対象システム | レポート管理システム（report-system） |
 | 対象ブランチ / コミット | `main` / `9ffe3e5`（作業ブランチ `dev_check_report` 作成時点） |
 | 作成日 | 2026-11-12 |
+| 更新日 | 2026-11-16：レポート項目管理機能を追加（ブランチ `feature/report-field-management`）。1、2、3、4.1、8 を更新し、9 を追加 |
 | 作成方法 | ソースコードおよび `data/reports.sqlite` のスキーマ定義からの現状分析（リバース） |
 | 関連文書 | [基本設計書](basic_design.md) |
 
@@ -52,7 +53,7 @@ DB ファイル: `data/reports.sqlite`（SQLite 3）。日時はすべて `TEXT`
 | 1 | id | INTEGER | × | PK AUTOINCREMENT | コメントID |
 | 2 | report_id | INTEGER | × | FK → reports.id ON DELETE CASCADE | 対象レポート |
 | 3 | user_id | INTEGER | × | FK → users.id ON DELETE RESTRICT | 投稿者 |
-| 4 | field_name | TEXT | × | | 対象項目（reports のカラム名） |
+| 4 | field_name | TEXT | × | | 対象項目の内部コード（`report_fields.code`。既存 6 項目は reports のカラム名、追加項目は `f_7` など） |
 | 5 | comment | TEXT | × | | 本文 |
 | 6 | created_at | TEXT | × | | 作成日時 |
 | 7 | updated_at | TEXT | × | | 更新日時 |
@@ -69,6 +70,61 @@ DB ファイル: `data/reports.sqlite`（SQLite 3）。日時はすべて `TEXT`
 | comments.report_id ON DELETE CASCADE | レポート削除でコメントも削除 | **削除されない（孤立コメントが残る）** |
 | reports.user_id / comments.user_id RESTRICT | 参照中ユーザーの削除を拒否 | `user_delete.php` のアプリ側チェックで拒否 |
 | users.manager_id SET NULL | 上司削除で部下の上司を NULL に | `user_delete.php` が部下のいるユーザーの削除自体を拒否 |
+
+### 1.4.1 項目管理のテーブル（2026-11-16 追加）
+
+項目管理のセットアップ画面（S-60）を実行したときに作る。定義は `lib/report_fields.php` の `reportFieldSchemaSql()`。外部キーは 1.4 と同じく無効のため、整合性はアプリ側で守る（項目・選択肢は使用中なら物理削除しない。レポート削除時は `delete.php` で値も削除する）。
+
+**report_fields（項目定義）**
+
+| No | カラム | 型 | NULL | 制約 | 説明 |
+|---|---|---|---|---|---|
+| 1 | id | INTEGER | × | PK AUTOINCREMENT | 項目ID |
+| 2 | code | TEXT | × | UNIQUE | 内部コード。既存 6 項目は列名、追加項目は `f_{id}`。変更不可 |
+| 3 | label | TEXT | × | | 表示名（100 文字以内） |
+| 4 | field_type | TEXT | × | CHECK（text / textarea / number / date / select / radio / checkbox） | 種類。追加後は変更不可 |
+| 5 | is_system | INTEGER | × | 0/1 | 固定項目（日付・氏名・件名） |
+| 6 | is_active | INTEGER | × | 0/1 | 表示中 |
+| 7 | is_required | INTEGER | × | 0/1 | 必須 |
+| 8 | show_in_list | INTEGER | × | 0/1 | 一覧に表示 |
+| 9 | is_searchable | INTEGER | × | 0/1 | キーワード検索の対象（テキストのみ） |
+| 10 | sort_order | INTEGER | × | | 並び順（10 刻み） |
+| 11 | max_length | INTEGER | ○ | | 最大文字数。NULL は既定値（1 行 200、複数行 10000） |
+| 12 | min_value / max_value | REAL | ○ | | 数値の最小・最大。NULL は制限なし |
+| 13 | allow_decimal | INTEGER | × | 0/1 | 数値で小数を許す |
+| 14 | created_at / updated_at | TEXT | × | | 作成日時 / 最終更新日時 |
+| 15 | updated_by | INTEGER | ○ | FK → users.id ON DELETE SET NULL | 最終更新者 |
+
+インデックス: `idx_report_fields_order (sort_order, id)`
+
+**report_field_options（選択肢）**
+
+| No | カラム | 型 | NULL | 制約 | 説明 |
+|---|---|---|---|---|---|
+| 1 | id | INTEGER | × | PK AUTOINCREMENT | 選択肢ID |
+| 2 | field_id | INTEGER | × | FK → report_fields.id ON DELETE RESTRICT | 項目 |
+| 3 | label | TEXT | × | | 名前（同じ項目内で重複不可。アプリ側で確認） |
+| 4 | sort_order | INTEGER | × | | 並び順 |
+| 5 | is_active | INTEGER | × | 0/1 | 表示中 |
+| 6 | created_at / updated_at / updated_by | | | | 1.4.1 report_fields と同じ |
+
+インデックス: `idx_report_field_options_field_order (field_id, sort_order, id)`
+
+**report_field_values（追加項目の値）**
+
+| No | カラム | 型 | NULL | 制約 | 説明 |
+|---|---|---|---|---|---|
+| 1 | id | INTEGER | × | PK AUTOINCREMENT | |
+| 2 | report_id | INTEGER | × | FK → reports.id ON DELETE CASCADE | レポート |
+| 3 | field_id | INTEGER | × | FK → report_fields.id ON DELETE RESTRICT | 項目 |
+| 4 | option_id | INTEGER | ○ | FK → report_field_options.id ON DELETE RESTRICT | 選んだ選択肢（プルダウン・ラジオ・チェックボックス） |
+| 5 | value_text | TEXT | ○ | | テキスト・日付の値 |
+| 6 | value_number | REAL | ○ | | 数値の値 |
+| 7 | created_at / updated_at | TEXT | × | | |
+
+- 既存 6 項目の値は reports の列に保存し、このテーブルには入れない（併用方式）。
+- 未入力の項目は行を作らない。チェックボックスは選んだ選択肢の数だけ行を持つ。
+- インデックス: `(report_id, field_id)`、`(field_id)`、`(option_id)`
 
 ### 1.5 データ件数（2026-11-12 時点の同梱 DB）
 
@@ -104,6 +160,44 @@ users 8 件 / reports 9 件 / comments 4 件
 | 関数 | 処理 |
 |---|---|
 | `h($value)` | `htmlspecialchars($value ?? '', ENT_QUOTES, 'UTF-8')` |
+
+### 2.3.1 lib/csrf.php（2026-11-16 追加）
+
+| 関数 | 処理 |
+|---|---|
+| `getCsrfToken(): string` | `$_SESSION['csrf_token']` を返す（なければ `random_bytes(32)` で作る）。ユーザー管理と同じキー |
+| `verifyCsrfToken(): void` | POST `csrf_token` と `hash_equals()` で比較し、不一致は 403 |
+
+### 2.3.2 lib/report_fields.php（2026-11-16 追加）
+
+項目定義の共通処理。主な定数・関数:
+
+| 名前 | 内容 |
+|---|---|
+| `REPORT_FIELD_TYPES` ほか | 種類、既定の最大文字数、上限値などの定数 |
+| `countUtf8Chars()` | 文字数を正規表現で数える（mbstring 非依存） |
+| `reportFieldTablesExist()` / `requireReportFieldTables()` | 3 テーブルの有無確認 / なければセットアップ画面へ |
+| `reportFieldSchemaSql()` / `reportFieldInitialRows()` | テーブル定義 / 既存 6 項目の初期データ |
+| `readReportFieldForm()` | 項目の追加・編集フォームの入力チェック（固定項目は表示名のみ） |
+| `moveReportFieldSortOrder()` | 隣の行と並び順を入れ替える（全体を 10 刻みで振り直す） |
+| `requireReportFieldAdmin()` | `requireAdmin()` ＋ログインユーザーID の取得 |
+
+### 2.3.3 lib/report_values.php（2026-11-16 追加）
+
+レポートの値の読み書き。既存 6 項目（`REPORT_COLUMN_FIELDS`）は reports の列、追加項目は `report_field_values` を使う。
+
+| 関数 | 内容 |
+|---|---|
+| `loadReportFields($pdo, $activeOnly)` | 項目定義（選択肢つき）。セットアップ前は既存 6 項目の初期定義を返す |
+| `loadReportFieldLabels()` | コメント用の 内部コード => 表示名 |
+| `loadReportValues()` / `loadAddedFieldValues()` | 1 件 / 複数件の値の取得 |
+| `formatReportValue()` | 表示用の文字にする（数値の整形、選択肢名への変換。チェックボックスは「、」区切り） |
+| `readReportFormInput()` | 登録・更新で共通の入力チェック（必須・最大文字数・日付・数値の範囲と小数・選択肢）。エラーは一覧で返す |
+| `buildReportColumnValues()` | reports の 6 列の値を作る（非表示の項目は今の値を残す） |
+| `saveAddedFieldValues()` | 追加項目の値を入れ直す（非表示の項目は触らない） |
+| `deleteReportFieldValues()` | レポート削除時に値を削除 |
+| `buildReportKeywordCondition()` | キーワード検索の条件（列は LIKE、追加項目は EXISTS）。列名は許可リストのものだけを SQL に埋め込む |
+| `isReportFieldUsed()` / `isReportFieldOptionUsed()` | 削除できるかの判定（値かコメントがあれば使用中） |
 
 ### 2.4 共通処理パターン
 
@@ -154,7 +248,7 @@ SELECT id FROM subordinate_users
 | パラメータ | 説明 |
 |---|---|
 | name | 氏名の部分一致（trim 後） |
-| keyword | 件名・内容・課題・備考の部分一致（trim 後） |
+| keyword | 「キーワード検索の対象」の項目の部分一致（trim 後）。初期設定では件名・内容・課題・備考 |
 
 **処理**
 
@@ -173,35 +267,41 @@ ORDER BY report_date DESC, id DESC
 
 LIKE の `%` / `_` はエスケープしていない（入力した `%` はワイルドカードとして働く）。ページングなし（全件表示）。
 
+**2026-11-16 変更**: `FROM reports r` とし、keyword の条件は `buildReportKeywordCondition()` で作る（検索対象の既存列の LIKE と、追加項目の `EXISTS (SELECT 1 FROM report_field_values v WHERE v.report_id = r.id AND v.field_id IN (...) AND v.value_text LIKE :keyword)` の OR）。検索欄のプレースホルダーは検索対象の項目名。
+
 **表示**
 
 | 列 | 内容 |
 |---|---|
-| ID / 日付 / 氏名 / 件名 | reports の各値 |
+| ID | reports.id |
+| 「一覧に表示」の項目 | 並び順どおり。日付・氏名・件名は固定で表示。追加項目の値は `loadAddedFieldValues()` でまとめて取得し `formatReportValue()` で表示 |
 | 操作 | 編集（`$canEdit` 時）、コメント（常に表示 → detail.php）、削除（`$canEdit` 時、JS confirm 後 POST） |
 
 `$canEdit = $isAdmin || report.user_id === $loginUserId`。非表示ボタンは同幅の空白で位置を揃える。
-ヘッダーにログインユーザー名、ユーザー管理（管理者のみ）、新規登録、ログアウト。
+ヘッダーにログインユーザー名、ユーザー管理・項目管理（管理者のみ）、新規登録、ログアウト。
 
 ### 3.2 S-11 / P-11 レポート登録（create.php → store.php）
 
-**入力項目**
+**2026-11-16 変更**: 入力欄と入力チェックを項目定義から作る。
 
-| 項目 | name | HTML 制約 | サーバー検証 |
-|---|---|---|---|
-| 日付 | report_date | date, required, 既定値=今日 | 必須（trim 後）、`!Y-m-d` で解析し再フォーマットが一致すること |
-| 氏名 | name | maxlength=100, required | 必須（trim 後）。**長さチェックなし** |
-| 件名 | subject | maxlength=200, required | 必須（trim 後）。**長さチェックなし** |
-| 内容 | content | textarea | なし |
-| 課題 | issues | textarea | なし |
-| 備考 | remarks | textarea | なし |
+**入力欄**: 表示中の項目を並び順に表示（`reports/_fields.php`）。name 属性は内部コード（チェックボックスは `code[]`）。日付（report_date）の既定値は今日。必須の項目は「（必須）」と表示。選択肢は表示中のものだけ。
 
-- 文字列以外（配列等）が送信された項目は空文字として扱う。
-- 保存値は **trim しない元の値**（必須判定のみ trim）。
+**サーバー検証**（`readReportFormInput()`。更新と共通）
 
-**処理**: `INSERT INTO reports (user_id, report_date, name, subject, content, issues, remarks, created_at, updated_at)`。`user_id` はログインユーザーID、`created_at = updated_at = 現在時刻`。
+| 種類 | 検証 |
+|---|---|
+| 共通 | 必須の項目が空ならエラー。文字列以外（配列等）はエラー |
+| 1 行テキスト | 前後の空白を除いて保存。最大文字数（未設定は 200）以内 |
+| 複数行テキスト | 入力のまま保存（空白だけなら未入力）。最大文字数（未設定は 10000）以内 |
+| 日付 | `!Y-m-d` で解析し、`getLastErrors()` に警告・エラーがなく、再フォーマットが一致 |
+| 数値 | 整数のみ（または小数可）の形式、最小値・最大値の範囲内 |
+| プルダウン・ラジオ・チェックボックス | 表示中の選択肢であること（更新時は、そのレポートで選択済みの非表示の選択肢も可） |
+
+既存 6 項目の初期設定では、氏名は 100 文字、件名は 200 文字、内容・課題・備考は 10000 文字まで（以前は登録時に長さチェックなし、更新時はバイト数で確認していた）。
+
+**処理**: トランザクション内で `INSERT INTO reports (...)`（6 列は `buildReportColumnValues()`）→ `saveAddedFieldValues()`。
 **正常終了**: `../index.php` へリダイレクト。
-**エラー**: 非 POST → `create.php` へ。必須不足 → 400 `必須項目が入力されていません。` / 日付不正 → 400 `日付の形式が正しくありません。`
+**エラー**: 非 POST → `create.php` へ。入力エラー → 400 で理由を一覧表示（「戻る」で入力画面へ）。DB エラー → 500 `レポートを登録できませんでした。`（詳細は `error_log`）
 
 ### 3.3 S-12 レポート詳細（reports/detail.php）
 
@@ -211,15 +311,7 @@ LIKE の `%` / `_` はエスケープしていない（入力した `%` はワ�
 
 1. ID 検証 → `SELECT * FROM reports WHERE id = :id`（無ければ 404）。
 2. 管理者以外は閲覧可能ユーザーID に `reports.user_id` が含まれなければ 403 `このレポートを参照する権限がありません。`
-3. 項目定義（ハードコード）:
-
-```php
-$fields = [
-    'report_date' => '日付', 'name' => '氏名', 'subject' => '件名',
-    'content' => '内容', 'issues' => '課題', 'remarks' => '備考',
-];
-$multilineFields = ['content', 'issues', 'remarks'];  // 表示枠を高くする
-```
+3. 項目定義（2026-11-16 変更）: `loadReportFields($pdo, true)` で表示中の項目を取得し、`loadReportValues()` で値を取得する。複数行テキストの項目は表示枠を高くする。値は `formatReportValue()` で表示用の文字にする。非表示の項目は表示しない（値とコメントは残る）。
 
 4. `SELECT * FROM comments WHERE report_id = :report_id ORDER BY created_at ASC, id ASC` で取得し、`field_name` ごとに振り分け（定義外の field_name は無視）。
 
@@ -242,7 +334,7 @@ $multilineFields = ['content', 'issues', 'remarks'];  // 表示枠を高くす�
 
 **edit.php**: GET `id` → レポート取得（404）→ 権限確認 → 登録画面と同じ項目を現在値付きで表示。hidden `id`。
 
-**update.php 入力検証**
+**update.php 入力検証**（2026-11-16 変更）
 
 | 順序 | 検証 | エラー |
 |---|---|---|
@@ -250,12 +342,9 @@ $multilineFields = ['content', 'issues', 'remarks'];  // 表示枠を高くす�
 | 2 | id（FILTER_VALIDATE_INT, > 0） | 400 `レポートIDが正しくありません。` |
 | 3 | レポート存在 | 404 |
 | 4 | 権限 | 403 `このレポートを更新する権限がありません。` |
-| 5 | 6項目すべて string であること（未送信も不可） | 400 `入力値が正しくありません。` |
-| 6 | 必須: report_date（trim なし）、name・subject（trim 後） | 400 `必須項目が入力されていません。` |
-| 7 | 日付: `!Y-m-d` + `getLastErrors()` 警告/エラーなし + 再フォーマット一致 | 400 `日付の形式が正しくありません。` |
-| 8 | name ≤ 300 バイト、subject ≤ 600 バイト | 400 `氏名が長すぎます。` / `件名が長すぎます。` |
+| 5 | 項目定義による検証（3.2 と同じ `readReportFormInput()`） | 400 で理由を一覧表示 |
 
-**処理**: `UPDATE reports SET report_date, name, subject, content, issues, remarks, updated_at WHERE id = :id`。name・subject は **trim 後の値**で保存（登録時と異なる）。`user_id` は変更しない。
+**処理**: トランザクション内で `UPDATE reports SET report_date, name, subject, content, issues, remarks, updated_at WHERE id = :id` → `saveAddedFieldValues()`。**非表示の項目は今の値を残す**（列は `buildReportColumnValues()`、追加項目は保存対象から外す）。`user_id` は変更しない。
 **正常終了**: `../index.php` へ。
 
 ### 3.5 P-14 レポート削除（reports/delete.php）
@@ -263,7 +352,7 @@ $multilineFields = ['content', 'issues', 'remarks'];  // 表示枠を高くす�
 1. POST 以外 → `../index.php`。
 2. POST `id` 検証 → `SELECT id, user_id FROM reports`（404）。
 3. 権限（管理者 or 作成者）でなければ 403。
-4. `DELETE FROM reports WHERE id = :id`。**コメントは削除しない**（1.4 参照）。
+4. トランザクション内で `deleteReportFieldValues()`（追加項目の値を削除。2026-11-16 追加）→ `DELETE FROM reports WHERE id = :id`。**コメントは削除しない**（1.4 参照）。
 5. `../index.php` へ。
 
 ---
@@ -272,8 +361,10 @@ $multilineFields = ['content', 'issues', 'remarks'];  // 表示枠を高くす�
 
 ### 4.1 許可される field_name
 
-`report_date` / `name` / `subject` / `content` / `issues` / `remarks`。
-`comment_store.php`、`comment_edit.php`、`comment_update.php`、`comment_delete.php` のそれぞれに配列でハードコード（`detail.php` と合わせ計5箇所）。
+2026-11-16 変更: 項目定義の内部コード（`loadReportFieldLabels()`）。
+
+- `comment_store.php`：表示中の項目だけ（非表示の項目には新しくコメントできない）
+- `comment_edit.php`、`comment_update.php`、`comment_delete.php`：非表示の項目も含む（既存コメントを扱えるようにする）
 
 ### 4.2 権限判定（共通）
 
@@ -490,9 +581,9 @@ ORDER BY id ASC
 | 1 | 高 | `lib/auth.php` `requireLogin()` | `Location: login.php` が相対パスのため、`reports/`・`comments/`・`users/` 配下で未ログイン時に `reports/login.php` 等（存在しない）へ遷移する | ルートからのパス、または `__DIR__` 基準でログイン URL を組み立てる |
 | 2 | 高 | `config/database.php` | `PRAGMA foreign_keys = ON` 未設定。レポート削除時にコメントが残る | 接続直後に有効化。既存の孤立コメントを確認・削除 |
 | 3 | 高 | reports / comments の POST、logout | CSRF 対策なし | ユーザー管理と同じトークン方式を共通化して適用 |
-| 4 | 中 | detail / comment_* の 5 ファイル + reports 画面 | 項目定義・許可リストが重複ハードコード | 項目定義を一元化（共通定義またはマスタテーブル） |
+| 4 | 中 | detail / comment_* の 5 ファイル + reports 画面 | ~~項目定義・許可リストが重複ハードコード~~ | **2026-11-16 解消**（項目管理機能。9 章） |
 | 5 | 中 | 閲覧範囲 SQL | 同一の再帰 SQL が 5 ファイルに重複。index.php のみ別実装（UNION ALL で、データに循環があると無限再帰の恐れ） | 共通関数化し UNION に統一 |
-| 6 | 中 | store.php / update.php | 長さチェック・trim・未送信時の扱いが登録と更新で不一致 | 検証処理を共通化 |
+| 6 | 中 | store.php / update.php | ~~長さチェック・trim・未送信時の扱いが登録と更新で不一致~~ | **2026-11-16 解消**（`readReportFormInput()` に共通化） |
 | 7 | 中 | `public/setup.php` | 認証なしで公開、旧スキーマ | 削除または公開ディレクトリ外へ移動 |
 | 8 | 中 | `config/database.php` | 接続エラー時に例外メッセージを表示 | 汎用メッセージ + `error_log` |
 | 9 | 中 | リポジトリ | 本番 DB（パスワードハッシュ含む）と backup をコミット | `.gitignore` 対象にし、スキーマ SQL を別途管理 |
@@ -502,3 +593,69 @@ ORDER BY id ASC
 | 13 | 低 | index.php | ページングなし、LIKE のワイルドカード未エスケープ | 件数増加時に対応 |
 | 14 | 低 | ログイン | 試行回数制限なし | 必要に応じてロックアウト等 |
 | 15 | 低 | `docs/design.php` | 「レポート削除時にコメントも削除」など実動作と異なる記述 | 本書の内容で更新 |
+| 16 | 中 | `public/report_fields/` | 未ログインで開くと No.1 と同じく存在しない `report_fields/login.php` へ遷移する | No.1 の対応で解消 |
+| 17 | 低 | reports/store.php・update.php | 入力エラー時は理由を一覧表示するだけで、入力画面に値を戻さない（従来と同じ方式） | 入力画面へ戻して値とエラーを表示する |
+
+---
+
+## 9. 項目管理機能（2026-11-16 追加）
+
+管理者（`requireAdmin()`）だけが使える。すべての POST は CSRF トークン（`lib/csrf.php`）を確認する。エラー・完了メッセージは `?error=` / `?message=` 付きのリダイレクトで表示する（ユーザー管理と同じ方式）。
+
+### 9.1 S-60 セットアップ（report_fields/setup.php）
+
+| 区分 | 内容 |
+|---|---|
+| 表示 | 3 テーブルの有無、既存 6 項目の登録状況、自動バックアップ先の設定状況 |
+| バックアップ先 | `config/backup.php` の `dir`。絶対パスであること、アプリのフォルダの外であることを確認。空なら「DB ファイルを手で保存しました」のチェックを必須にする |
+| 処理 | `BEGIN IMMEDIATE` → DB ファイルをバックアップ先へコピー（`reports_before_report_fields_YYYYMMDD_HHMMSS.sqlite`、権限 0600）→ `reportFieldSchemaSql()` を実行 → 項目定義が空のときだけ既存 6 項目を登録 → `COMMIT`。失敗時は `ROLLBACK` して DB は変更しない |
+| 再実行 | 何度実行しても安全（`IF NOT EXISTS`）。既存 6 項目の再登録は項目定義が空のときだけ（削除した項目を復活させない） |
+
+既存 6 項目の初期値:
+
+| code | label | type | 固定 | 必須 | 一覧 | 検索 | 最大文字数 |
+|---|---|---|---|---|---|---|---|
+| report_date | 日付 | date | ○ | ○ | ○ | － | － |
+| name | 氏名 | text | ○ | ○ | ○ | × | 100 |
+| subject | 件名 | text | ○ | ○ | ○ | ○ | 200 |
+| content / issues / remarks | 内容 / 課題 / 備考 | textarea | | | | ○ | 既定（10000） |
+
+### 9.2 S-61 項目一覧（report_fields/index.php）
+
+項目定義が 3 テーブルそろっていなければ S-60 へ移動。並び順に、↑↓、表示名（固定項目は「固定」）、種類（選択肢の件数。0 件なら「選択肢なし」）、必須、一覧に表示、キーワード検索、入力チェックの要約、状態、最終更新（日時・更新者）、操作（編集、選択肢、非表示にする／再表示する、削除）を表示する。
+
+- 非表示の切り替え・削除のボタンは固定項目には出さない。
+- 削除ボタンは `isReportFieldUsed()` が false の項目だけに出す。
+
+### 9.3 項目の追加・編集（create.php → store.php、edit.php → update.php）
+
+| 入力 | 検証（`readReportFieldForm()`） |
+|---|---|
+| 表示名 | 必須、100 文字以内、制御文字・改行不可 |
+| 種類 | 追加時のみ。`REPORT_FIELD_TYPES` のいずれか |
+| 必須 / 一覧に表示 | チェックボックス |
+| キーワード検索の対象・最大文字数 | テキストの種類のみ。最大文字数は 1〜100000 の整数（空は既定値） |
+| 小数の可否・最小値・最大値 | 数値のみ。±1 兆以内。整数のみの場合は最小・最大も整数。最小 ≤ 最大 |
+
+- 追加時の code は、仮の値で INSERT した後に `f_{id}` へ更新する（同じトランザクション内）。並び順は最後。
+- 選択肢の種類を追加した場合は、選択肢の管理画面（S-67）へ移動する。
+- 編集では種類・code・固定区分・表示状態・並び順は変更しない。固定項目は表示名だけ受け付ける。
+
+### 9.4 表示切替・並び替え・削除（toggle.php、move.php、delete.php）
+
+| 処理 | 内容 |
+|---|---|
+| toggle | is_active を反転。固定項目は拒否 |
+| move | POST `direction`（up / down）。`moveReportFieldSortOrder()` で隣と入れ替え、動いた 2 行の最終更新者・日時を記録 |
+| delete | `BEGIN IMMEDIATE` → 固定項目・使用中（`isReportFieldUsed()`：コメントあり、既存列に値あり、値テーブルに値あり）なら拒否 → 選択肢と項目を削除 → `COMMIT` |
+
+### 9.5 選択肢の管理（options.php ほか）
+
+GET `field_id`（選択肢の種類以外は一覧へ戻す）。選択肢の一覧（↑↓、名前の変更欄、状態、最終更新、非表示にする／再表示する、削除）と追加欄。
+
+| 処理 | 内容 |
+|---|---|
+| option_store | 名前の検証（表示名と同じ）。同じ項目内に同名があれば拒否（非表示なら「再表示してください」） |
+| option_update | 名前の変更。同名（非表示を含む）があれば拒否。名前を変えると過去のレポートも新しい名前で表示される |
+| option_toggle / option_move | 項目と同じ |
+| option_delete | `BEGIN IMMEDIATE` → 選んだ値があれば拒否 → 削除 |

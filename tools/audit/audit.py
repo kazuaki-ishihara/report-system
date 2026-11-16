@@ -42,6 +42,7 @@ SEVERITIES = ["高", "中", "低", "情報"]
 SEV_ORDER = {s: i for i, s in enumerate(SEVERITIES)}
 
 # レポートの項目（コメント対象 field_name の許可値）。詳細設計書 4.1 と同じ。
+# 項目管理（report_fields テーブル）がある場合は、その内部コードも許可値に加える。
 ALLOWED_FIELDS = ["report_date", "name", "subject", "content", "issues", "remarks"]
 # 役職。DB の CHECK 制約と同じ。
 ALLOWED_ROLES = ["一般", "主任", "課長代理", "課長", "部長"]
@@ -123,12 +124,12 @@ def static_audit(res, repo_root):
     if "lib/auth.php" in src:
         hits = find_lines(src["lib/auth.php"], r"Location:\s*login\.php")
         callers = [r for r in rels
-                   if re.match(r"^public/[^/]+/", r) and re.search(r"require(Login|Admin)\s*\(", text[r])]
+                   if re.match(r"^public/[^/]+/", r) and re.search(r"require(Login|Admin|ReportFieldAdmin)\s*\(", text[r])]
         if hits and callers:
             res.finding(cat, "S-01", "高", "未ログイン時のリダイレクト先が相対パス",
                         ["lib/auth.php:{}".format(hits[0][0])] + callers,
                         "requireLogin() が 'Location: login.php' を返す。サブディレクトリ配下の {} ファイル"
-                        "（reports/・comments/・users/）から呼ばれると、ブラウザは存在しない URL"
+                        "（reports/・comments/・users/・report_fields/）から呼ばれると、ブラウザは存在しない URL"
                         "（例: reports/login.php）へ遷移する。".format(len(callers)),
                         "ログイン画面の URL をアプリのルート基準で組み立てる（呼び出し元の階層に依存しないパス）。")
         else:
@@ -153,7 +154,11 @@ def static_audit(res, repo_root):
     for r in rels:
         if not post_rx.search(text[r]):
             continue
-        if "hash_equals" in text[r] and "csrf" in text[r]:
+        # lib/ は共通関数（POST の読み取り関数など）で、それ自体は更新処理ではない
+        if r.startswith("lib/"):
+            continue
+        # lib/csrf.php の verifyCsrfToken() を呼んでいれば検証ありとみなす
+        if ("hash_equals" in text[r] and "csrf" in text[r]) or "verifyCsrfToken(" in text[r]:
             with_csrf.append(r)
         elif re.search(r"(^|/)(login|setup_admin)\.php$", r):
             no_csrf_low.append(r)
@@ -179,7 +184,10 @@ def static_audit(res, repo_root):
                     "POST + CSRF トークンでのログアウトに変更する。")
 
     # ---- S-05 項目定義の重複 ----
-    field_files = [r for r in rels if "'report_date'" in text[r] and "'remarks'" in text[r]]
+    # 項目の一覧（'report_date', 'name', 'subject' … の配列、または 'report_date' => '日付' の対応表）を
+    # 直接書いているファイルを数える。lib/report_values.php の REPORT_COLUMN_FIELDS（列名の許可リスト）は 1 か所の定義。
+    field_list_rx = re.compile(r"'report_date'\s*,\s*'name'\s*,\s*'subject'|'report_date'\s*=>\s*'日付'")
+    field_files = [r for r in rels if field_list_rx.search(text[r])]
     if len(field_files) > 1:
         res.finding(cat, "S-05", "中", "レポート項目の定義が複数ファイルに重複", field_files,
                     "項目（report_date〜remarks）の一覧・許可リストが {} ファイルに個別に記述されている。"
@@ -710,6 +718,10 @@ def db_audit(res, db_path):
         users = [dict(r) for r in con.execute("SELECT * FROM users ORDER BY id")]
         reports = [dict(r) for r in con.execute("SELECT * FROM reports ORDER BY id")]
         comments = [dict(r) for r in con.execute("SELECT * FROM comments ORDER BY id")]
+        field_codes = list(ALLOWED_FIELDS)
+        if "report_fields" in tables:
+            field_codes += [r["code"] for r in con.execute("SELECT code FROM report_fields ORDER BY sort_order, id")
+                            if r["code"] not in field_codes]
     finally:
         con.close()
 
@@ -773,13 +785,13 @@ def db_audit(res, db_path):
         res.ok(cat, "D-05", "管理者数", "{} 人".format(len(admins)))
 
     # ---- D-06 コメント対象項目 ----
-    bad_field = [c for c in comments if c["field_name"] not in ALLOWED_FIELDS]
+    bad_field = [c for c in comments if c["field_name"] not in field_codes]
     if bad_field:
         res.finding(cat, "D-06", "中", "定義外の項目に対するコメント",
                     ["comments.id={} field_name={}".format(c["id"], c["field_name"]) for c in bad_field],
                     "画面に表示されず、編集・削除もできない（400 エラー）。", "項目定義と照合してデータを整理する。")
     else:
-        res.ok(cat, "D-06", "コメント対象項目", "すべて許可値（" + ", ".join(ALLOWED_FIELDS) + "）。")
+        res.ok(cat, "D-06", "コメント対象項目", "すべて許可値（" + ", ".join(field_codes) + "）。")
 
     # ---- D-07 役職 ----
     bad_role = [u for u in users if u["role_title"] not in ALLOWED_ROLES]

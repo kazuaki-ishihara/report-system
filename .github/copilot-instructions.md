@@ -24,12 +24,17 @@
 config/database.php   $pdo（PDO）を生成。全処理が require する
 lib/auth.php          startSession / requireLogin / getLoginUser / isAdmin / requireAdmin
 lib/functions.php     h()（HTML エスケープ）
+lib/csrf.php          getCsrfToken / verifyCsrfToken（ユーザー管理と同じセッションキー）
+lib/report_fields.php 項目定義の共通処理（種類・入力チェック・並び替え・テーブル定義）
+lib/report_values.php レポートの値の読み書き・入力チェック・検索（列と値テーブルの切り替え）
+config/backup.php     項目管理セットアップ時の DB バックアップ先（アプリのフォルダの外を指定）
 data/                 SQLite DB（Web からのアクセスは .htaccess で拒否）
 public/               公開ディレクトリ
   index.php           レポート一覧・検索
   reports/            create(画面) → store(処理), detail, edit(画面) → update(処理), delete
   comments/           comment_store, comment_edit(画面) → comment_update, comment_delete
   users/              管理者専用のユーザー管理
+  report_fields/      管理者専用の項目管理（setup, index, create/store, edit/update, toggle, move, delete, options, option_*）
 docs/                 設計書（サーバーには置かない）
 tools/audit/          監査ツール（Python 3 標準ライブラリのみ）
 ```
@@ -61,8 +66,8 @@ tools/audit/          監査ツール（Python 3 標準ライブラリのみ）
    - 閲覧: 管理者、または「自分＋全配下」のレポート（`WITH RECURSIVE` で配下を取得。**`UNION ALL` ではなく `UNION`** を使う）
    - レポートの編集・削除: 管理者、または作成者本人のみ（配下のレポートでも不可）
    - コメントの編集・削除: 管理者、または投稿者本人のみ
-   - ユーザー管理: `requireAdmin($pdo)`
-4. **POST の更新処理には CSRF トークンを付ける**。`public/users/` の実装（`$_SESSION['csrf_token']` + `hash_equals()`）と同じ方式にする。
+   - ユーザー管理・項目管理: `requireAdmin($pdo)`（項目管理は `requireReportFieldAdmin($pdo)`）
+4. **POST の更新処理には CSRF トークンを付ける**。`lib/csrf.php` の `getCsrfToken()`（フォームの hidden `csrf_token`）と `verifyCsrfToken()`（処理側）を使う。`public/users/` と同じセッションキー。
 5. パスワードは `password_hash()` / `password_verify()`。平文で保存・ログ出力しない。
 6. DB 例外の詳細は画面に出さず `error_log()` に記録し、画面には汎用メッセージを出す。
 7. 秘密情報（パスワード、本番 DB）をコミットしない。
@@ -75,35 +80,33 @@ tools/audit/          監査ツール（Python 3 標準ライブラリのみ）
 |---|---|---|
 | 未ログイン時のリダイレクト先が相対パス `login.php` で、サブディレクトリから呼ぶと 404 になる | `lib/auth.php` の `requireLogin()` | 呼び出し元の階層に依存しない URL にする |
 | `PRAGMA foreign_keys = ON` を実行していないため、外部キー（CASCADE 等）が効かない | `config/database.php` | 有効化すると、レポート削除時にコメントも削除されるようになる |
-| レポート・コメントの POST に CSRF 対策がない | `public/reports/*`, `public/comments/*` | フォーム側（hidden）と処理側の両方に必要 |
-| 登録（store.php）と更新（update.php）で入力チェックが違う | `public/reports/` | 共通化が望ましい |
+| レポート・コメントの POST に CSRF 対策がない | `public/reports/*`, `public/comments/*` | フォーム側（hidden）と処理側の両方に必要。`lib/csrf.php` を使う |
 | `public/setup.php` が認証なしで公開され、旧スキーマを持つ | `public/setup.php` | 使っていない。削除候補 |
 
 ## レポートの「項目」について（重要）
 
-レポートの項目は **`reports` テーブルの固定カラム**で、項目マスタは存在しない。
+レポートの項目は **項目管理機能（`public/report_fields/`、管理者のみ）で管理**する。項目の一覧をコードに直書きしないこと。
 
-| field_name | 表示名 | 入力 | 必須 |
-|---|---|---|---|
-| report_date | 日付 | date | ○ |
-| name | 氏名 | text | ○ |
-| subject | 件名 | text | ○ |
-| content | 内容 | textarea | |
-| issues | 課題 | textarea | |
-| remarks | 備考 | textarea | |
+- 項目定義：`report_fields`（表示名・種類・必須・一覧に表示・キーワード検索の対象・並び順・表示状態・入力チェック）
+- 選択肢：`report_field_options`
+- 値の保存先は**併用方式**：
+  - 既存 6 項目（`report_date`, `name`, `subject`, `content`, `issues`, `remarks`）は **`reports` の列**（`REPORT_COLUMN_FIELDS`）
+  - 管理画面で追加した項目（内部コード `f_7` など）は **`report_field_values`**（1 項目 1 行、チェックボックスは選んだ数だけ行）
+- 画面からは `lib/report_values.php` の関数だけを使い、保存先を意識しない。
+  - 項目：`loadReportFields($pdo, true)`（表示中のみ）／`false`（非表示を含む）
+  - 値：`loadReportValues()`、表示：`formatReportValue()`
+  - 入力チェック：`readReportFormInput()`（登録・更新で共通）
+  - 保存：`buildReportColumnValues()`（reports の列）＋ `saveAddedFieldValues()`（値テーブル）。非表示の項目の値は残す
+  - 検索：`buildReportKeywordCondition()`
+- `comments.field_name` には項目の内部コード（`report_fields.code`）が入る。
+- 日付・氏名・件名は固定項目（`is_system = 1`）。表示名と並び順以外は変更できない（一覧の並び替え・氏名の絞り込みに使う）。
+- 項目・選択肢は非表示にでき、値とコメントは残る。使用中（値かコメントがある）の項目・選択肢は物理削除しない。
+- 項目の種類は追加後に変更しない。
+- 項目管理のセットアップ前でも、レポート画面は既存 6 項目の初期定義（`reportFieldInitialRows()`）で動く。
+- SQL に列名を埋め込むときは、`REPORT_COLUMN_FIELDS` に含まれる名前だけを使う（内部コードをそのまま埋め込まない）。
+- **レポートの種類（テンプレート）はない**。項目の定義は全レポート共通で 1 組。
 
-**項目の一覧が複数のファイルに重複して直書きされている**。項目を追加・変更するときは、次をすべて確認すること（1か所だけ直すと、コメントが登録できない・表示されない等の不具合になる）。
-
-- `public/reports/detail.php`（`$fields`、`$multilineFields`）
-- `public/comments/comment_store.php`、`comment_edit.php`、`comment_update.php`、`comment_delete.php`（許可リスト）
-- `public/reports/create.php`、`edit.php`（入力フォーム）
-- `public/reports/store.php`、`update.php`（INSERT / UPDATE）
-- `public/index.php`（キーワード検索の対象カラム）
-- `comments.field_name` に保存済みのデータ
-
-「項目を管理する機能」を作る場合は、まず項目定義を1か所（共通定義または項目マスタテーブル）に集約し、上記ファイルがそれを参照するようにする。
-
-役職リスト（一般〜部長）も `public/users/` の4ファイルと DB の CHECK 制約に重複しているので、同様に注意する。
+役職リスト（一般〜部長）は `public/users/` の4ファイルと DB の CHECK 制約に重複しているので注意する。
 
 ## データベース
 
@@ -112,6 +115,7 @@ tools/audit/          監査ツール（Python 3 標準ライブラリのみ）
 - `users`（id, username UNIQUE, password_hash, role_title CHECK, manager_id → users.id, is_admin 0/1, created_at）
 - `reports`（id, user_id → users.id, report_date, name, subject, content, issues, remarks, created_at, updated_at）
 - `comments`（id, report_id → reports.id, user_id → users.id, field_name, comment, created_at, updated_at）
+- `report_fields`、`report_field_options`、`report_field_values`（項目管理。セットアップ画面で作る。定義は `lib/report_fields.php` の `reportFieldSchemaSql()`）
 - 日時は TEXT 型で `Y-m-d H:i:s`、日付は `Y-m-d`
 - スキーマを変更するときは、既存データの移行方法も提案すること（SQLite は `ALTER TABLE` の機能が限られる）
 
