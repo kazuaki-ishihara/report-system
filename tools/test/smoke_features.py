@@ -490,6 +490,11 @@ def main():
     save_theme(member_a1_client, "yozakura2")
     status_code, _location, home_html = member_a1_client.get("/index.php")
     check("夜桜2 を選ぶと、画面の html に data-theme=\"yozakura2\" が付く", status_code == 200 and 'data-theme="yozakura2"' in home_html, status_code)
+    # 若葉2（若葉から派生。画面の下に清流）も選べる
+    check("テーマの選択肢に「若葉2」（清流）がある", 'name="ui_theme" value="wakaba2"' in account_html and "若葉2" in account_html)
+    save_theme(member_a1_client, "wakaba2")
+    status_code, _location, home_html = member_a1_client.get("/index.php")
+    check("若葉2 を選ぶと、画面の html に data-theme=\"wakaba2\" が付く", status_code == 200 and 'data-theme="wakaba2"' in home_html, status_code)
     save_theme(member_a1_client, "sakura")
     status_code, _location, _page_html = save_theme(member_a1_client, "rainbow")
     check("知らないテーマは 400", status_code == 400, status_code)
