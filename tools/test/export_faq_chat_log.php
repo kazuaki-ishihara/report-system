@@ -33,7 +33,7 @@ $logRowList = db_all(
 );
 
 $headerList = ['番号', '日時', 'ログイン ID', '表示名', '役割', '開いていた画面', '質問・選んだ分野', '結果', '心の不調の段階', '返事をしなかった',
-    '出した答え（いちばん近い質問）', '出した質問の数', '反応', '反応した答え', '送った要望・依頼の番号', '心の不調に対応した日時'];
+    '出した答え（いちばん近い質問）', '出した質問の数', '反応', '反応した答え', '送った要望・依頼の番号', '心の不調に対応した日時', '会話'];
 $csvLineList = [];
 $csvLine = static function (array $valueList): string {
     return implode(',', array_map(static function ($value): string {
@@ -60,6 +60,7 @@ foreach ($logRowList as $logRow) {
         $logRow['feedback_faq_id'] === null ? '' : $questionTextOf((int) $logRow['feedback_faq_id']),
         $logRow['request_id'] ?? '',
         $logRow['handled_at'] ?? '',
+        $logRow['conversation_id'] ?? '',   // 会話の番号（G-25 §2.14。同じ人が 10 分以内に続けて入れた発言で同じ）
     ]);
 }
 

@@ -188,11 +188,19 @@ if ($commandName === 'csv') {
     }
     $headerRow = fgetcsv($csvHandle);
     $rowCount = 0;
+    // 列「会話」がある CSV（2026-11-17 以降の書き出し）は、会話ごとに前の話題を補って判定し直す（G-25 §2.14）
+    $topicByConversationId = [];
+    $previousConversationId = null;
     while (($csvRow = fgetcsv($csvHandle)) !== false) {
         if (count($csvRow) !== count($headerRow)) {
             continue;
         }
         $logRow = array_combine($headerRow, $csvRow);
+        $conversationId = (string) ($logRow['会話'] ?? '');
+        if ($conversationId !== '' && $conversationId !== $previousConversationId) {
+            echo '---- 会話 ', substr($conversationId, 0, 8), " ----\n";
+        }
+        $previousConversationId = $conversationId;
         $questionText = (string) $logRow['質問・選んだ分野'];
         $loggedAnswerText = (string) $logRow['出した答え（いちばん近い質問）'] !== '' ? ' → ' . $logRow['出した答え（いちばん近い質問）'] : '';
         $feedbackText = !in_array((string) $logRow['反応'], ['', '（なし）'], true) ? ' [' . $logRow['反応'] . ']' : '';
@@ -200,7 +208,13 @@ if ($commandName === 'csv') {
         echo '  質問: ', faq_check_shown_text($questionText), "\n";
         echo '  記録: ', $logRow['結果'], $loggedAnswerText, $feedbackText, "\n";
         $isNotJudgeable = strpos($questionText, '分野:') === 0 || strpos($questionText, '（要配慮の内容') === 0;
-        echo '  今　: ', $isNotJudgeable ? '（判定しない）' : faq_check_judge($questionText, faq_check_visible_list($allFaqList, (string) $logRow['ログイン ID'])) . faq_check_notice_mark($questionText), "\n";
+        $nextTopic = '';
+        $currentJudgementText = $isNotJudgeable ? '（判定しない）' : faq_check_judge($questionText, faq_check_visible_list($allFaqList, (string) $logRow['ログイン ID']),
+            $conversationId !== '' ? ($topicByConversationId[$conversationId] ?? '') : '', $nextTopic) . faq_check_notice_mark($questionText);
+        if ($conversationId !== '') {
+            $topicByConversationId[$conversationId] = $isNotJudgeable ? '' : $nextTopic;
+        }
+        echo '  今　: ', $currentJudgementText, "\n";
         $rowCount++;
     }
     echo "$rowCount 件\n";
