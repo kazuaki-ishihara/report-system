@@ -216,10 +216,34 @@ const FAQ_DISTRESS_NOT_FEELING_PHRASES = ['辛いラーメン', '辛いもの', 
 /**
  * 心の不調らしい文か。'urgent'（命に関わる言葉）・'concern'（心配な言葉）・''（どちらでもない）。
  */
+/** 機能の言葉（「2 段階認証を辞めたい」のように、この言葉と一緒の「辞めたい」は、仕事を辞める話ではない） */
+const FAQ_FEATURE_OBJECT_WORDS = ['2段階', '二段階', '認証', 'ログイン', 'パスワード', '設定', 'テーマ', '通知', '機能', 'チャット', 'アプリ', '表示', 'ダーク', 'コード', '入力', 'メール'];
+/** 仕事・会社を辞める話の言葉（これがあれば、機能の言葉があっても退職の話として扱う） */
+const FAQ_JOB_QUITTING_WORDS = ['仕事を辞め', '会社を辞め', '仕事をやめ', '会社をやめ', '退職', '辞職', '退社', '離職'];
+
+/**
+ * 「2 段階認証を辞めたい」のように、機能をやめたいという意味の「辞めたい」を除いた文（そろえた文で受け取り、そろえた文で返す）。
+ * 仕事・会社を辞める話の言葉があるときは、何も除かない（2026-11-17。記録で、心の不調と退職の知らせに取り違えていた）
+ */
+function faq_strip_feature_quitting(string $normalizedQuery): string
+{
+    foreach (FAQ_JOB_QUITTING_WORDS as $jobQuittingWord) {
+        if (strpos($normalizedQuery, $jobQuittingWord) !== false) {
+            return $normalizedQuery;
+        }
+    }
+    foreach (FAQ_FEATURE_OBJECT_WORDS as $featureObjectWord) {
+        if (strpos($normalizedQuery, $featureObjectWord) !== false) {
+            return str_replace(['辞めたい', '辞めたく', '辞め', 'やめたい', 'やめたく', '止めたい'], ' ', $normalizedQuery);
+        }
+    }
+    return $normalizedQuery;
+}
+
 function faq_distress_level(string $queryText): string
 {
-    // 気持ちとは関係のない言い方を先に除く（「辛いラーメン」の辛い は味）
-    $normalizedQuery = str_replace(FAQ_DISTRESS_NOT_FEELING_PHRASES, ' ', faq_normalize_text($queryText));
+    // 気持ちとは関係のない言い方を先に除く（「辛いラーメン」の辛い は味。「2 段階認証を辞めたい」の辞めたい は機能の話）
+    $normalizedQuery = str_replace(FAQ_DISTRESS_NOT_FEELING_PHRASES, ' ', faq_strip_feature_quitting(faq_normalize_text($queryText)));
     foreach (FAQ_DISTRESS_URGENT_WORDS as $distressWord) {
         if (strpos($normalizedQuery, $distressWord) !== false) {
             return 'urgent';
@@ -334,7 +358,7 @@ function faq_is_about_subordinate(string $queryText): bool
 /** 退職に関わる質問か */
 function faq_is_retirement(string $queryText): bool
 {
-    $normalizedQuery = faq_normalize_text($queryText);
+    $normalizedQuery = faq_strip_feature_quitting(faq_normalize_text($queryText));   // 「2 段階認証を辞めたい」は退職の話ではない
     foreach (FAQ_RETIREMENT_WORDS as $retirementWord) {
         if (strpos($normalizedQuery, $retirementWord) !== false) {
             return true;
@@ -931,7 +955,7 @@ const FAQ_SEARCH_SYNONYMS = [
     '報告を取り下げ' => '提出を取り消したい', '締め日はだれ' => '締め日を変えたい 課長', '締め日は誰' => '締め日を変えたい 課長', '差し戻' => '差し戻 却下',
     '部下の報告' => '課の人の提出状況 未チェックの報告', 'にコメントしたい' => 'コメントのしかた 確認者', '確認者を外' => '確認者を決めたい', '課長になった' => '役職が変わる 昇格',
     '班の分け' => '班ごとに報告を見る 管理の仕方', '確認完了を取り消' => '確認を完了にしたい 課長', '未提出' => '課の人の提出状況', '催促' => '課の人の提出状況',
-    'ログインしたまま' => '毎回 2段階認証 聞かれる 覚え', '安全' => 'セキュリティ 暗号化 安全', '暗号' => 'セキュリティ 暗号化 安全', '個人情報' => 'セキュリティ 暗号化 個人情報', '面倒' => '毎回 2段階認証 聞かれる', '勝手に' => '自動で',
+    'ログインしたまま' => '毎回 2段階認証 聞かれる 覚え', '安全' => 'セキュリティ 暗号化 安全', '暗号' => 'セキュリティ 暗号化 安全', '個人情報' => 'セキュリティ 暗号化 個人情報', '面倒' => '毎回 2段階認証 聞かれる', 'めんどくさ' => '毎回 2段階認証 聞かれる', 'めんどう' => '毎回 2段階認証 聞かれる', '勝手に' => '自動で',
     '文字を大き' => '文字を大きくしたい 拡大', 'ズーム' => '文字を大きくしたい 拡大', '拡大' => '文字を大きくしたい 拡大', '押しにくい' => '文字を大きくしたい 拡大', 'ガラケー' => 'スマートフォン 端末 使えるか',
     'チャットの内容' => 'チャットに入れた質問は記録されるか', '記録され' => 'チャットに入れた質問は記録されるか', '人が読' => 'チャットに入れた質問は記録されるか',
     '誰が答え' => 'チャットに入れた質問は記録されるか', 'だれが答え' => 'チャットに入れた質問は記録されるか', '要望はどこ' => 'システムへの要望 伝えたい', '締め日はいつ' => '締切 期限', '締めた' => '締切 期限', '処理落ち' => '止まった 障害 重い 遅い', '遅く' => '重い 遅い', '遅れる' => '重い 遅い', '動作環境' => 'ブラウザー 端末 使える', '環境は' => 'ブラウザー 端末 使える', '効かない' => '保存できない メンテナンス中 表示 おかしい', 'きかない' => '保存できない メンテナンス中 表示 おかしい', '課長権限' => '課長を変えたい 役職 昇格', '課長の権限' => '課長を変えたい 役職 昇格',
