@@ -774,8 +774,9 @@ function faq_classify_in_conversation(string $questionText, string $previousTopi
     if ($contextTopic === '' && in_array($classification['code'], ['matched', 'no_match'], true)) {
         $topicCharacterList = preg_split('//u', trim($questionText), -1, PREG_SPLIT_NO_EMPTY) ?: [];
         $nextTopic = implode('', array_slice($topicCharacterList, 0, FAQ_CONVERSATION_TOPIC_MAX_LENGTH));
-    } elseif ($contextTopic === '' && !in_array($classification['code'], ['vague', 'opener'], true)) {
-        // 緊急・心の不調・関係のない質問などのあとは、前の話題を持ち越さない
+    } elseif ($contextTopic === '' && $classification['code'] !== 'vague') {
+        // 緊急・心の不調・関係のない質問などのあとは、前の話題を持ち越さない。
+        // 呼びかけ（「もしもし」「大変です」）のあとも、話が切り替わるので持ち越さない（古い話題の答えをくり返さないように）
         $nextTopic = '';
     }
     return ['classification' => $classification, 'contextTopic' => $contextTopic, 'nextTopic' => $nextTopic];
