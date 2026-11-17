@@ -348,6 +348,14 @@ def main():
               (fallback_result_text, fallback_clipboard_text))
         b.mobile(False)
 
+        # ---- パスワードの変更（G-16）: 「自動で作る」は、新しいパスワードを表示し、確認の欄は隠したまま同じ値を入れる ----
+        b.goto(a.base + "/account.php?tab=password")
+        b.click('.generate-password[data-target="new_password"]')
+        password_field_state = b.eval("(function(){var n=document.getElementById('new_password'), c=document.getElementById('new_password_confirm');"
+                                      " return [n.type, c.type, n.value.length, n.value === c.value];})()")
+        check("「自動で作る」で、新しいパスワードは表示し、確認の欄は隠したまま同じ値を入れる",
+              password_field_state == ["text", "password", 16, True], password_field_state)
+
         # ---- 画面のテーマ（G-16）: ダークを選ぶと背景が暗くなる ----
         b.goto(a.base + "/account.php?tab=theme")
         b.click('input[name="ui_theme"][value="dark"]')

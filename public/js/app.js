@@ -126,11 +126,13 @@
     var generateButton = e.target.closest('.generate-password');
     if (generateButton) {
       var generatedPassword = generatePassword(16);
-      [generateButton.getAttribute('data-target'), generateButton.getAttribute('data-confirm-target')].forEach(function (targetId) {
+      // 新しいパスワードの欄は、控えられるよう表示する。確認の欄は値を入れるだけで、隠したままにする（画面をのぞかれても 2 つ並んで見えないように）
+      var newPasswordTargetId = generateButton.getAttribute('data-target');
+      [newPasswordTargetId, generateButton.getAttribute('data-confirm-target')].forEach(function (targetId) {
         var targetInput = targetId ? document.getElementById(targetId) : null;
         if (targetInput) {
           targetInput.value = generatedPassword;
-          targetInput.type = 'text';
+          targetInput.type = targetId === newPasswordTargetId ? 'text' : 'password';
           targetInput.dispatchEvent(new Event('input', {bubbles: true}));
         }
       });
