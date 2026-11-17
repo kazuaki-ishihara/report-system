@@ -615,6 +615,11 @@ const FAQ_OFFTOPIC_WORDS = [
     '人口', '首都', '歴史', '翻訳', 'しりとり', 'なぞなぞ', 'ジョーク', '面白い話', 'python', 'java', 'javascript', 'プログラムを書', 'コードを書', 'プログラミング',
     '社員証', '名刺', '年末調整', '給与明細', '交通費', '経費精算',
 ];
+/** 会議・集まりの言葉。役職の言葉（FAQ_ROLE_ONLY_WORDS）のほかにシステムの言葉が無ければ、関係のない質問とする（「部課長会議」） */
+const FAQ_MEETING_WORDS = ['会議', '打ち合わせ', '打合せ', 'ミーティング', '朝礼', '夕礼', '面談', '飲み会', '懇親会', '忘年会', '新年会', '歓迎会', '送別会'];
+/** 役職だけを表す言葉（システムの言葉にも入っているが、会議の話のときはシステムの質問とみなさない） */
+const FAQ_ROLE_ONLY_WORDS = ['課長代理', '確認者', '課長', '部長', '部下', '社長', '役員', '取締役', '班'];
+
 /** 関係のない質問（不適切な表現を含む）がこの回数続いたら、それからは返事をしない（関係のある質問をするか、分野を選ぶと戻る） */
 const FAQ_UNRELATED_IGNORE_COUNT = 5;
 
@@ -635,6 +640,20 @@ function faq_is_unrelated(string $queryText, array $faqList): bool
         if (strpos($normalizedQuery, $strongOfftopicWord) !== false) {
             return true;
         }
+    }
+    // 会議・集まりの話（「部課長会議」「課長会議の日程」）: 役職の言葉のほかにシステムの言葉が無ければ、関係のない質問
+    // （「会議の前に報告を提出したい」は「報告」「提出」があるので答える）
+    foreach (FAQ_MEETING_WORDS as $meetingWord) {
+        if (strpos($normalizedQuery, $meetingWord) === false) {
+            continue;
+        }
+        $withoutRoleText = str_replace(array_merge(FAQ_ROLE_ONLY_WORDS, FAQ_MEETING_WORDS), ' ', $normalizedQuery);
+        foreach (FAQ_SYSTEM_WORDS as $systemWord) {
+            if (strpos($withoutRoleText, $systemWord) !== false) {
+                return false;
+            }
+        }
+        return true;
     }
     // 「誰が誰なの」のように、誰・だれ のほかに中身の無い文は、関係のない質問（「誰」の言い換えで管理者の答えに当てない）
     // （「あなたは誰」のように、言い換えの表にあるほかの言葉があれば、その言葉で答えを探す）
