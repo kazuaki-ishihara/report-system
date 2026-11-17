@@ -318,6 +318,21 @@ def main():
         shot("faq_category_chosen")
         check("よくある質問で分野を続けて押すと、押した見た目は最後の 1 つだけ", chosen_count == 1 and second_chosen, (chosen_count, second_chosen))
 
+        # ---- よくある質問（G-25）: 「解決した」を押すと、チャットを開いたときと同じ状態に戻る ----
+        b.goto(a.base + "/faq.php")
+        initial_child_count = b.eval("document.querySelectorAll('#faq-chat .faq-chat-log > :not([hidden])').length")
+        b.fill("#faq_search_query", "パスワードを忘れた")
+        b.click("#faq-chat form.faq-chat-input button[type=submit]")
+        time.sleep(1.5)
+        b.eval("Array.prototype.find.call(document.querySelectorAll('#faq-chat .chat-choices button'), function (choiceButton) { return choiceButton.textContent === '解決した'; }).click()")
+        time.sleep(0.5)
+        after_solved_child_count = b.eval("document.querySelectorAll('#faq-chat .faq-chat-log > :not([hidden])').length")
+        has_initial_only = b.eval("Array.prototype.every.call(document.querySelectorAll('#faq-chat .faq-chat-log > :not([hidden])'), function (childElement) { return childElement.classList.contains('chat-initial'); })")
+        chosen_after_reset = b.eval("document.querySelectorAll('#faq-chat a[data-category].chosen').length")
+        shot("faq_reset_after_solved")
+        check("よくある質問で「解決した」を押すと、チャットを開いたときと同じ状態に戻る",
+              after_solved_child_count == initial_child_count and has_initial_only and chosen_after_reset == 0, (initial_child_count, after_solved_child_count, has_initial_only, chosen_after_reset))
+
         # ---- 予備のコード（G-16）: スマートフォンの幅で「コピー」を押すと、1 つ 1 行でクリップボードに入る ----
         b.call("Browser.grantPermissions", {"origin": a.base, "permissions": ["clipboardReadWrite", "clipboardSanitizedWrite"]})
         b.mobile(True)

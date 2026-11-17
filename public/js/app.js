@@ -784,12 +784,35 @@
       errorData.append('status', String(statusCode || 0));
       fetch(chatForm.action, { method: 'POST', body: errorData, credentials: 'same-origin', headers: { Accept: 'application/json' } }).catch(function () {});
     }
+    /** チャットを開いたときと同じ状態に戻す（最初の吹き出しと分野のボタンだけを残す） */
+    function resetChat() {
+      Array.prototype.slice.call(chatLog.children).forEach(function (childElement) {
+        if (childElement === askBlock) { return; }
+        if (!childElement.classList.contains('chat-initial')) { childElement.remove(); }
+      });
+      if (categoryRowTemplate) {
+        categoryRowTemplate.classList.remove('chat-choices-done');
+        Array.prototype.forEach.call(categoryRowTemplate.querySelectorAll('.chosen'), function (choiceLink) { choiceLink.classList.remove('chosen'); choiceLink.removeAttribute('aria-current'); });
+      }
+      if (askBlock) {
+        askBlock.hidden = true;
+        var askTextarea = askBlock.querySelector('textarea[name="question"]');
+        var askLogInput = askBlock.querySelector('input[name="chat_log_id"]');
+        if (askTextarea) { askTextarea.value = ''; }
+        if (askLogInput) { askLogInput.value = ''; }
+        chatLog.appendChild(askBlock);
+      }
+      lastQuestionText = '';
+      questionInput.value = '';
+      chatLog.scrollTop = 0;
+      questionInput.focus();
+    }
     function askSolved(logId, faqId) {
       addChoices([
         { label: M('解決した'), onChoose: function () {
+          // 解決したら、チャットを開いたときと同じ状態に戻す（サーバーは、この反応で会話を終える）
           sendFeedback(logId, 'solved', faqId);
-          addBubble('bot', M('よかったです。ほかにも知りたいことがあれば入れてください。'));
-          questionInput.focus();
+          resetChat();
         } },
         { label: M('解決しない'), onChoose: function () { sendFeedback(logId, 'unsolved', faqId); offerAsk(logId); } }
       ]);

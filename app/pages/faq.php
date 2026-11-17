@@ -160,6 +160,10 @@ if (is_post() && post_str('action') === 'chat_feedback') {
     }
     $feedbackFaqId = isset($_POST['faq_id']) && $_POST['faq_id'] !== '' ? input_id('faq_id', 'POST') : null;
     faq_chat_log_set_feedback($feedbackLogId, $feedbackCode, $feedbackFaqId);
+    if ($feedbackCode === 'solved') {
+        // 解決した: 会話を終える（画面はチャットを開いたときの状態に戻る。次の発言は新しい会話）
+        faq_conversation_reset();
+    }
     json_response(['ok' => true]);
 }
 

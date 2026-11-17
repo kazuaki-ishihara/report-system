@@ -891,6 +891,12 @@ function faq_is_clarification(string $questionText): bool
     return $compactText === '' && trim(faq_normalize_text($questionText)) !== '';
 }
 
+/** 会話を終える（「解決した」を押したとき。次の発言から新しい会話） */
+function faq_conversation_reset(): void
+{
+    unset($_SESSION['faq_conversation']);
+}
+
 /** 会話の話題を覚え直す（分野を選んだときは空にする） */
 function faq_conversation_set_topic(string $topicText): void
 {

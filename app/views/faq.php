@@ -34,7 +34,7 @@ $categoryUrl = static function (string $categoryCode) use ($keptQueryValueByName
 $hasScreenCategory = $screenCategory !== null && in_array($screenCategory, array_column($categoryCountList, 'code'), true);
 // 分野のボタン（JavaScript があれば data-category で、その場で質問を出す。無ければリンクで開き直す）
 $renderCategoryChoices = static function () use ($categoryCountList, $categoryUrl, $screenCategory): void {
-    echo '<div class="chat-choices">';
+    echo '<div class="chat-choices chat-initial">';
     foreach ($categoryCountList as $categoryCount) {
         $isScreenCategory = $categoryCount['code'] === $screenCategory;
         echo '<a class="chat-choice' . ($isScreenCategory ? ' chat-choice-recommended' : '') . '" href="' . h($categoryUrl($categoryCount['code'])) . '" data-category="' . h($categoryCount['code']) . '">'
@@ -51,9 +51,9 @@ $renderCategoryChoices = static function () use ($categoryCountList, $categoryUr
   <div class="faq-chat" id="faq-chat" data-ask-role="<?= h($askRole) ?>">
     <input type="hidden" name="csrf_token" value="<?= h(csrf_token()) ?>" class="faq-chat-csrf">
     <div class="faq-chat-log" aria-live="polite">
-      <div class="chat-bubble chat-bot">こんにちは。知りたいことを入れてください。よくある質問から近い答えを探します。<br>（例: パスワードを忘れた、スマホを替えた、締め日を過ぎた）<?php if ($categoryCountList): ?><br>何を聞けばよいか分からないときは、分野を選んでください。<?php endif; ?></div>
+      <div class="chat-bubble chat-bot chat-initial">こんにちは。知りたいことを入れてください。よくある質問から近い答えを探します。<br>（例: パスワードを忘れた、スマホを替えた、締め日を過ぎた）<?php if ($categoryCountList): ?><br>何を聞けばよいか分からないときは、分野を選んでください。<?php endif; ?></div>
       <?php if ($hasScreenCategory): ?>
-        <div class="chat-bubble chat-bot">開いていた画面の質問は「<?= h(FAQ_CATEGORY_LABELS[$screenCategory]) ?>」にあります。</div>
+        <div class="chat-bubble chat-bot chat-initial">開いていた画面の質問は「<?= h(FAQ_CATEGORY_LABELS[$screenCategory]) ?>」にあります。</div>
       <?php endif; ?>
       <?php if ($categoryCountList): ?><?php $renderCategoryChoices(); ?><?php endif; ?>
 

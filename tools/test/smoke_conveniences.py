@@ -351,6 +351,11 @@ def main():
                                                                        "feedback": "solved", "faq_id": str(chat_result["matches"][0]["id"])})
     feedback_row = database.execute("SELECT feedback, feedback_faq_id FROM faq_chat_logs WHERE id = ?", (chat_result["log_id"],)).fetchone()
     check("J: 「解決した」を記録に残す", feedback_status == 200 and tuple(feedback_row) == ("solved", chat_result["matches"][0]["id"]), (feedback_status, feedback_row))
+    after_solved_result = ask_chat(leader_client, "締め日はいつ")
+    solved_conversation_rows = database.execute("SELECT conversation_id FROM faq_chat_logs WHERE id IN (?, ?) ORDER BY id",
+                                                (chat_result["log_id"], after_solved_result["log_id"])).fetchall()
+    check("J: 「解決した」のあとの発言は、新しい会話になる（チャットを開いたときの状態に戻る）",
+          len(solved_conversation_rows) == 2 and solved_conversation_rows[1][0] != "" and solved_conversation_rows[0][0] != solved_conversation_rows[1][0], solved_conversation_rows)
     _status_code, _location, member_faq_html = member_client.get("/faq.php")
     other_status, _location, _page = member_client.post("/faq.php", {"csrf_token": csrf(member_faq_html), "action": "chat_feedback", "log_id": str(chat_result["log_id"]), "feedback": "unsolved", "faq_id": ""})
     check("J: ほかの人の記録には反応を付けられない（400）", other_status == 400 and database.execute("SELECT feedback FROM faq_chat_logs WHERE id = ?", (chat_result["log_id"],)).fetchone()[0] == "solved", other_status)
