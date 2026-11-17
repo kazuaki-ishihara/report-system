@@ -15,8 +15,20 @@ import sys
 import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import lib_http  # noqa: E402
 from cdp import Browser  # noqa: E402
-from lib_http import check, summary, totp  # noqa: E402
+from lib_http import summary, totp  # noqa: E402
+
+# 見学（--slow）のとき、確かめた結果を画面の字幕にも出すためのブラウザー
+WATCHED_BROWSER = {"browser": None}
+
+
+def check(name, ok, detail=""):
+    lib_http.check(name, ok, detail)
+    browser = WATCHED_BROWSER["browser"]
+    if browser is not None:
+        browser.caption(name, bool(ok))
+        time.sleep(browser.slow_seconds)
 
 
 # 画面を離れるときの確認（beforeunload）が出るかを、イベントを起こして確かめる
@@ -30,6 +42,9 @@ def main():
     ap.add_argument("--out", default=os.path.join(os.path.dirname(os.path.abspath(__file__)), "output", "ui"))
     ap.add_argument("--show", action="store_true", help="ブラウザーを表示して実行する（目視で確認するとき）")
     ap.add_argument("--browser-port", type=int, default=0, help="起動済みのブラウザー（--remote-debugging-port）につなぐ")
+    ap.add_argument("--slow", type=float, default=0.0,
+                    help="見学用: 操作の前に枠を付けてこの秒数だけ待ち、結果を画面の下に字幕で出す（例: 0.8）")
+    ap.add_argument("--keep-open", action="store_true", help="終わったあともブラウザーを閉じない（見学用）")
     a = ap.parse_args()
     if "127.0.0.1" not in a.base and "localhost" not in a.base:
         print("ローカル検証環境（127.0.0.1）以外には実行しません")
@@ -46,6 +61,9 @@ def main():
     used = {}
 
     b = Browser(headless=not a.show, attach_port=a.browser_port or None)
+    if a.slow > 0:
+        b.slow_seconds = a.slow
+        WATCHED_BROWSER["browser"] = b
 
     def shot(name):
         shot_no[0] += 1
@@ -54,6 +72,7 @@ def main():
     def login(login_id):
         b.clear_cookies()
         b.goto(a.base + "/login.php")
+        b.caption("%s でログインする" % login_id)
         b.fill("#login_id", login_id)
         b.fill("#password", U[login_id]["password"])
         b.click("form.form button[type=submit]", navigate=True)
@@ -304,7 +323,10 @@ def main():
         except Exception:  # noqa: BLE001
             pass
     finally:
-        b.quit()
+        if a.keep_open:
+            b.detach()
+        else:
+            b.quit()
     print("画面の画像: " + a.out)
     return summary()
 

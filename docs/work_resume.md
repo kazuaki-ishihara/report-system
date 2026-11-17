@@ -54,9 +54,9 @@ C:\ReportSystem\
 | `app/pages/`・`app/views/` | 画面ごとの処理とテンプレート |
 | `public/` | 公開側の入り口（本番では公開ディレクトリ。`app/` は公開ディレクトリの外に置く） |
 | `app/bin/` | `migrate.php`（テーブルと鍵の作成）、`seed_template.php`（初期の様式）、`create_user.php`（利用者の作成）、`migrate_legacy.php`（既存データの移行）、`backup.php`（DB のバックアップ。定期実行に登録）、`run_schedules.php`（予約した組織の改訂の反映。定期実行に登録） |
-| `tools/lib/` | 何度も使う道具（Python 3 標準ライブラリ、3.8 互換）: `msg_catalog.py`（文言の一覧）、`project_ledger.py`（案件台帳。使い方は `docs/project_ledger.md`）、`mdview.py`（Markdown をブラウザーで読む。`python3 tools/lib/mdview.py docs` で docs/ を一覧から読める。Linux・Windows 共通）、`faq_check.php`（よくある質問の答え方を確かめる。`self` 標準の質問が自分を見つけられるか／`ask "質問" [ID]` 1 つの判定／`logs [番号]` この端末のチャットの記録を今の作りで判定し直す／`csv <ファイル>` ほかの端末から受け取った記録を判定し直す／`sync` この端末の DB に標準の質問の追加・答えの変更を写す。聞いた人に見える範囲で判定し、要配慮・緊急の文は伏せて出す。ローカル専用）、`clean_outputs.py`（古い検証記録と古いローカル検証環境の一式を消す。`--yes` を付けたときだけ消す。`--keep` で残す回数） |
+| `tools/lib/` | 何度も使う道具（Python 3 標準ライブラリ、3.8 互換）: `msg_catalog.py`（文言の一覧）、`project_ledger.py`（案件台帳。使い方は `docs/project_ledger.md`）、`mdview.py`（Markdown をブラウザーで読む。`python3 tools/lib/mdview.py docs` で docs/ を一覧から読める。Linux・Windows 共通）、`faq_check.php`（よくある質問の答え方を確かめる。`self` 標準の質問が自分を見つけられるか／`ask "質問" [ID]` 1 つの判定／`logs [番号]` この端末のチャットの記録を今の作りで判定し直す／`csv <ファイル>` ほかの端末から受け取った記録を判定し直す／`sync` この端末の DB に標準の質問の追加・答えの変更を写す。聞いた人に見える範囲で判定し、要配慮・緊急の文は伏せて出す。ローカル専用）、`ui_watch.py`（画面の自動操作をブラウザーを表示して見学する。§6.1）、`clean_outputs.py`（古い検証記録・見学の画像と古いローカル検証環境の一式を消す。`--yes` を付けたときだけ消す。`--keep` で残す回数） |
 | `tools/deploy/` | 本番への反映: `build_package.py`（コミット済みの内容から反映用の一式 `tools/deploy/output/<日時>_<コミット>/` を作る。DB・鍵・ローカルの設定は入らない）、`check_prod.py`（本番を外から確かめる。画面を見るだけ）、`build_local_kit.py`（ほかの人に渡すローカル検証環境の一式 `tools/deploy/output/local_<日時>_<コミット>/report-system-local(.zip)` を作る。Windows 用の PHP を同梱し、受け取った人は `1_起動.bat` だけで動かせる。初回の起動でテスト用の利用者・標準のよくある質問・暗号の鍵を作る。`3_記録を書き出す.bat` で、よくある質問のチャットの記録だけを CSV（`faq_chat_log_<日時>.csv`。質問は復号済み。報告の中身・鍵は入らない）に書き出し、受け取った人に送り返してもらう（道具は `tools/test/export_faq_chat_log.php`。この端末でも使える）。DB・鍵・この端末の設定は入らない。`--worktree` でコミット前の変更も入れる。`--no-php` で PHP を入れない） |
-| `tools/2fa/` | 開発用の利用者の 2 段階認証のコードを出すバッチ（`.bat`）とシェルスクリプト（`.sh`）。ローカルのテストデータ専用 |
+| `tools/2fa/` | 開発用の利用者の 2 段階認証のコードを出すバッチ（`.bat`）とシェルスクリプト（`.sh`）、Python なしで動く PowerShell 版（`dev_code.ps1`。`-Watch` で 1 秒ごと、`-Watch -Interval 30` で 30 秒ごとに更新。全員を 30 秒ごとに出す `all_ps.bat` はダブルクリックで使える）。ローカルのテストデータ専用 |
 | `tools/test/` | 検証の道具（Python 3 標準ライブラリ）。`screen_gallery.py` は画面の目視確認の道具（全画面の画像と一覧のページ） |
 
 詳細設計書（共通編・DB 編・G-01〜G-25）は実装に合わせて更新済み。まだ作っていないもの（`Strict-Transport-Security`、鍵の入れ替え、記録の削除）は、設計書にその旨を書いてある。
@@ -75,6 +75,7 @@ $php = (Get-ChildItem "$env:LOCALAPPDATA\Microsoft\WinGet\Packages\PHP.PHP.8.3_*
 & $php tools\test\dev_seed.php --yes        # テストデータを作り直す
 & $php -S 127.0.0.1:8000 -t public          # サーバー（止めるときは Ctrl + C）
 python tools\test\dev_code.py               # テスト用の利用者と 2 段階認証のコード
+powershell -ExecutionPolicy Bypass -File tools\2fa\dev_code.ps1   # 同じ（Python がないとき。tools\2fa\all_ps.bat なら全員を 30 秒ごとに更新）
 ```
 
 ブラウザーで `http://127.0.0.1:8000/` を開く。
@@ -100,15 +101,29 @@ python tools\test\verify_all.py --ui     # 画面の自動操作検証も行う�
 ```
 
 - 結果は `tools/test/output/検証記録/<日時>/結果.md`、一覧は `tools/test/output/検証記録/一覧.csv`（リポジトリ外）。
-- 作業端末の Claude Code の実行環境では、Python から起動したブラウザーが応答しない。その場合は Edge を先に起動し、`--browser-port` でつなぐ。
-
-  ```powershell
-  Start-Process "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" -ArgumentList "--headless=new","--remote-debugging-port=29777","--user-data-dir=$env:TEMP\mr_ui_edge","--no-first-run","about:blank"
-  python tools\test\verify_all.py --ui --browser-port 29777
-  ```
+- 画面の自動操作では、道具が作業用の Edge（一時フォルダーの `mr_ui_*`）を自分で起動し、終わったら閉じてプロファイルを消す（`tools/test/cdp.py`）。
+  - Edge は新しいプロファイルでも Windows のアカウントで自動的にサインインするため、自動のサインインを止めて起動する。つないだ先がサインインしていたら、作業用のプロファイルなら閉じて消し（サインアウト）、起動し直す。利用者自身のブラウザーなら触らずに止める。
+  - 検証に使うタブ以外（前の実行の残り・始めに開くページなど）は閉じる。そのため、1 つのブラウザーを 2 つの検証で同時に使わない。
+- 作業端末の Claude Code では、**PowerShell ツールから起動したブラウザーは応答しない**（この実行環境の制限。30 秒で「つながりません」と止まる）。Bash ツールから実行する（`python tools/test/verify_all.py --ui`）。
+- 起動済みのブラウザーにつなぐときは `--browser-port <番号>`（`--remote-debugging-port` で起動したもの）。
 
 - 検証は自分用の DB（`app/data/verify.sqlite`）を使い、2 段階認証を飛ばさない設定で動く（環境変数 `MR_VERIFY_DB`。`app/config/config.php`）。画面を見ている `dev.sqlite`（テーマ・ログイン）と `config.local.php` には触れないので、`dev_skip_2fa` を切り替える必要はなく、検証の途中でもローカルの画面を見られる。
-- 直近の結果: すべて成功（OK 1388 / NG 0。画面の自動操作を含む。検証用の DB で実行）。
+- 直近の結果: すべて成功（OK 1399 / NG 0。画面の自動操作を含む。検証用の DB で実行。Edge は道具が起動）。
+
+### 6.1 画面の自動操作を見学する（ブラウザーを表示する）
+
+`verify_all.py --ui` はヘッドレス（画面を出さない）で速く流す。人が目で見て確かめたいときは `tools/lib/ui_watch.py` を使う。
+
+```powershell
+python tools\lib\ui_watch.py                  # ブラウザーを表示して、1 操作 0.8 秒の速さで操作する
+python tools\lib\ui_watch.py --slow 1.5       # もっとゆっくり
+python tools\lib\ui_watch.py --keep-open      # 終わったあともブラウザーを開いたままにする（Enter でサーバーを止める）
+```
+
+- 操作は `ui_check.py` と同じ（部下 → 確認者 → 課長 → 管理者 → 画面のテーマ）。操作する場所にオレンジの枠を付け、文字は 1 文字ずつ入れ、確かめた結果を画面の下に字幕（緑 = OK、赤 = NG）で出す。
+- 自分用の DB（`app/data/watch.sqlite`）と空いている番号のサーバーを使う。`dev.sqlite`・`verify.sqlite`・`config.local.php` には触れないので、ローカルの画面や自動検証と同時に動かせる。見学のたびにテストデータを作り直す。
+- 画面の画像は `tools/test/output/見学/<日時>/`（字幕が写る）。古いものは `clean_outputs.py` で消せる。
+- Edge の起動・サインインしない・関係のないタブを閉じる扱いは §6 と同じ。作業端末の Claude Code では Bash ツールから実行する。
 
 ## 7. 未完了・確認待ち
 
@@ -153,7 +168,7 @@ python tools\test\verify_all.py --ui     # 画面の自動操作検証も行う�
    - 画面確認の道具: `python tools\test\screen_gallery.py --db app\data\dev.sqlite` で、役割ごとに全画面を PC とスマートフォンの幅で撮り、一覧のページ（`tools/test/output/画面一覧/<日時>/index.html`）を作る。一覧で画面ごとに「確認済み」の印とメモを付け、「メモを書き出す」で課題管理に貼る。横のはみ出し・403・PHP やブラウザーのエラーは赤字で自動で出る。
      - `--themes light,dark,sakura,yozakura,yozakura2,wakaba,wakaba2,cud` でテーマごと、`--vision none,deuteranopia,protanopia,tritanopia,achromatopsia` で色覚の型の見え方を真似て、`--roles kacho_b,ippan_b1` で別の役割、`--screens G-22` で画面を絞って撮る。報告・要望がないときは、見本の報告・コメント・要望と返信を画面の操作で作る（`--no-prepare` で作らない）。
      - 既定で撮る役割は部下・確認者・課長・管理者・補佐（`ippan_a1`・`leader_a`・`kacho_a`・`admin01`・`hosa01`）。
-     - 作業端末の Claude Code から動かすときは、§6 のとおり Edge を先に起動して `--browser-port 29777` を付ける。
+     - 作業端末の Claude Code から動かすときは、§6 のとおり Bash ツールから実行する。
      - 画像で全体を見て、気になる画面だけブラウザーで実際に操作する（入力・ボタン・タブの動きは画像では分からない）。
    - テスト用の利用者（パスワードは `pass-<ログイン ID>-1234`。`python tools\test\dev_code.py` でも確かめられる）
 

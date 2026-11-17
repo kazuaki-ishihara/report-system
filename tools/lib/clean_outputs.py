@@ -7,6 +7,7 @@
 
 消すもの:
   - tools/test/output/検証記録/<日時>/ の古い実行（新しい --keep 回分を残す。一覧.csv も残した行だけにする）
+  - tools/test/output/見学/<日時>/ の古い実行（ui_watch.py の画像。新しい --keep 回分を残す）
   - tools/deploy/output/local_*（ローカル検証環境の一式）のうち、いちばん新しいもの以外
 消さないもの: 本番反映の一式（tools/deploy/output/<日時>_<コミット>/）、DB・鍵・他端末検証/。
 Python 3.8 以上の標準ライブラリだけで動く。
@@ -17,6 +18,7 @@ import shutil
 
 REPOSITORY_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 RECORD_DIR = os.path.join(REPOSITORY_ROOT, "tools", "test", "output", "検証記録")
+WATCH_DIR = os.path.join(REPOSITORY_ROOT, "tools", "test", "output", "見学")
 DEPLOY_OUTPUT_DIR = os.path.join(REPOSITORY_ROOT, "tools", "deploy", "output")
 
 
@@ -42,6 +44,12 @@ def main():
         keep_count = max(arguments.keep, 0)
         kept_run_set = set(run_name_list[-keep_count:]) if keep_count else set()
         removed_path_list += [os.path.join(RECORD_DIR, name) for name in run_name_list if name not in kept_run_set]
+    if os.path.isdir(WATCH_DIR):
+        watch_run_name_list = sorted(name for name in os.listdir(WATCH_DIR)
+                                     if os.path.isdir(os.path.join(WATCH_DIR, name)) and name[:8].isdigit())
+        keep_count = max(arguments.keep, 0)
+        removed_watch_name_list = watch_run_name_list[:-keep_count] if keep_count else watch_run_name_list
+        removed_path_list += [os.path.join(WATCH_DIR, name) for name in removed_watch_name_list]
     if os.path.isdir(DEPLOY_OUTPUT_DIR):
         kit_name_list = sorted(name for name in os.listdir(DEPLOY_OUTPUT_DIR) if name.startswith("local_"))
         removed_path_list += [os.path.join(DEPLOY_OUTPUT_DIR, name) for name in kit_name_list[:-1]]
