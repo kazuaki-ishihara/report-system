@@ -390,7 +390,7 @@
 アウト	unrelated	宝くじの当たる番号は
 アウト	unrelated|vague	おはよう
 アウト	unrelated|vague	ありがとう
-アウト	abusive|unrelated	ばか
+アウト	abusive	ばか	（文がそれだけのときは不適切な表現）
 アウト	abusive	このシステムはクソ
 アウト	abusive	死ね
 アウト	abusive|unrelated	お前は使えない
@@ -626,4 +626,8 @@
 グレー	vague	じゃけん	（方言のあいづちだけ。断らない）
 グレー	vague	そうじゃけん
 グレー	vague	だべ
+グレー	vague	いってこうわい	（ひらがなだけの方言・話し言葉。断らない）
+グレー	vague	そうなんよ
+アウト	abusive	あほ
+寄る	matched	エラーばかり出る	（「ばか」を含んでも、ふつうの質問として答える）
 

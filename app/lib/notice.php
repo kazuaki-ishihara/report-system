@@ -548,10 +548,16 @@ function faq_is_violent(string $queryText): bool
     return false;
 }
 
+/** 文がそれだけのときに不適切な表現とする、ひらがなの悪口（「ばか」は「エラーばかり」にも出るので、文全体がこれのときだけ） */
+const FAQ_WHOLE_INPUT_ABUSIVE_WORDS = ['きも', 'ばか', 'ばーか', 'ばかやろう', 'ばかやろー', 'あほ', 'あほか', 'あほう', 'まぬけ', 'くず', 'かす'];
+
 /** 不適切な表現が入っているか */
 function faq_is_abusive(string $queryText): bool
 {
     $normalizedQuery = faq_normalize_text($queryText);
+    if (in_array(str_replace(' ', '', $normalizedQuery), FAQ_WHOLE_INPUT_ABUSIVE_WORDS, true)) {
+        return true;
+    }
     foreach (FAQ_ABUSIVE_WORDS as $abusiveWord) {
         if (strpos($normalizedQuery, $abusiveWord) !== false) {
             return true;
@@ -893,6 +899,16 @@ function faq_is_vague(string $queryText): bool
         if (faq_text_contains_term($normalizedQuery, (string) $synonymWord)) {
             return false;
         }
+    }
+    // ひらがなだけで、探す言葉が 1 つも取れない文（方言・話し言葉の「いってこうわい」など）は、断らずに分野を選んでもらう。
+    // 関係のない話題の言葉（しりとり など）があれば、関係のない質問として扱う
+    if (preg_match('/^[\p{Hiragana}ー〜~ ]+$/u', $normalizedQuery) === 1 && faq_search_terms($queryText) === []) {
+        foreach (array_merge(FAQ_OFFTOPIC_WORDS, FAQ_OFFTOPIC_STRONG_WORDS) as $offtopicWord) {
+            if (strpos($normalizedQuery, $offtopicWord) !== false) {
+                return false;
+            }
+        }
+        return true;
     }
     // 中身のない言い方が入っていないもの（「あなたは誰」など、言葉が取れないだけの文）は曖昧とはしない（関係のない質問で扱う）
     return $remainingText !== $normalizedQuery && faq_search_terms($remainingText) === [];
