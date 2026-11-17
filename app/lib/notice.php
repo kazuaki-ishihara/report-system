@@ -665,6 +665,18 @@ function faq_is_unrelated(string $queryText, array $faqList): bool
             }
         }
     }
+    // 「上司がクリーントン」のように、人の主語のあとが、よくある質問に出てこないカタカナの言葉だけの文は、関係のない質問
+    // （カタカナは 2 文字の並びで探すので、「リー」が「リーダー」に当たるような取り違えが起きるため）
+    if (preg_match('/^(上司|課長|部長|係長|主任|社長|部下|同僚|先輩|後輩|管理者)(が|は|って)([\p{Katakana}ー]{3,})$/u', str_replace(' ', '', $normalizedQuery), $personKatakanaMatch) === 1) {
+        $katakanaWord = $personKatakanaMatch[3];
+        $knownText = implode(' ', FAQ_SYSTEM_WORDS) . ' ' . implode(' ', array_keys(FAQ_SEARCH_SYNONYMS)) . ' ' . implode(' ', FAQ_SEARCH_SYNONYMS);
+        foreach ($faqList as $faqRow) {
+            $knownText .= ' ' . $faqRow['question'] . ' ' . $faqRow['answer'];
+        }
+        if (strpos(faq_normalize_text($knownText), $katakanaWord) === false) {
+            return true;
+        }
+    }
     $matchedFaqList = faq_search($queryText, $faqList);
     if ($matchedFaqList !== [] && $matchedFaqList[0]['match_ratio'] > FAQ_UNRELATED_MAX_RATIO) {
         return false;
