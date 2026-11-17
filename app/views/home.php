@@ -38,6 +38,9 @@ $editUrl = url('/reports/edit.php?period=' . rawurlencode($period));
 <?php if ($unknownLoginCount > 0): ?>
   <div class="flash flash-error" role="alert"><a href="<?= h(url('/admin/logs.php?kind=auth_unknown')) ?>"><?= h(msg('無い ID でログインしようとした記録があります（未確認 {count} 件）。なりすましのおそれがないか確かめてください', ['count' => $unknownLoginCount])) ?></a></div>
 <?php endif; ?>
+<?php if ($faqDistressCounts !== null && $faqDistressCounts['violence'] > 0): ?>
+  <div class="flash flash-error" role="alert"><a href="<?= h(url('/admin/faq_logs.php#distress')) ?>"><?= h(msg('よくある質問のチャットに、人への暴力を書いた文があります（未対応 {count} 件）。確かめて、対応してください', ['count' => $faqDistressCounts['violence']])) ?></a></div>
+<?php endif; ?>
 <?php if ($faqDistressCounts !== null && $faqDistressCounts['credential'] > 0): ?>
   <div class="flash flash-error" role="alert"><a href="<?= h(url('/admin/faq_logs.php#distress')) ?>"><?= h(msg('よくある質問のチャットに、ID・パスワードを求める質問があります（未対応 {count} 件）。なりすましのおそれがないか確かめてください', ['count' => $faqDistressCounts['credential']])) ?></a></div>
 <?php endif; ?>

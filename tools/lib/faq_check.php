@@ -35,32 +35,28 @@ $commandName = $argv[1] ?? '';
  */
 function faq_check_judge(string $questionText, array $visibleFaqList): string
 {
-    if (faq_is_emergency($questionText)) {
-        return '緊急（119 番）';
-    }
-    $distressLevel = faq_distress_level($questionText);
-    if ($distressLevel !== '') {
-        $companionList = $distressLevel === 'concern' ? faq_companion_matches(faq_strip_distress_words($questionText), $visibleFaqList) : [];
-        return '心の不調（' . $distressLevel . '）' . ($companionList ? ' + ' . $companionList[0]['question'] : '');
-    }
-    if (faq_is_retirement($questionText) && !faq_is_about_subordinate($questionText)) {
-        return '自分の退職（相談を促す）';
-    }
-    if (faq_is_sensitive($questionText)) {
-        return '要配慮（寄り添う返事）';
-    }
-    if (faq_is_abusive($questionText)) {
-        return '不適切な表現';
-    }
-    if (faq_is_vague($questionText)) {
-        return 'あいまい（分野を選ぶ）';
-    }
-    if (faq_is_unrelated($questionText, $visibleFaqList)) {
-        return '関係のない質問';
-    }
-    $matchedFaqList = faq_search($questionText, $visibleFaqList);
-    if ($matchedFaqList === []) {
-        return '見つからない';
+    // 判定はチャットと同じ関数（faq_classify_question()）。ここでは結果を読みやすい文にするだけ
+    $classification = faq_classify_question($questionText, $visibleFaqList);
+    $matchedFaqList = $classification['matches'];
+    switch ($classification['code']) {
+        case 'emergency':
+            return '緊急（119 番）';
+        case 'distress':
+            return '心の不調（' . $classification['distressLevel'] . '）' . ($matchedFaqList ? ' + ' . $matchedFaqList[0]['question'] : '');
+        case 'retirement':
+            return '自分の退職（相談を促す）';
+        case 'sensitive':
+            return '要配慮（寄り添う返事）';
+        case 'abusive':
+            return '不適切な表現';
+        case 'opener':
+            return '呼びかけ（ご用件を聞く）';
+        case 'vague':
+            return 'あいまい（分野を選ぶ）';
+        case 'unrelated':
+            return '関係のない質問';
+        case 'no_match':
+            return '見つからない';
     }
     $answerText = '答え: ' . $matchedFaqList[0]['question'];
     if (count($matchedFaqList) > 1) {

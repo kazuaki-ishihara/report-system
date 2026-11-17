@@ -210,6 +210,8 @@ def main():
     step_php74(r)
     step_repo(r)
     r.run("メッセージの一覧が最新", [sys.executable, "-I", os.path.join(ROOT, "tools", "lib", "msg_catalog.py"), "--check"])
+    # よくある質問のチャットの判定（システムに寄る・グレーゾーン・明確にアウトの入力。tools/test/faq_input_cases.tsv）。サーバー・DB は使わない
+    r.run("よくある質問の自動入力検証", [php, os.path.join("tools", "test", "faq_input_check.php")])
 
     port = free_port()
     base = "http://127.0.0.1:%d" % port

@@ -145,7 +145,22 @@ const FAQ_VAGUE_WORDS = [
     '操作', '使えない', 'できない', '出来ない', 'うまくいかない', '上手くいかない', 'よく', '何', 'なに', 'はじめて', '初めて', '最初', 'について',
     'こんにちは', 'こんばんは', 'おはよう', 'ありがとう', 'よろしく', 'すみません', 'はじめまして', 'もしもし',
     'なんで', 'なぜ', 'どうして', '答えろ', '答えて', 'こたえろ', 'こたえて',
+    'おかしい', '変になった', '違う', '前と', 'いつもと', 'どこ',
+    'さっき', '続き', 'ちょっと', '聞きたい', '相談', '急ぎ', '至急',
+    'はい', 'いいえ', 'どういうこと', 'どういう意味', '意味がわからない', 'ご用件', '用件', 'でしょ', '返答して', '返事して', '返事をして', '返信して',
 ];
+
+/**
+ * 呼びかけだけの文（用件の無い「大変です」など）。faq_normalize_text() でそろえ、記号と空白を除いた形がこれと同じときだけ（用件があれば、ふつうに探す）。
+ * 返事は「どういったご用件でしょうか。」（G-25 §2.6。2026-11-17 指示）
+ */
+const FAQ_OPENER_PHRASES = ['大変です', '大変', 'たいへんです', 'たいへん', '大変なんです', 'たいへんなんです', '大変です大変です', '大変だ'];
+
+/** 呼びかけだけの文か */
+function faq_is_opener(string $queryText): bool
+{
+    return in_array(str_replace(' ', '', faq_normalize_text($queryText)), FAQ_OPENER_PHRASES, true);
+}
 
 // ---- 心の不調らしい文（G-25 §2.8。AI は使わない。返事を気づかいの言葉にし、システム管理者・補佐に知らせる） ----
 /**
@@ -213,16 +228,46 @@ const FAQ_EMERGENCY_WORDS = [
     '巻き込まれ', '挟まれ', '下敷き', '切断', 'はねられ', '轢かれ', '転落', '冷たくなっ', '息をしていな', '息していな', '呼吸をしていな', '呼吸していな', '脈がな', '体が硬',
 ];
 
+/**
+ * 緊急の言葉のうち、システム・端末の質問にも出るもの（「ボタンが反応しない」「誤って報告を消した」「スマホの電池が切れた」「通信が切断された」）。
+ * これだけが当たり、システム・端末の言葉があるときは、緊急としない（自動入力検証で見つかった）
+ */
+const FAQ_EMERGENCY_AMBIGUOUS_WORDS = ['反応しな', '反応がな', '誤って', '電池', '切断', '磁石'];
+/** 上のあいまいな緊急の言葉を、システム・端末の話と見分ける言葉（FAQ_SYSTEM_WORDS に加えて） */
+const FAQ_EMERGENCY_SYSTEM_CONTEXT_WORDS = [
+    'スマホ', 'スマートフォン', '携帯', 'パソコン', 'pc', 'タブレット', '通信', 'ネット', '回線', '接続', 'wi fi', 'wifi',
+    '提出', '送信', '削除', '消し', '押し', '押す', 'クリック', 'タップ', 'コメント', '下書き', '案件', 'ログイン', 'ページ', 'タブ', 'マウス', 'キーボード',
+];
+
 /** 命・体の緊急の状態に触れる文か */
 function faq_is_emergency(string $queryText): bool
 {
     $normalizedQuery = faq_normalize_text($queryText);
+    $hasClearEmergencyWord = false;
+    $hasAmbiguousEmergencyWord = false;
     foreach (FAQ_EMERGENCY_WORDS as $emergencyWord) {
-        if (strpos($normalizedQuery, $emergencyWord) !== false) {
-            return true;
+        if (strpos($normalizedQuery, $emergencyWord) === false) {
+            continue;
+        }
+        if (in_array($emergencyWord, FAQ_EMERGENCY_AMBIGUOUS_WORDS, true)) {
+            $hasAmbiguousEmergencyWord = true;
+        } else {
+            $hasClearEmergencyWord = true;
         }
     }
-    return false;
+    if ($hasClearEmergencyWord) {
+        return true;
+    }
+    if (!$hasAmbiguousEmergencyWord) {
+        return false;
+    }
+    // あいまいな言葉だけのとき: システム・端末の話なら緊急としない（人のことなら緊急。安全側）
+    foreach (array_merge(FAQ_SYSTEM_WORDS, FAQ_EMERGENCY_SYSTEM_CONTEXT_WORDS) as $systemContextWord) {
+        if (strpos($normalizedQuery, $systemContextWord) !== false) {
+            return false;
+        }
+    }
+    return true;
 }
 
 // ---- ID・パスワードを求める質問（G-25 §2.13。K-057。なりすましのおそれ。システム管理者・補佐に知らせる） ----
@@ -356,7 +401,30 @@ const FAQ_ABUSIVE_WORDS = [
     '無能', '役立たず', 'やくたたず', '能無し', '低能', 'ポンコツ', 'ぽんこつ', 'クズ', 'クソ', '糞', 'ボケ', 'ボケが',
     '間抜け', 'マヌケ', 'まぬけ', 'うざい', 'ウザい', 'うぜえ', 'うぜー', 'きもい', 'キモい', '気持ち悪い', 'ふざけるな', 'ふざけんな', 'ふざけんじゃ',
     'なめてる', 'なめんな', '舐めてる', '舐めんな', 'ざけんな', 'fuck', 'shit', 'stupid', 'idiot',
+    'お前', 'おまえ', 'てめえ', 'てめぇ', '貴様',
 ];
+
+/**
+ * 人への暴力を書いた言葉（「管理者を殴りたい」）。不適切な表現として断り、システム管理者・補佐に知らせる（職場の安全のため。2026-11-17 指示）。
+ * faq_normalize_text() でそろえた形で書く。「ハチに刺された」などの緊急の文は、先に緊急として扱う
+ */
+const FAQ_VIOLENCE_WORDS = [
+    '殴', 'なぐりたい', 'なぐってやる', '蹴りたい', '蹴ってやる', '蹴飛ばし', '刺したい', '刺してやる', '叩きたい', 'たたきたい', '叩いてやる',
+    '殺したい', '殺してやる', 'ぶっ殺', 'ころしたい', 'ころしてやる', '襲いたい', '襲ってやる', '痛めつけ', '暴力をふる', '暴力を振る', '危害を加え',
+    '火をつけ', '放火', '爆破', '刃物で',
+];
+
+/** 人への暴力を書いた文か */
+function faq_is_violent(string $queryText): bool
+{
+    $normalizedQuery = faq_normalize_text($queryText);
+    foreach (FAQ_VIOLENCE_WORDS as $violenceWord) {
+        if (strpos($normalizedQuery, $violenceWord) !== false) {
+            return true;
+        }
+    }
+    return false;
+}
 
 /** 不適切な表現が入っているか */
 function faq_is_abusive(string $queryText): bool
@@ -380,12 +448,25 @@ const FAQ_SYSTEM_WORDS = [
     '修正', '訂正', '削除', '登録', '設定', '編集', '変更', '帳票', '余白', 'レイアウト', '添付', '開発者', '概要', '機能', 'チャット', '返答',
     '色彩', '配色', 'テーマ', '部下', '課長代理', '確認者', '課長', '班', '退職', '組織', '役職', '異動', '先月', '翌月', '前月', '今月', '当月',
     '管理者', '権限', 'パスワード', '障害', 'サーバー', '本番環境', '不正アクセス', '侵入', 'ランサムウェア', 'ファイアウォール', 'データベース', 'api',
+    '案件', 'プロジェクト', '提出', '未提出',
 ];
 /**
  * 関係のない質問とみなす境目: 入れた文の言葉のうち、よくある質問の文・システムの言葉に出てくる割合がこれ以下で、
  * いちばん近い質問の近さ（faq_search() の割合）もこれ以下のとき（「野球の結果」のように 1 語だけたまたま当たるものを含める）
  */
 const FAQ_UNRELATED_MAX_RATIO = 0.5;
+/**
+ * 明らかにシステムと関係のない話題の言葉（faq_normalize_text() でそろえた形）。システムの言葉（FAQ_SYSTEM_WORDS）が無ければ、関係のない質問とする。
+ * 2 文字の並びで探すため、「ラーメン」が「コメント」に、「Python のコード」が「予備のコード」に当たってしまうのを防ぐ（自動入力検証で見つかった）
+ */
+/** システムの言葉（「パスワード」など）があっても関係のない話題とする言葉（「社内の Wi-Fi のパスワード」「プリンターが動かない」） */
+const FAQ_OFFTOPIC_STRONG_WORDS = ['wi fi', 'wifi', 'プリンター', 'teams', '有給', '人事', '扶養', '住所', '年末調整', '給与'];
+const FAQ_OFFTOPIC_WORDS = [
+    '天気', '天候', '気温', '雨が', '台風', 'ラーメン', 'レシピ', '料理', 'ランチ', '居酒屋', 'レストラン', 'おすすめの店', 'グルメ',
+    '野球', 'サッカー', 'ゴルフ', '競馬', '試合', '株価', '為替', '宝くじ', '占い', '星座', '恋愛', '彼女', '彼氏', '旅行', '観光', '映画', 'ドラマ', 'アニメ', 'ゲーム',
+    '人口', '首都', '歴史', '翻訳', 'しりとり', 'なぞなぞ', 'ジョーク', '面白い話', 'python', 'java', 'javascript', 'プログラムを書', 'コードを書', 'プログラミング',
+    '社員証', '名刺', '年末調整', '給与明細', '交通費', '経費精算',
+];
 /** 関係のない質問（不適切な表現を含む）がこの回数続いたら、それからは返事をしない（関係のある質問をするか、分野を選ぶと戻る） */
 const FAQ_UNRELATED_IGNORE_COUNT = 5;
 
@@ -398,15 +479,32 @@ const FAQ_UNRELATED_IGNORE_COUNT = 5;
  */
 function faq_is_unrelated(string $queryText, array $faqList): bool
 {
+    $normalizedQuery = faq_normalize_text($queryText);
+    foreach (FAQ_OFFTOPIC_STRONG_WORDS as $strongOfftopicWord) {
+        if (strpos($normalizedQuery, $strongOfftopicWord) !== false) {
+            return true;
+        }
+    }
+    $hasSystemWord = false;
+    foreach (FAQ_SYSTEM_WORDS as $systemWord) {
+        if (strpos($normalizedQuery, $systemWord) !== false) {
+            $hasSystemWord = true;
+            break;
+        }
+    }
+    if (!$hasSystemWord) {
+        foreach (FAQ_OFFTOPIC_WORDS as $offtopicWord) {
+            if (strpos($normalizedQuery, $offtopicWord) !== false) {
+                return true;
+            }
+        }
+    }
     $matchedFaqList = faq_search($queryText, $faqList);
     if ($matchedFaqList !== [] && $matchedFaqList[0]['match_ratio'] > FAQ_UNRELATED_MAX_RATIO) {
         return false;
     }
-    $normalizedQuery = faq_normalize_text($queryText);
-    foreach (FAQ_SYSTEM_WORDS as $systemWord) {
-        if (strpos($normalizedQuery, $systemWord) !== false) {
-            return false;
-        }
+    if ($hasSystemWord) {
+        return false;
     }
     $termList = faq_search_terms($queryText);
     if ($termList === []) {
@@ -475,6 +573,65 @@ function faq_visible_entries(array $faqList, array $user): array
     }));
 }
 
+/**
+ * チャットに入れた文の判定（G-25 §2.6。チャット（faq_answer_chat()）と自動入力検証（tools/test/faq_input_check.php）が使う。記録・数えることはしない）。
+ * 判定の順: 命・体の緊急の状態（§2.12。119 番を案内） → 心の不調らしい文（§2.8） → 自分の退職（§2.10。寄り添って上司への相談を促す）
+ *   → 要配慮個人情報に触れる文（§2.9） → 不適切な表現 → 呼びかけだけの文 → 曖昧な質問 → 関係のない質問 → 近い質問を探す。
+ * 心の不調らしい文は、心配な言葉の段階なら近い質問も探して一緒に返す（「助けて、ログインできない」など）。
+ *
+ * @param array<int, array<string, mixed>> $faqList 聞いた人に見えるよくある質問
+ * @return array{code: string, matches: array<int, array<string, mixed>>, distressLevel: string, noticeLevel: string}
+ *   code: emergency・distress・retirement・sensitive・abusive・opener（呼びかけだけ）・vague・unrelated・matched・no_match。
+ *   noticeLevel: 管理者に知らせる理由（心の不調の段階 → violence（人への暴力） → credential（K-057） → retirement（K-054）。なければ空）
+ */
+function faq_classify_question(string $questionText, array $faqList): array
+{
+    $matchedFaqList = [];
+    $distressLevel = faq_distress_level($questionText);
+    if (faq_is_emergency($questionText)) {
+        // 命・体の緊急の状態: 119 番を案内する（心の不調の言葉も入っていれば、知らせる）
+        $resultCode = 'emergency';
+    } elseif ($distressLevel !== '') {
+        $resultCode = 'distress';
+        // 心配な言葉で、ほかにはっきり知りたいことがあるときだけ、その答えも出す（「助けて、ログインできない」。「仕事を辞めたい」の「仕事」のような弱い当たりは出さない）
+        $matchedFaqList = $distressLevel === 'concern' ? faq_companion_matches(faq_strip_distress_words($questionText), $faqList) : [];
+    } elseif (faq_is_retirement($questionText) && !faq_is_about_subordinate($questionText)) {
+        // 自分の退職: 手続きは示さず、寄り添って上司（課長）への相談を促す（部下の退職は、下で手続きの答えを探す。どちらも管理者に知らせる）
+        $resultCode = 'retirement';
+    } elseif (faq_is_sensitive($questionText)) {
+        // 要配慮個人情報に触れる文: 寄り添う返事。ほかにはっきり知りたいことがあれば、その答えも出す（「入院するので報告が出せない」）
+        $resultCode = 'sensitive';
+        $matchedFaqList = faq_companion_matches(faq_strip_sensitive_words($questionText), $faqList);
+    } elseif (faq_is_abusive($questionText) || faq_is_violent($questionText)) {
+        // 不適切な表現・人への暴力を書いた文: 断る（暴力の文は、下でシステム管理者・補佐に知らせる）
+        $resultCode = 'abusive';
+    } elseif (faq_is_opener($questionText)) {
+        // 呼びかけだけ（「大変です」）: 用件を聞き返す。断らない（断った回数に数えない）
+        $resultCode = 'opener';
+    } elseif (faq_is_vague($questionText)) {
+        $resultCode = 'vague';
+    } elseif (faq_is_unrelated($questionText, $faqList)) {
+        $resultCode = 'unrelated';
+    } else {
+        $matchedFaqList = faq_search($questionText, $faqList);
+        $resultCode = $matchedFaqList ? 'matched' : 'no_match';
+        // 亡くなったと書かれたときだけ、いちばんの答えにお悔やみを添える（答えの文には書かない。逃げた・交代しただけかもしれないので決めつけない）
+        if ($matchedFaqList && faq_mentions_death($questionText) && strpos((string) $matchedFaqList[0]['answer'], 'お悔やみ') === false) {
+            $matchedFaqList[0]['answer'] = '心よりお悔やみ申し上げます。' . "\n" . $matchedFaqList[0]['answer'];
+        }
+    }
+    // 知らせる理由: 心の不調らしい文の段階 → 人への暴力（violence） → ID・パスワードを求める質問（credential。K-057） → 退職に関わる質問（retirement。K-054）
+    $noticeLevel = $distressLevel;
+    if ($noticeLevel === '' && faq_is_violent($questionText)) {
+        $noticeLevel = 'violence';
+    } elseif ($noticeLevel === '' && faq_is_credential_request($questionText)) {
+        $noticeLevel = 'credential';
+    } elseif ($noticeLevel === '' && $resultCode !== 'abusive' && faq_is_retirement($questionText)) {
+        $noticeLevel = 'retirement';
+    }
+    return ['code' => $resultCode, 'matches' => $matchedFaqList, 'distressLevel' => $distressLevel, 'noticeLevel' => $noticeLevel];
+}
+
 /** 分野のコードとして正しいか（空の「そのほか」も含む） */
 function faq_is_category(string $categoryCode): bool
 {
@@ -505,12 +662,6 @@ function faq_ensure_category_column(): void
 function faq_is_vague(string $queryText): bool
 {
     $normalizedQuery = faq_normalize_text($queryText);
-    // 言い換えの表にある言葉（概要・開発者・添付など）が入っていれば、知りたいことがあるので曖昧とはしない
-    foreach (array_keys(FAQ_SEARCH_SYNONYMS) as $synonymWord) {
-        if (faq_text_contains_term($normalizedQuery, (string) $synonymWord)) {
-            return false;
-        }
-    }
     $remainingText = $normalizedQuery;
     $vagueWordList = FAQ_VAGUE_WORDS;
     usort($vagueWordList, static function (string $leftWord, string $rightWord): int {
@@ -518,6 +669,16 @@ function faq_is_vague(string $queryText): bool
     });
     foreach ($vagueWordList as $vagueWord) {
         $remainingText = str_replace($vagueWord, ' ', $remainingText);
+    }
+    // 中身のない言い方だけでできた文（「返答して」「どういうこと？」）は、言い換えの表に当たっても曖昧とする
+    if ($remainingText !== $normalizedQuery && trim($remainingText) === '') {
+        return true;
+    }
+    // 言い換えの表にある言葉（概要・開発者・添付など）が入っていれば、知りたいことがあるので曖昧とはしない
+    foreach (array_keys(FAQ_SEARCH_SYNONYMS) as $synonymWord) {
+        if (faq_text_contains_term($normalizedQuery, (string) $synonymWord)) {
+            return false;
+        }
     }
     // 中身のない言い方が入っていないもの（「あなたは誰」など、言葉が取れないだけの文）は曖昧とはしない（関係のない質問で扱う）
     return $remainingText !== $normalizedQuery && faq_search_terms($remainingText) === [];
@@ -602,12 +763,71 @@ const FAQ_SEARCH_SYNONYMS = [
     '退職' => '退職 無効', '他界' => '亡くなった 忌引', '亡くな' => '亡くなった 忌引', '忌引' => '忌引 亡くなった', '葬儀' => '忌引 亡くなった', '逝去' => '忌引 亡くなった', '今度' => '自分', '来月' => '自分', '私が' => '自分', 'わたしが' => '自分', '退職予定' => '自分 退職', '異動予定' => '自分 異動', '部下が退職' => '部下が退職 ユーザー 無効', '部下が辞め' => '部下が退職 ユーザー 無効', '部下が異動' => '部下 異動 ユーザー', '役職変更' => '役職 変わる', '役職が変' => '役職 変わる', '役職が' => '役職 変わる', '役職の' => '役職 変わる', '辞め' => '退職 無効', '辞職' => '退職 無効', '改編' => '組織 改訂 改編', '組織変更' => '組織 改訂', '再編' => '組織 改訂',
     '統合' => '組織 改訂', '分割' => '組織 改訂', '部門' => '課 組織', '部署' => '課 組織', '廃止' => '廃止', '昇格' => '役職', '昇進' => '役職', '他の課' => 'ほかの課', '他課' => 'ほかの課', 'よその課' => 'ほかの課',
     'おくる' => '送る', '送る' => '送る', '送りたい' => '送る', '課長代理' => '課長代理 できること', '代理' => '課長代理 できること', 'リーダー' => '課長代理 確認者',
+    // 自動入力検証（tools/test/faq_input_cases.tsv）で見つかった言い換え
+    'ログインできません' => 'パスワード 違います', 'しばらく' => 'ロック ロックされた 何回 間違える', '買い替え' => '機種変更 買い替え 認証アプリ', '買い換え' => '機種変更 買い替え 認証アプリ',
+    'なくした' => '紛失 盗まれ', 'コピー' => '写したい 過去', '前回' => '過去 前月', '完了にしたい' => '完了にしたい 課長',
+    'ダークモード' => '画面の色 テーマ 変えたい', 'ダークテーマ' => '画面の色 テーマ 変えたい', '不具合' => '不具合 要望 伝えたい',
+    'プロジェクト' => '案件', 'pj' => '案件',
+    // ひらがなで入れたとき
+    'ろぐいん' => 'ログイン', 'ろぐいんでき' => 'ログイン パスワード 違います', 'ろぐあうと' => 'ログアウト', 'ぱすわーど' => 'パスワード', 'ほうこく' => '報告', 'しめきり' => '締め日 いつ', 'しめび' => '締め日',
+    'にんしょう' => '認証 2段階認証', 'こめんと' => 'コメント', 'ていしゅつ' => '提出', 'すまほ' => 'スマートフォン',
+    // 使う端末・場所
+    'ipad' => 'スマートフォン 端末 使えるか', 'タブレット' => 'スマートフォン 端末 使えるか', 'mac' => '端末 使えるか ブラウザー', 'linux' => '端末 使えるか ブラウザー',
+    'windows' => '端末 使えるか ブラウザー', '自宅' => '端末 使えるか', '家から' => '端末 使えるか', '家の' => '端末 使えるか', '社外から' => '端末 使えるか', '外出先' => '端末 使えるか',
+    '在宅' => '端末 使えるか', 'テレワーク' => '端末 使えるか', 'キャッシュ' => '表示 おかしい 古い',
+    // 報告の書き方・見る人・知らせ
+    '何を書' => '報告に何を書けばよいか 書き方', '書き方' => '報告に何を書けばよいか 書き方', 'どのくらい書' => '報告に何を書けばよいか 書き方', '書くことがない' => '報告に何を書けばよいか 書き方',
+    '作業時間' => '報告に何を書けばよいか 書き方', '仕事がなかった' => '報告に何を書けばよいか 書き方', '仕事がない' => '報告に何を書けばよいか 書き方', '顧客' => '客先名 黄色の注意', '客先名' => '客先名 黄色の注意', 'お客様' => '客先名 黄色の注意',
+    'だれが見る' => 'だれが見る 見られる人', '誰が見る' => 'だれが見る 見られる人', '以外にも見' => 'だれが見る 見られる人', 'だれが見られ' => 'だれが見る 見られる人', '誰が見られ' => 'だれが見る 見られる人',
+    // グレーゾーンの自動入力検証 2 で見つかった言い換え
+    '404' => 'ページが見つかりません 権限がありません エラー', '403' => 'ページが見つかりません 権限がありません エラー', 'ページが見つか' => 'ページが見つかりません 権限がありません',
+    '権限がありません' => 'ページが見つかりません 権限がありません', '500' => '止まった 障害 エラー', '通信エラー' => '止まった 障害 表示 おかしい', 'エラー' => 'エラー 表示 おかしい',
+    '読み込み' => '表示 おかしい 古い', '反応しな' => '表示 おかしい 古い', '他の班' => '他課 情報', '戻るボタン' => '下書き 保存', 'タブを閉じ' => '下書き 保存',
+    'ログインid' => 'ログイン id を忘れた', 'idが分から' => 'ログイン id を忘れた', 'idを忘れ' => 'ログイン id を忘れた', 'パスワードの条件' => 'パスワードを変えたい', '何文字' => 'パスワードを変えたい',
+    '何回間違え' => 'ロック 何回 間違える', 'コードの有効期限' => '2段階認証 コード どこで見る', 'qr' => 'セットアップキー 時間ベース', '時計' => 'コードが違います 時刻', '締め切りいつ' => '締切 期限', '締め切りはいつ' => '締切 期限',
+    '提出できたか' => '報告の状態 提出済み', '出したか分から' => '報告の状態 提出済み', '知らせが行' => 'メールや通知は来るか', '前月分' => '締め日を過ぎても 前月', '先月分' => '締め日を過ぎても 前月',
+    '報告を取り下げ' => '提出を取り消したい', '締め日はだれ' => '締め日を変えたい 課長', '締め日は誰' => '締め日を変えたい 課長', '差し戻' => '差し戻 却下',
+    '部下の報告' => '課の人の提出状況 未チェックの報告', 'にコメントしたい' => 'コメントのしかた 確認者', '確認者を外' => '確認者を決めたい', '課長になった' => '役職が変わる 昇格',
+    '班の分け' => '班ごとに報告を見る 管理の仕方', '確認完了を取り消' => '確認を完了にしたい 課長', '未提出' => '課の人の提出状況', '催促' => '課の人の提出状況',
+    'ログインしたまま' => '毎回 2段階認証 聞かれる 覚え', '安全' => 'セキュリティ 暗号化 安全', '暗号' => 'セキュリティ 暗号化 安全', '個人情報' => 'セキュリティ 暗号化 個人情報', '面倒' => '毎回 2段階認証 聞かれる', '勝手に' => '自動で',
+    '文字を大き' => '文字を大きくしたい 拡大', 'ズーム' => '文字を大きくしたい 拡大', '拡大' => '文字を大きくしたい 拡大', '押しにくい' => '文字を大きくしたい 拡大', 'ガラケー' => 'スマートフォン 端末 使えるか',
+    'チャットの内容' => 'チャットに入れた質問は記録されるか', '記録され' => 'チャットに入れた質問は記録されるか', '人が読' => 'チャットに入れた質問は記録されるか',
+    '誰が答え' => 'チャットに入れた質問は記録されるか', 'だれが答え' => 'チャットに入れた質問は記録されるか', '要望はどこ' => 'システムへの要望 伝えたい', '締め日はいつ' => '締切 期限', '開発担当' => '開発者 問い合わせ先', '開発者は' => '開発者 問い合わせ先', '他の人' => '他課 情報',
+    'ホウコク' => '報告', 'totp' => '2段階認証 コード', 'otp' => '2段階認証 コード', 'submit' => '提出', 'report' => '報告', 'deadline' => '締め日',
+    '通知' => 'メール 通知 お知らせ', '通知を' => 'メールや通知は来るか お知らせの届き方', 'プッシュ' => 'メールや通知は来るか お知らせの届き方', 'メール' => 'メール 通知', '休みだった' => '出張 研修 締め日までに報告を出せない', '休んで' => '出張 研修 締め日までに報告を出せない', 'あなた' => 'チャット 何に答える 返答', 'きみは' => 'チャット 何に答える 返答', '君は' => 'チャット 何に答える 返答',
 ];
 
 /**
  * 探すために文をそろえる: 全角の英数字・記号を半角に、英字を小文字に、記号と空白を 1 つの空白にする。
  * （mbstring が無いサーバーでも動くよう、mb_ の関数は使わない）
  */
+/** 半角カナ → 全角カナの対応（濁点・半濁点の付いた 2 文字を先に。mbstring が無くても動くよう、自前の表で変える） */
+function faq_halfwidth_kana_map(): array
+{
+    static $kanaMap = null;
+    if ($kanaMap !== null) {
+        return $kanaMap;
+    }
+    $halfwidthList = preg_split('//u', 'ｦｧｨｩｪｫｬｭｮｯｰｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝ｡｢｣､･', -1, PREG_SPLIT_NO_EMPTY) ?: [];
+    $fullwidthList = preg_split('//u', 'ヲァィゥェォャュョッーアイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワン。「」、・', -1, PREG_SPLIT_NO_EMPTY) ?: [];
+    $kanaMap = [];
+    $voicedList = preg_split('//u', 'ガギグゲゴザジズゼゾダヂヅデドバビブベボ', -1, PREG_SPLIT_NO_EMPTY) ?: [];
+    foreach (preg_split('//u', 'ｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾊﾋﾌﾍﾎ', -1, PREG_SPLIT_NO_EMPTY) ?: [] as $voicedIndex => $halfwidthCharacter) {
+        $kanaMap[$halfwidthCharacter . 'ﾞ'] = $voicedList[$voicedIndex];
+    }
+    $semiVoicedList = preg_split('//u', 'パピプペポ', -1, PREG_SPLIT_NO_EMPTY) ?: [];
+    foreach (preg_split('//u', 'ﾊﾋﾌﾍﾎ', -1, PREG_SPLIT_NO_EMPTY) ?: [] as $semiVoicedIndex => $halfwidthCharacter) {
+        $kanaMap[$halfwidthCharacter . 'ﾟ'] = $semiVoicedList[$semiVoicedIndex];
+    }
+    $kanaMap['ｳﾞ'] = 'ヴ';
+    foreach ($halfwidthList as $kanaIndex => $halfwidthCharacter) {
+        $kanaMap[$halfwidthCharacter] = $fullwidthList[$kanaIndex];
+    }
+    $kanaMap['ﾞ'] = '';
+    $kanaMap['ﾟ'] = '';
+    return $kanaMap;
+}
+
 function faq_normalize_text(string $text): string
 {
     static $fullwidthToHalfwidthMap = null;
@@ -618,8 +838,11 @@ function faq_normalize_text(string $text): string
             $fullwidthToHalfwidthMap[$fullwidthCharacter] = chr($codePoint - 0xFEE0);
         }
     }
-    $normalizedText = strtolower(strtr($text, $fullwidthToHalfwidthMap));
-    return trim((string) preg_replace('/[\s\p{P}\p{S}]+/u', ' ', $normalizedText));
+    $normalizedText = strtolower(strtr(strtr($text, faq_halfwidth_kana_map()), $fullwidthToHalfwidthMap));
+    $normalizedText = (string) preg_replace('/[\s\p{P}\p{S}]+/u', ' ', $normalizedText);
+    // 日本語の文字の間の空白は詰める（「ログイン　できない」「パスワードを、忘れました」を続けて探す。英数字の間は語の区切りとして残す）
+    $normalizedText = (string) preg_replace('/(?<=[^\x00-\x7F]) (?=[^\x00-\x7F])/u', '', $normalizedText);
+    return trim($normalizedText);
 }
 
 /**
@@ -647,8 +870,10 @@ function faq_search_terms(string $queryText): array
     // （「AM10:00 に提出」の「提出」で探せるように。「10時」の「時」が「12 時間」に当たらないように）
     $normalizedQuery = (string) preg_replace('/(?<![a-z])(am|pm)(?![a-z])|午前|午後/u', ' ', faq_normalize_text($queryText));
     $normalizedQuery = (string) preg_replace('/(?<![a-z0-9])[0-9]+(?![a-z0-9])(時間|時|分|秒|日|か月|ヶ月|カ月|月|年|回|件|歳|人)?/u', ' ', $normalizedQuery);
+    // 言い換えの表は、数字を除く前の文で見る（「404」「500」も言い換えられるように）
+    $synonymSourceQuery = faq_normalize_text($queryText);
     foreach (FAQ_SEARCH_SYNONYMS as $typedWord => $faqWordText) {
-        if (faq_text_contains_term($normalizedQuery, (string) $typedWord)) {
+        if (faq_text_contains_term($synonymSourceQuery, (string) $typedWord)) {
             $normalizedQuery .= ' ' . $faqWordText;
         }
     }

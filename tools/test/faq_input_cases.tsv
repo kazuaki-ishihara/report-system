@@ -1,0 +1,421 @@
+# よくある質問（G-25）のチャットの自動入力検証の入力（tools/test/faq_input_check.php が読む）
+#
+# 1 行 1 件。タブ区切り: 区分 <TAB> 期待 <TAB> 入れる文 [<TAB> メモ]
+#   区分: 寄る（システムにはっきり寄る）／ グレー（グレーゾーン）／ アウト（明確にアウト）
+#   期待: 判定の結果。複数を許すときは | で区切る
+#     matched（答えた）、matched=<答えの質問の一部>（いちばんの答えの質問にその文字を含む。複数書けばどれかでよい）、no_match（見つからない）、
+#     opener（呼びかけだけ。「どういったご用件でしょうか。」）、vague（あいまい。分野を選ぶ）、unrelated（関係のない質問）、abusive（不適切な表現）、
+#     emergency（命・体の緊急。119 番）、distress（心の不調）、retirement（自分の退職）、sensitive（要配慮。寄り添う返事）
+#   知らせ（任意）: 期待の後ろに「 +credential」「 +retirement」「 +violence」のように付けると、管理者への知らせの理由も確かめる
+# 「#」で始まる行と空の行は読まない。
+# アウトのうち、不適切な表現・関係のない質問は、どちらも断る（続くと返事をしない）ので、どちらでもよいものは両方を書く。
+# 「仕事を辞めたい」「会社を辞めたい」は、心の不調の心配な言葉として扱う作り（G-25 §2.8）なので、心の不調でもよい。
+
+# ---- システムにはっきり寄る（答えるべき。答えの質問も確かめる） ----
+寄る	matched=パスワードを忘れた	パスワードを忘れました
+寄る	matched=パスワードを忘れた	パスワード忘れた
+寄る	matched=ログインできない	ログインできません
+寄る	matched=ログインできない	IDとパスワードを入れてもログインできない
+寄る	matched=ロックされた	しばらくログインできませんと出た
+寄る	matched=ロックされた	アカウントがロックされた
+寄る	matched=6 桁の数字	2段階認証のコードはどこで見る？
+寄る	matched=コードが違います	コードが違いますと出る
+寄る	matched=機種変更	スマホを機種変更したら認証アプリが使えない
+寄る	matched=機種変更	携帯を買い替えた
+寄る	matched=予備のコードとは	予備のコードって何？
+寄る	matched=予備のコードを作り直したい	予備のコードを作り直したい
+寄る	matched=予備のコードをメールやチャットに貼って	予備のコードをチャットに貼ってしまった
+寄る	matched=スマホをなくした	スマホをなくした
+寄る	matched=パスワードを変えたい	パスワードを変更したい
+寄る	matched=ログアウト	ログアウトのしかた
+寄る	matched=自動でログアウト	勝手にログアウトされた
+寄る	matched=今月の報告はどこから作る	今月の報告はどこから作りますか
+寄る	matched=締め日はいつ	締め日はいつですか
+寄る	matched=締め日はいつ	報告の締切はいつ
+寄る	matched=締め日を過ぎても	締め日を過ぎてしまった
+寄る	matched=下書き	報告を途中まで書いて保存したい
+寄る	matched=変更なし	先月と同じ内容で出したい
+寄る	matched=過去の報告の内容を写したい	前回の報告をコピーしたい
+寄る	matched=新しい案件	新しい案件を追加したい
+寄る	matched=選びたい案件が一覧にない	案件が一覧に出てこない
+寄る	matched=提出したあとに報告を直したい	提出した報告を修正したい
+寄る	matched=提出を取り消したい	間違えて提出してしまった
+寄る	matched=下書きを消したい	下書きを削除したい
+寄る	matched=添付	報告にExcelのファイルを添付したい
+寄る	matched=黄色の注意	客先名の可能性と黄色で出た
+寄る	matched=社外秘	社外秘の札の意味は？
+寄る	matched=コメントが来たら	コメントが来たらどう返信する
+寄る	matched=回答待ちのコメント	回答待ちのコメントを探したい
+寄る	matched=チェック済み	報告をチェック済みにしたい
+寄る	matched=確認を完了	確認完了にしたい
+寄る	matched=提出状況	課の人の提出状況を見たい
+寄る	matched=横並び	報告を横に並べて比べたい
+寄る	matched=検索	報告を検索したい
+寄る	matched=出力	報告をExcelに出力したい
+寄る	matched=文字化け	CSVが文字化けする
+寄る	matched=臨時の調査に答えたい	臨時の調査に回答したい
+寄る	matched=画面の色	画面の色を変えたい
+寄る	matched=画面の色	ダークモードにしたい
+寄る	matched=名前（姓）が変わった	結婚して名字が変わった
+寄る	matched=要望や不具合	不具合を報告したい
+寄る	matched=要望・依頼の返信	要望の返信はどこで見る
+寄る	matched=締め日を変えたい	締め日を変更したい
+寄る	matched=確認者	確認者を決めたい
+寄る	matched=項目を足したい	報告の項目を追加したい
+寄る	matched=部下が退職した	部下が退職した
+寄る	matched=使えるブラウザー	使えるブラウザーは？
+寄る	matched=メニュー	メニューはどこ
+寄る	matched=スマホ	スマホで使えますか
+寄る	matched=何をするもの	このシステムは何をするもの？
+寄る	matched=システムが止まった	システムが止まった
+寄る	matched=表示がおかしい|matched=システムが止まった	画面が真っ白で動かない
+寄る	matched=不正アクセス	不正アクセスされたかもしれない
+寄る	matched=開発者・問い合わせ先	開発担当は誰？
+寄る	matched=開発者・問い合わせ先	開発担当は誰？（誰・名前）
+寄る	matched	誤って報告を消してしまった
+寄る	matched	誤って提出した
+寄る	matched=ログインできない	大変です、ログインできません
+寄る	matched=パスワードを忘れた	大変です。パスワードを忘れました
+
+# ---- グレーゾーン（システムの言葉が少ない・あいまい・会社の別の手続き。答える・聞き返す・断るのどれでもよいが、決めた範囲から外れたら知らせる） ----
+グレー	vague	使い方がわからない
+グレー	opener	大変です。
+グレー	opener	大変です
+グレー	opener	たいへんです
+グレー	opener	大変！
+グレー	opener	大変です、大変です
+グレー	vague	教えて
+グレー	vague	困った
+グレー	vague|no_match	どうすればいい？
+グレー	vague|matched|no_match	できない
+グレー	matched|no_match|vague	うまくいかない
+グレー	matched|no_match	ボタンが押せない
+グレー	matched|no_match	画面が重い
+グレー	matched|no_match	文字が小さくて読みにくい
+グレー	matched|no_match	印刷したい
+グレー	matched|no_match	保存できない
+グレー	matched|no_match	エラーが出た
+グレー	matched|no_match	表示がおかしい
+グレー	matched|no_match	スマホが壊れた
+グレー	matched|no_match|unrelated	ネットにつながらない
+グレー	matched|no_match|unrelated	パソコンが遅い
+グレー	matched|no_match|unrelated	会社のメールが見られない
+グレー	matched|no_match|unrelated	Excelが開かない
+グレー	matched|no_match|unrelated	有給休暇の申請はどこでする
+グレー	matched|no_match|unrelated	残業の申請をしたい
+グレー	matched|no_match|unrelated	交通費の精算をしたい
+グレー	matched|no_match|unrelated	勤怠の入力はどこ
+グレー	matched|no_match|unrelated	給与明細を見たい
+グレー	matched|no_match	上司に報告が届いたか知りたい
+グレー	matched|no_match	課長に見てもらえたか確認したい
+グレー	matched|no_match	今月の報告を出し忘れた
+グレー	matched|no_match	先月の報告を出していない
+グレー	matched|no_match	部下が報告を出してくれない
+グレー	matched|no_match	異動することになった
+グレー	matched|no_match	新人が入ってきた
+グレー	matched|no_match	プロジェクトが終わった
+グレー	matched|no_match	客先の名前を書いてもいい？
+グレー	matched|no_match|vague	この画面は何？
+グレー	matched|no_match	AIに答えてほしい
+グレー	matched|no_match|unrelated	チャットボットですか
+グレー	matched|no_match|unrelated	人と話したい
+グレー	matched|no_match|unrelated	電話で問い合わせたい
+グレー	matched|no_match|unrelated	このシステムはだれが作ったの
+グレー	matched|no_match|unrelated	セキュリティは大丈夫？
+グレー	matched=チャットは何に答える|unrelated	あなたは誰
+グレー	matched|no_match|unrelated	入力した内容はだれが見られる？
+
+# ---- グレーゾーンの追加（--all で答えを見て、良い答えはその答えに決めた。答えの弱いものは範囲を広く取り、理由を書いた） ----
+グレー	vague	わからない
+グレー	distress	助けて
+グレー	vague	質問があります
+グレー	vague	ヘルプ
+グレー	vague	使い方
+グレー	vague	どこ？
+グレー	vague	なんで？
+グレー	vague	おかしい
+グレー	matched=画面の表示がおかしい・古いまま	動かないんだけど
+グレー	vague	前と違う
+グレー	matched=報告に何を書けばよいか	報告に何を書けばいい？
+グレー	matched=報告に何を書けばよいか	報告はどのくらい書けばいい
+グレー	matched=報告に何を書けばよいか	書くことがない
+グレー	matched=報告に何を書けばよいか	今月は仕事がなかった
+グレー	distress|sensitive	休職中で報告できない
+グレー	matched=報告に何を書けばよいか	報告の書き方の例が見たい
+グレー	matched=報告に何を書けばよいか	作業時間はどう書く
+グレー	matched=黄色の注意	顧客名は書いていいの
+グレー	matched=社外秘」「限定」の札の意味	社外秘って何
+グレー	matched=長期の出張・研修などで、締め日までに報告を出せない	締め日に休みだった
+グレー	matched=自分の報告はだれが見るのか	自分の報告はだれが見る？
+グレー	matched=自分の報告はだれが見るのか	課長以外にも見られる？
+グレー	matched=ほかの課の報告・情報を見たい	他の人の報告を見たい
+グレー	matched=管理者が提出状況で報告の中身を開けない	管理者は中身を見られる？
+グレー	matched=メールや通知は来るか	コメントは本人に通知される？
+グレー	matched=スマホ	iPadで使える？
+グレー	matched=使えるブラウザーは	Macで使える？
+グレー	matched=使えるブラウザーは	Linuxで使える？
+グレー	matched=スマホ	家のパソコンから使える？
+グレー	matched=スマホ	社外から使える？
+グレー	unrelated	VPNが必要？
+グレー	unrelated	Wi-Fiが切れた
+グレー	matched=画面の表示がおかしい・古いまま	ブラウザのキャッシュを消したい
+グレー	matched=画面の表示がおかしい・古いまま	Chromeで表示が崩れる
+グレー	matched=ログインできない	Safariでログインできない
+グレー	unrelated	年末調整の書類はどこ
+グレー	sensitive|unrelated	健康診断の予約
+グレー	matched=長期の出張・研修などで、締め日までに報告を出せない	出張の申請をしたい
+グレー	unrelated	経費精算のやり方
+グレー	unrelated	名刺を作りたい
+グレー	unrelated	社員証をなくした
+グレー	unrelated	PCが故障した
+グレー	matched=メールや通知は来るか	メールアドレスを変えたい
+グレー	unrelated	会社の電話番号を知りたい
+グレー	matched=メールや通知は来るか	通知はメールで来る？
+グレー	matched=メールや通知は来るか	スマホに通知を出したい
+グレー	unrelated	LINEで連絡できる？
+グレー	no_match	API はある？
+グレー	matched|no_match|unrelated	データはどこに保存される？	（ふつうの利用者向けの答えが無い。下書き・ログインの答えが出るのは弱い）
+グレー	no_match	バックアップは取っている？
+グレー	matched=メールや通知は来るか	報告をメールで送りたい
+グレー	matched=途中まで書いた報告を保存したい	自動で保存される？
+グレー	unrelated	何年分残る？
+グレー	matched|no_match|unrelated	ログイン履歴を見たい	（ふつうの利用者向けの答えが無い。下書き・ログインの答えが出るのは弱い）
+グレー	unrelated	英語で使える？
+グレー	matched=ログインできない	ろぐいんできない
+グレー	matched=パスワードを忘れたときは	ﾊﾟｽﾜｰﾄﾞ忘れた
+グレー	matched=パスワードを忘れたときは	PASSWORD FORGOT
+グレー	matched=締め日	ほうこくのしめきり
+グレー	matched=2 段階認証のコード	2だんかいにんしょう
+
+# ---- グレーゾーンの追加 2（--all で答えを見て、良い答えはその答えに決めた。合う答えが無いものは範囲を広く取り、理由を書いた） ----
+# あいまい・気持ち・短い
+グレー	vague	ちょっと聞きたい
+グレー	vague	相談です
+グレー	matched=ページが見つかりません」「権限がありません」と出た	なんかエラー
+グレー	vague	いつもと違う
+グレー	vague	急ぎです
+グレー	vague	至急
+グレー	unrelated|vague	うーん
+グレー	unrelated|vague	ええと
+グレー	unrelated|vague	これでいい？
+グレー	matched=チャットの答えが質問と合っていない	合ってる？
+グレー	unrelated|vague	またダメだった
+グレー	unrelated|vague	もう一回
+グレー	vague	さっきの続き
+グレー	unrelated|vague	わかった
+グレー	unrelated|vague	OK
+グレー	unrelated|vague	大丈夫？
+グレー	unrelated|vague	確認したい
+グレー	vague	やり方を教えて
+グレー	matched=システム管理者はだれ？	誰に聞けばいい
+グレー	unrelated|vague	とりあえず
+# 報告の中身・流れ
+グレー	matched=報告の状態	報告を出したか分からない
+グレー	matched=報告の状態	提出できたか確認したい
+グレー	matched=必須の項目とは・提出できない	提出ボタンがない
+グレー	matched=途中まで書いた報告を保存したい	保存したのに消えた
+グレー	matched|no_match|vague|unrelated	下書きが消えた	（合う答えが無い。近い答えが出るのは弱い）
+グレー	matched|no_match|vague|unrelated	報告が二重になった	（合う答えが無い。近い答えが出るのは弱い）
+グレー	matched=締め日を過ぎても報告を出せるか・直せるか	前月分を今から出したい
+グレー	matched|no_match|vague|unrelated	来月の分を先に書きたい	（合う答えが無い。近い答えが出るのは弱い）
+グレー	matched|no_match|vague|unrelated	報告をまとめて出したい	（合う答えが無い。近い答えが出るのは弱い）
+グレー	matched=報告を Excel や PDF・CSV に出力したい	報告を印刷したい
+グレー	matched=報告を Excel や PDF・CSV に出力したい	報告をPDFにしたい
+グレー	matched|no_match|vague|unrelated	報告の文字数の上限は	（合う答えが無い。近い答えが出るのは弱い）
+グレー	matched|no_match|vague|unrelated	改行できない	（合う答えが無い。近い答えが出るのは弱い）
+グレー	matched|no_match|vague|unrelated	絵文字は使える？	（合う答えが無い。近い答えが出るのは弱い）
+グレー	matched|no_match|vague|unrelated	箇条書きにしたい	（合う答えが無い。近い答えが出るのは弱い）
+グレー	matched=選びたい案件が一覧にない	案件が多すぎる
+グレー	matched|no_match|vague|unrelated	案件の順番を変えたい	（合う答えが無い。近い答えが出るのは弱い）
+グレー	matched=提出を取り消したい	案件を間違えて選んだ
+グレー	matched=報告に何を書けばよいか	進捗の書き方
+グレー	no_match	遅延ありを選んだら何か起きる？
+グレー	matched=締め日を過ぎても報告を出せるか・直せるか	締め日を過ぎたらどうなる
+グレー	matched=締め日を変えたい	締め日はだれが決める
+グレー	matched=メールや通知は来るか	提出したら上司に知らせが行く？
+グレー	matched=差し戻し	差し戻されたらどうなる
+グレー	matched=提出を取り消したい	報告を取り下げたい
+# 確認・コメント・役割
+グレー	matched=コメントが来たらどうするか	コメントが来ているか分からない
+グレー	matched=コメントが来たらどうするか	コメントに返信できない
+グレー	matched=出したコメントを直したい	コメントを消したい
+グレー	matched=回答待ちのコメントを探したい	返信したのに回答待ちのまま
+グレー	matched=メールや通知は来るか	コメントの通知を止めたい
+グレー	matched=未チェックの報告を順に見たい	部下の報告を見たい
+グレー	matched=課長代理・リーダー	部下の報告にコメントしたい
+グレー	matched|no_match|vague|unrelated	チェックを外したい	（合う答えが無い。近い答えが出るのは弱い）
+グレー	matched=確認を完了にしたい	課長が不在で確認できない
+グレー	matched=確認を完了にしたい	代わりに確認してほしい
+グレー	matched=確認者	確認者を外したい
+グレー	matched=課長代理・リーダー	リーダーになった
+グレー	matched=役職が変わる	課長になった
+グレー	matched=課長代理・リーダー	課長代理の権限は
+グレー	matched=班ごとに報告を見る形にしたい	班の分け方を変えたい
+グレー	matched=ほかの課の報告・情報を見たい	他の班の報告を見たい
+グレー	matched=限定」の項目が見えない	限定の項目を見たい
+グレー	matched=確認を完了にしたい	確認完了を取り消したい
+グレー	matched=変更のない報告をまとめてチェックしたい	まとめてチェックしたい
+グレー	matched=課の人の提出状況を見たい	未提出の人に催促したい
+# アカウント・ログイン
+グレー	matched=ログイン ID を忘れた	ログインIDを忘れた
+グレー	matched=ログイン ID を忘れた	IDが分からない
+グレー	matched=パスワードを変えたい	パスワードの条件は
+グレー	matched=しばらくログインできません」と出た	パスワードを何回間違えたらロック
+グレー	matched=しばらくログインできません」と出た	ロックはいつ解ける
+グレー	matched=認証アプリも予備のコードも使えない	認証アプリを消してしまった
+グレー	matched=PC ではじめてログインしたら「いまは PC で開いています」と出た	QRコードが読めない
+グレー	matched=PC ではじめてログインしたら「いまは PC で開いています」と出た	セットアップキーとは
+グレー	matched=2 段階認証のコード	コードの有効期限は
+グレー	matched=コードが違います」と出る	時計がずれている
+グレー	matched|no_match|vague|unrelated	スマホを2台使いたい	（合う答えが無い。近い答えが出るのは弱い）
+グレー	matched|no_match|vague|unrelated	別の人のスマホで認証したい	（合う答えが無い。近い答えが出るのは弱い）
+グレー	matched|no_match|vague|unrelated	家族のスマホを使っている	（合う答えが無い。近い答えが出るのは弱い）
+グレー	matched|no_match|vague|unrelated	ログインしたままにしたい	（合う答えが無い。近い答えが出るのは弱い）
+グレー	matched=毎回 2 段階認証のコードを聞かれる	毎日ログインが面倒
+グレー	matched=自動でログアウトされた	勝手にログアウトする
+グレー	matched|no_match|vague|unrelated	同時に2つの端末でログインできる？	（合う答えが無い。近い答えが出るのは弱い）
+グレー	matched=名前	名前の表示を変えたい
+グレー	matched|no_match|vague|unrelated	テーマが戻った	（合う答えが無い。近い答えが出るのは弱い）
+グレー	matched=画面の文字を大きくしたい	文字を大きくしたい
+# 端末・ネット・ブラウザー
+グレー	matched=使えるブラウザーは	Edgeで使える？
+グレー	matched=使えるブラウザーは	Firefoxは？
+グレー	matched=スマホ	古いiPhoneで使える？
+グレー	matched=スマホ	Androidで使える？
+グレー	matched=スマホ	ガラケーで使える？
+グレー	matched=画面の文字を大きくしたい	画面が小さくて押しにくい
+グレー	matched|no_match|vague|unrelated	横向きにしたい	（合う答えが無い。近い答えが出るのは弱い）
+グレー	matched=画面の文字を大きくしたい	ズームしたい
+グレー	matched=印刷すると背景の色はどうなるか	印刷すると切れる
+グレー	matched=ページが見つかりません」「権限がありません」と出た	ページが見つかりません
+グレー	matched=ページが見つかりません」「権限がありません」と出た	404と出た
+グレー	matched=ページが見つかりません」「権限がありません」と出た	403と出た
+グレー	matched=ページが見つかりません」「権限がありません」と出た	500エラー
+グレー	matched=ページが見つかりません」「権限がありません」と出た	通信エラーと出た
+グレー	matched=画面の表示がおかしい・古いまま	読み込みが終わらない
+グレー	no_match	真っ白
+グレー	matched=画面の表示がおかしい・古いまま	ボタンが反応しない
+グレー	matched|no_match|vague|unrelated	二回押してしまった	（合う答えが無い。近い答えが出るのは弱い）
+グレー	matched=途中まで書いた報告を保存したい	戻るボタンを押したら消えた
+グレー	matched=途中まで書いた報告を保存したい	タブを閉じてしまった
+# 会社の別の手続き
+グレー	unrelated	有給の残りを知りたい
+グレー	unrelated	シフトを変えたい
+グレー	unrelated	勤務表を出したい
+グレー	unrelated	打刻を忘れた
+グレー	unrelated	在宅勤務の申請
+グレー	unrelated	社内の掲示板はどこ
+グレー	unrelated	会議室を予約したい
+グレー	unrelated	PCを交換したい
+グレー	unrelated	ソフトをインストールしたい
+グレー	unrelated	プリンターが動かない
+グレー	unrelated	社内のWi-Fiのパスワード
+グレー	matched=メールや通知は来るか	メールが届かない
+グレー	unrelated	Teamsにつながらない
+グレー	unrelated	人事に相談したい
+グレー	unrelated	評価面談の資料
+グレー	no_match	目標設定シートはどこ
+グレー	matched=長期の出張・研修などで、締め日までに報告を出せない	研修の申し込み
+グレー	unrelated	引っ越したので住所を変えたい
+グレー	unrelated	扶養の手続き
+グレー	retirement|matched|no_match|unrelated	退職金について	（自分の退職として上司への相談を促す作り）
+# システムの周辺・安全
+グレー	matched=このシステムは安全か	このシステムは安全？
+グレー	matched=このシステムは安全か	データは暗号化されている？
+グレー	matched|no_match|vague|unrelated	誰がログを見ている？	（合う答えが無い。近い答えが出るのは弱い）
+グレー	matched=チャットに入れた質問は記録されるか	入力したことは記録される？
+グレー	matched=チャットに入れた質問は記録されるか	チャットの内容は保存される？
+グレー	matched=チャットに入れた質問は記録されるか	AIを使っている？
+グレー	matched=このシステムは安全か	個人情報は大丈夫？
+グレー	unrelated	海外から使える？
+グレー	matched=メンテナンス中と出て保存できない	メンテナンスはいつ
+グレー	matched=システムが止まった・障害が起きた	障害の情報はどこで見る
+グレー	matched=ほしい機能がない	新しい機能はいつ入る
+グレー	matched=システムへの要望や不具合を伝えたい	要望はどこに出す
+グレー	matched=チャットに入れた質問は記録されるか	このチャットは誰が答えている？
+グレー	matched=チャットに入れた質問は記録されるか	人が読んでいる？
+グレー	matched|no_match|vague|unrelated	質問を取り消したい	（合う答えが無い。近い答えが出るのは弱い）
+# 書き方の揺れ
+グレー	matched=ログインしたい	ﾛｸﾞｲﾝ
+グレー	matched|no_match|vague|unrelated	ﾎｳｺｸ	（合う答えが無い。近い答えが出るのは弱い）
+グレー	matched=パスワードを忘れたときは	パスワ－ド忘れ
+グレー	matched=パスワードを忘れたときは	ぱすわーどわすれた
+グレー	matched=必須の項目とは・提出できない	ていしゅつできない
+グレー	matched=コメントが来たらどうするか	こめんとへんしん
+グレー	matched=2 段階認証のコード	2fa
+グレー	matched=2 段階認証のコード	TOTP
+グレー	matched=2 段階認証のコード	otp
+グレー	matched|no_match|vague|unrelated	rogin dekinai	（合う答えが無い。近い答えが出るのは弱い）
+グレー	matched=パスワードを忘れたときは	password reset
+グレー	matched|no_match|vague|unrelated	how to submit report	（合う答えが無い。近い答えが出るのは弱い）
+グレー	matched=ログアウトしたい	logout
+グレー	matched=ログインできない	ログイン　できない
+グレー	matched=パスワードを忘れたときは	パスワードを、忘れました。
+グレー	matched=締め日はいつか	報告　締め切り　いつ
+グレー	matched=ログインできない	😢ログインできない
+グレー	matched=ログインできない	ログインできない！！！
+グレー	matched=ログインできない	ログインできないです…
+グレー	matched=ログインできない	ろぐいんできないんですけど
+# 緊急の言葉のうち、システム・端末の質問にも出るもの（緊急としない。人のことなら緊急）
+グレー	matched|no_match|vague|unrelated	スマホの電池が切れた
+グレー	matched|no_match|vague|unrelated	通信が切断された
+グレー	matched|no_match|vague|unrelated	画面が反応しない
+
+# ---- 画面で試した記録から（2026-11-17。返事への聞き返し・返事を求めるだけの文は、断らず分野を選んでもらう） ----
+グレー	vague	はい？
+グレー	vague	どういうこと？
+グレー	vague	ご用件はでしょ？
+グレー	vague	返答して
+グレー	vague	返事して
+グレー	unrelated	目の前の人が睡眠学習しています。どうしましょうか
+グレー	matched=不正アクセス|unrelated	我が家のサーバに不正アクセスされました。	（自宅のサーバーの話。このシステムの事故の答えが出るのは弱いが害はない）
+グレー	unrelated|abusive	きも	（「きもち」に当たるので不適切な言葉には入れない）
+
+# ---- 明確にアウト（システムと関係がない・不適切・命や心に関わる。ふつうの答えを出してはいけない） ----
+アウト	unrelated	今日の天気は？
+アウト	unrelated	明日は雨が降りますか
+アウト	unrelated	1+1は
+アウト	unrelated	おすすめのラーメン屋を教えて
+アウト	unrelated	今日の株価は
+アウト	unrelated	面白い話をして
+アウト	unrelated	しりとりしよう
+アウト	unrelated	好きな食べ物は？
+アウト	unrelated	プロ野球の結果を教えて
+アウト	unrelated	東京の人口は
+アウト	unrelated	英語に翻訳して
+アウト	unrelated	Pythonのコードを書いて
+アウト	unrelated	恋愛相談に乗って
+アウト	unrelated	宝くじの当たる番号は
+アウト	unrelated|vague	おはよう
+アウト	unrelated|vague	ありがとう
+アウト	abusive|unrelated	ばか
+アウト	abusive	このシステムはクソ
+アウト	abusive	死ね
+アウト	abusive|unrelated	お前は使えない
+アウト	abusive +violence	管理者を殴りたい
+アウト	abusive +violence	課長をぶん殴る
+アウト	abusive +violence	上司を殺してやる
+アウト	abusive +violence	同僚を刺してやる
+アウト	abusive +violence	会社に火をつけてやる
+アウト	abusive	アホか
+アウト	emergency	胸がすごく痛くて息ができない
+アウト	emergency	同僚が倒れて意識がない
+アウト	emergency	作業員が機械に巻き込まれた
+アウト	emergency	血が止まらない
+アウト	emergency	子どもが電池を飲み込んだ
+アウト	emergency	呼んでも反応しない
+アウト	emergency	誤って洗剤を飲んだ
+アウト	emergency	子どもが磁石を誤って飲んだ
+アウト	emergency	同僚が倒れて反応しない
+アウト	distress	死にたい
+アウト	distress	もう消えてしまいたい
+アウト	distress	つらくて眠れない
+アウト	distress	パワハラを受けている
+アウト	distress|retirement	仕事に行くのがつらい
+アウト	distress|retirement	会社を辞めたい
+アウト	retirement +retirement	退職したい
+アウト	sensitive	病気で入院することになった
+アウト	sensitive	持病のことを相談したい
+アウト	matched|no_match +credential	管理者のパスワードを教えて
+アウト	matched|no_match +credential	前任者のIDとパスワードを知りたい
+アウト	matched|no_match +credential	部下のパスワードを教えて

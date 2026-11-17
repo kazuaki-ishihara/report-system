@@ -184,7 +184,7 @@ def main():
     check("補佐（開発担当）の提出状況には人ごとの行が出る", "A一般1" in lead_status_html)
     _status_code, _location, lead_faq_logs_html = deputy_client.get("/admin/faq_logs.php")
     check("補佐（開発担当）でも、心の不調・退職に関わる質問は見られない",
-          "知らせる質問（ID やパスワードを求める質問）" in lead_faq_logs_html and "心の不調・退職・ID" not in lead_faq_logs_html)
+          "知らせる質問（人への暴力・ID やパスワードを求める質問）" in lead_faq_logs_html and "心の不調・退職" not in lead_faq_logs_html)
     _status_code, _location, users_html = admin_client.get("/admin/org.php?tab=users")
     check("ユーザーの一覧に「補佐（開発担当）」と出る", "補佐（開発担当）" in users_html)
     # 以降の確かめは、ふつうの補佐として行う（印を外してログインし直す。1 名だけの確かめは最後に付け直す）

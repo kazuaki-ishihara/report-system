@@ -31,6 +31,21 @@ function url(string $path): string
     return cfg('base_path') . $path;
 }
 
+/**
+ * CSS・JavaScript の URL に、ファイルの更新日時を付ける（`/css/app.css?v=1763341234`）。
+ * 更新して置き換えると URL が変わるので、利用者のブラウザーが前のファイルを使い続けない。
+ * ファイルの場所: ローカルは public/ の下、本番は app/ と同じ階層（公開範囲.txt）。見つからなければ付けない
+ */
+function asset_url(string $path): string
+{
+    foreach ([dirname(APP_DIR) . '/public' . $path, dirname(APP_DIR) . $path] as $assetFilePath) {
+        if (is_file($assetFilePath)) {
+            return url($path) . '?v=' . (string) filemtime($assetFilePath);
+        }
+    }
+    return url($path);
+}
+
 /** 自サイトの中だけに転送する */
 function redirect(string $path): void
 {

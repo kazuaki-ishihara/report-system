@@ -11,9 +11,9 @@ $flashes = take_flashes();
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <title><?= h($title) ?> - 月次報告</title>
-<link rel="stylesheet" href="<?= h(url('/css/app.css')) ?>">
+<link rel="stylesheet" href="<?= h(asset_url('/css/app.css')) ?>">
 <?php if ($userThemeStylesheetUrl !== ''): ?><link rel="stylesheet" href="<?= h($userThemeStylesheetUrl) ?>"><?php endif; ?>
-<script src="<?= h(url('/js/app.js')) ?>" defer></script>
+<script src="<?= h(asset_url('/js/app.js')) ?>" defer></script>
 </head>
 <body<?php if (maintenance_blocks($user ?? null) && ($user ?? null) !== null): ?> data-maintenance="1"<?php endif; ?> data-msgs="<?= h(json_encode(msg_js_map(), JSON_UNESCAPED_UNICODE)) ?>">
 <header class="app-header">

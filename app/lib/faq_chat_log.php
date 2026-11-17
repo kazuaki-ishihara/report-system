@@ -44,6 +44,7 @@ const FAQ_CHAT_LOG_DISTRESS_LABELS = [
     'concern'    => '心配な言葉',
     'retirement' => '退職に関わる質問',
     'credential' => 'ID・パスワードを求める質問',
+    'violence'   => '人への暴力を書いた文',
 ];
 
 /** 役割（コード => 表示名） */
@@ -91,7 +92,7 @@ const FAQ_CHAT_LOG_CREATE_SQL = "CREATE TABLE IF NOT EXISTS faq_chat_logs (
     category TEXT,
     result TEXT NOT NULL CHECK (result IN ('matched', 'no_match', 'vague', 'unrelated', 'abusive', 'distress', 'sensitive', 'emergency', 'retirement', 'category')),
     is_ignored INTEGER NOT NULL DEFAULT 0 CHECK (is_ignored IN (0, 1)),
-    distress_level TEXT CHECK (distress_level IN ('urgent', 'concern', 'retirement', 'credential')),
+    distress_level TEXT CHECK (distress_level IN ('urgent', 'concern', 'retirement', 'credential', 'violence')),
     handled_at TEXT,
     handled_by INTEGER REFERENCES users(id),
     shown_faq_ids TEXT NOT NULL DEFAULT '',
@@ -101,7 +102,7 @@ const FAQ_CHAT_LOG_CREATE_SQL = "CREATE TABLE IF NOT EXISTS faq_chat_logs (
     feedback_at TEXT
 )";
 /** 今の表の形の印（結果の決まりに、いちばん新しく足した種類）。無い表は作り直す */
-const FAQ_CHAT_LOG_SCHEMA_MARK = "'retirement', 'credential'";
+const FAQ_CHAT_LOG_SCHEMA_MARK = "'credential', 'violence'";
 const FAQ_CHAT_LOG_INDEX_SQL = 'CREATE INDEX IF NOT EXISTS ix_faq_chat_logs_asked_at ON faq_chat_logs (asked_at)';
 
 /** 心の不調・退職に関わる質問の知らせを受け、見られるか: システム管理者だけ（補佐は対象外。K-054） */
@@ -112,7 +113,7 @@ function faq_chat_log_can_receive_notice(array $user): bool
 
 /**
  * その人が知らせを受け、見られる理由（distress_level）の並び。
- * システム管理者: すべて。補佐: ID・パスワードを求める質問だけ（心の不調・退職は対象外。K-054・K-057）。ほか: なし。
+ * システム管理者: すべて。補佐: ID・パスワードを求める質問と人への暴力を書いた文（心の不調・退職は対象外。K-054・K-057）。ほか: なし。
  *
  * @return string[]
  */
@@ -121,7 +122,7 @@ function faq_chat_log_notice_levels(array $user): array
     if (is_admin($user)) {
         return array_keys(FAQ_CHAT_LOG_DISTRESS_LABELS);
     }
-    return is_admin_deputy($user) ? ['credential'] : [];
+    return is_admin_deputy($user) ? ['credential', 'violence'] : [];
 }
 
 /** 記録を見られるか: システム管理者と補佐（どちらも聞いた人を見られる。K-051） */
@@ -202,7 +203,7 @@ function faq_chat_log_set_feedback(int $logId, string $feedbackCode, ?int $feedb
 function faq_chat_log_unhandled_distress_counts(array $levels): array
 {
     faq_chat_log_ensure_table();
-    $countByLevel = ['urgent' => 0, 'concern' => 0, 'retirement' => 0, 'credential' => 0];
+    $countByLevel = ['urgent' => 0, 'concern' => 0, 'retirement' => 0, 'credential' => 0, 'violence' => 0];
     foreach (db_all('SELECT distress_level, COUNT(*) AS level_count FROM faq_chat_logs WHERE distress_level IS NOT NULL AND handled_at IS NULL GROUP BY distress_level') as $countRow) {
         if (isset($countByLevel[$countRow['distress_level']]) && in_array($countRow['distress_level'], $levels, true)) {
             $countByLevel[$countRow['distress_level']] = (int) $countRow['level_count'];

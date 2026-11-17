@@ -62,7 +62,7 @@ $faqQuestionText = static function (?int $faqId) use ($faqQuestionById): string 
   </div>
 
   <?php if ($canReceiveNotice): ?>
-  <h2 id="distress">知らせる質問（<?= is_admin($user) ? '心の不調・退職・ID やパスワードを求める質問' : 'ID やパスワードを求める質問' ?>）</h2>
+  <h2 id="distress">知らせる質問（<?= is_admin($user) ? '心の不調・退職・人への暴力・ID やパスワードを求める質問' : '人への暴力・ID やパスワードを求める質問' ?>）</h2>
   <p class="note">ID やパスワードを求める質問は、なりすましで聞き出そうとしているおそれがあります。聞いた人に心当たりがあるか確かめ、パスワードは教えないでください。</p>
   <p class="note">チャットに、命に関わる言葉や心配な言葉（つらい・限界・眠れない など）が入った文と、退職に関わる質問です。心の不調らしい文には、気づかいの言葉と「上司やシステム管理者に相談してください」を返しています。自分の退職の質問には、寄り添う言葉と「まず上司（課長）に相談してください」を返しています（手続きは示しません。部下の退職の手続きを聞く質問には、手続きの答えを返しています）。言葉だけで見分けているので、軽い言い方も入ります。内容を確かめ、必要なら本人の上司などと連携して対応し、「対応した」を押してください。健康に関わる情報なので、対応に必要な人の間だけで扱ってください。</p>
   <?php if (!$distressLogRowList): ?>
@@ -75,7 +75,7 @@ $faqQuestionText = static function (?int $faqId) use ($faqQuestionById): string 
         <tr>
           <td><?= h(display_datetime((string) $logRow['asked_at'])) ?></td>
           <td><?= h($askedUserText($logRow)) ?></td>
-          <td><span class="tag<?= in_array($logRow['distress_level'], ['urgent', 'credential'], true) ? ' tag-open' : ($logRow['distress_level'] === 'concern' ? ' tag-changed' : '') ?>"><?= h(FAQ_CHAT_LOG_DISTRESS_LABELS[(string) $logRow['distress_level']] ?? '') ?></span></td>
+          <td><span class="tag<?= in_array($logRow['distress_level'], ['urgent', 'credential', 'violence'], true) ? ' tag-open' : ($logRow['distress_level'] === 'concern' ? ' tag-changed' : '') ?>"><?= h(FAQ_CHAT_LOG_DISTRESS_LABELS[(string) $logRow['distress_level']] ?? '') ?></span></td>
           <td><?= h($logRow['question_text']) ?></td>
           <td>
             <?php if ($logRow['handled_at'] === null): ?>

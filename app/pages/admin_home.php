@@ -87,6 +87,9 @@ foreach ($adminMenuItemList as $adminMenuItem) {
         if ($distressRetirementCount > 0) {
             $statusList[] = ['text' => '心の不調・退職に関わる質問（未対応） ' . $distressRetirementCount . ' 件', 'isAttention' => true];
         }
+        if ($faqDistressCounts['violence'] > 0) {
+            $statusList[] = ['text' => '人への暴力を書いた文（未対応） ' . $faqDistressCounts['violence'] . ' 件', 'isAttention' => true];
+        }
         if ($faqDistressCounts['credential'] > 0) {
             $statusList[] = ['text' => 'ID・パスワードを求める質問（未対応） ' . $faqDistressCounts['credential'] . ' 件', 'isAttention' => true];
         }

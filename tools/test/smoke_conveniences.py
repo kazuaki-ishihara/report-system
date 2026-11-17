@@ -150,6 +150,18 @@ def main():
         check("J: 2 けた以上の数字が入った質問（%s）でもエラーにならない" % digit_text, status_code == 200 and json.loads(json_text).get("ok") is True, (status_code, json_text[:80]))
     _status_code, _location, json_text = member_client.get("/faq.php?format=json&q=" + urllib.parse.quote("ログインできない"))
     check("J: 中身のある質問（ログインできない）は聞き返さずに答える", json.loads(json_text)["vague"] is False and len(json.loads(json_text)["matches"]) >= 1)
+    # CSS・JavaScript の URL に更新日時を付ける（更新したあと、利用者のブラウザーが前のファイルを使い続けない。APP-093）
+    _status_code, _location, faq_page_html = member_client.get("/faq.php")
+    check("CSS・JavaScript の読み込みに更新日時が付く（app.css?v=・app.js?v=）",
+          re.search(r'href="[^"]*/css/app\.css\?v=\d+"', faq_page_html) is not None and re.search(r'src="[^"]*/js/app\.js\?v=\d+"', faq_page_html) is not None)
+    # 呼びかけだけ（「大変です。」）は「どういったご用件でしょうか。」と聞き返す。断らず、断った回数にも数えない
+    for opener_index in range(6):
+        _status_code, _location, json_text = member_client.get("/faq.php?format=json&q=" + urllib.parse.quote("大変です。"))
+    opener_answer = json.loads(json_text)
+    check("J: 「大変です。」は呼びかけとして聞き返し、6 回続けても断らない（返事をしなくならない）",
+          (opener_answer["opener"], opener_answer["unrelated"], opener_answer["ignored"], opener_answer["matches"]) == (True, False, False, []), json_text[:160])
+    _status_code, _location, json_text = member_client.get("/faq.php?format=json&q=" + urllib.parse.quote("大変です、ログインできません"))
+    check("J: 「大変です、ログインできません」は用件に答える", json.loads(json_text)["opener"] is False and len(json.loads(json_text)["matches"]) >= 1)
     # J セキュリティ: 分野「システムの管理」は管理者・補佐にだけ見せる。答えにシステムの内部の情報を書かない
     for other_client, other_name in [(member_client, "部下"), (kacho_client, "課長")]:
         _status_code, _location, json_text = other_client.get("/faq.php?format=json&category=admin")
@@ -189,6 +201,18 @@ def main():
     for credential_row_id in database.execute("SELECT id FROM faq_chat_logs WHERE distress_level = 'credential' AND handled_at IS NULL").fetchall():
         post_form(deputy_notice_client, "/admin/faq_logs.php", {"action": "distress_handled", "log_id": str(credential_row_id[0])})
     check("J: すべて対応すると、補佐のホームの知らせが消える", "ID・パスワードを求める質問があります" not in deputy_notice_client.get("/index.php")[2])
+    # J 人への暴力を書いた文は、断って、システム管理者と補佐の両方に知らせる（2026-11-17 指示）
+    violence_result = ask_chat_for_notice(member_client, "管理者を殴りたい")
+    violence_row = database.execute("SELECT result, distress_level FROM faq_chat_logs WHERE id = ?", (violence_result["log_id"],)).fetchone()
+    check("J: 人への暴力を書いた文は断り（不適切な表現）、答えを出さない", violence_result["abusive"] is True and violence_result["matches"] == [], json.dumps(violence_result, ensure_ascii=False)[:160])
+    check("J: 人への暴力を書いた文に、知らせる印（violence）を付ける", tuple(violence_row) == ("abusive", "violence"), violence_row)
+    check("J: 管理者のホームに、人への暴力を書いた文を知らせる", "人への暴力を書いた文があります" in admin_client.get("/index.php")[2])
+    check("J: 補佐のホームにも、人への暴力を書いた文を知らせる", "人への暴力を書いた文があります" in deputy_notice_client.get("/index.php")[2])
+    check("J: 部下のホームには、人への暴力の知らせを出さない", "人への暴力を書いた文があります" not in member_client.get("/index.php")[2])
+    status_code, _location, _page_html = post_form(deputy_notice_client, "/admin/faq_logs.php", {"action": "distress_handled", "log_id": str(violence_result["log_id"])})
+    check("J: 補佐が人への暴力の記録に「対応した」を押すと、知らせが消える",
+          database.execute("SELECT handled_at FROM faq_chat_logs WHERE id = ?", (violence_result["log_id"],)).fetchone()[0] is not None
+          and "人への暴力を書いた文があります" not in deputy_notice_client.get("/index.php")[2], status_code)
     distress_for_deputy = ask_chat_for_notice(member_client, "もう死にたい")
     status_code, _location, _page_html = post_form(deputy_notice_client, "/admin/faq_logs.php", {"action": "distress_handled", "log_id": str(distress_for_deputy["log_id"])})
     check("J: 補佐は、心の不調の記録には「対応した」を押せない（403）", status_code == 403, status_code)

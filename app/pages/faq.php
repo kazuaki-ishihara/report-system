@@ -74,52 +74,26 @@ $askErrorTextList = [];
  */
 function faq_answer_chat(array $user, array $faqList, string $searchQueryText, ?string $selectedCategory, string $screenCode): array
 {
-    $matchedFaqList = [];
-    $distressLevel = $selectedCategory === null ? faq_distress_level($searchQueryText) : '';
     if ($selectedCategory !== null) {
         $resultCode = 'category';
         $matchedFaqList = faq_in_category($faqList, $selectedCategory);
-    } elseif (faq_is_emergency($searchQueryText)) {
-        // 命・体の緊急の状態: 119 番を案内する（心の不調の言葉も入っていれば、下で知らせる）
-        $resultCode = 'emergency';
-    } elseif ($distressLevel !== '') {
-        $resultCode = 'distress';
-        // 心配な言葉で、ほかにはっきり知りたいことがあるときだけ、その答えも出す（「助けて、ログインできない」。「仕事を辞めたい」の「仕事」のような弱い当たりは出さない）
-        $matchedFaqList = $distressLevel === 'concern' ? faq_companion_matches(faq_strip_distress_words($searchQueryText), $faqList) : [];
-    } elseif (faq_is_retirement($searchQueryText) && !faq_is_about_subordinate($searchQueryText)) {
-        // 自分の退職: 手続きは示さず、寄り添って上司（課長）への相談を促す（部下の退職は、下で手続きの答えを探す。どちらも管理者に知らせる）
-        $resultCode = 'retirement';
-    } elseif (faq_is_sensitive($searchQueryText)) {
-        // 要配慮個人情報に触れる文: 寄り添う返事。ほかにはっきり知りたいことがあれば、その答えも出す（「入院するので報告が出せない」）
-        $resultCode = 'sensitive';
-        $matchedFaqList = faq_companion_matches(faq_strip_sensitive_words($searchQueryText), $faqList);
-    } elseif (faq_is_abusive($searchQueryText)) {
-        $resultCode = 'abusive';
-    } elseif (faq_is_vague($searchQueryText)) {
-        $resultCode = 'vague';
-    } elseif (faq_is_unrelated($searchQueryText, $faqList)) {
-        $resultCode = 'unrelated';
+        $distressLevel = '';
+        $notifyLevel = '';
     } else {
-        $matchedFaqList = faq_search($searchQueryText, $faqList);
-        $resultCode = $matchedFaqList ? 'matched' : 'no_match';
-        // 亡くなったと書かれたときだけ、いちばんの答えにお悔やみを添える（答えの文には書かない。逃げた・交代しただけかもしれないので決めつけない）
-        if ($matchedFaqList && faq_mentions_death($searchQueryText) && strpos((string) $matchedFaqList[0]['answer'], 'お悔やみ') === false) {
-            $matchedFaqList[0]['answer'] = '心よりお悔やみ申し上げます。' . "\n" . $matchedFaqList[0]['answer'];
-        }
+        // 入れた文の判定（判定の順は faq_classify_question()。自動入力検証 tools/test/faq_input_check.php も同じ関数を使う）
+        $classification = faq_classify_question($searchQueryText, $faqList);
+        $resultCode = $classification['code'];
+        $matchedFaqList = $classification['matches'];
+        $distressLevel = $classification['distressLevel'];
+        $notifyLevel = $classification['noticeLevel'];
     }
     $isRefused = $resultCode === 'abusive' || $resultCode === 'unrelated';
     $refusedCount = faq_count_unrelated($isRefused);   // 関係のある質問・分野を選んだときは 0 に戻る
     $isIgnored = $isRefused && $refusedCount >= FAQ_UNRELATED_IGNORE_COUNT;
     // 要配慮個人情報に触れる文・命や体の緊急の状態も、文は記録する（暗号化）。画面には出さない（faq_chat_log_display_text()。K-053・K-055。2026-11-16 指示）
     $loggedQuestionText = $selectedCategory !== null ? '' : $searchQueryText;
-    // 知らせる理由: 心の不調らしい文の段階 → ID・パスワードを求める質問（credential。K-057） → 退職に関わる質問（retirement。K-054）
-    $notifyLevel = $distressLevel;
-    if ($notifyLevel === '' && $selectedCategory === null && faq_is_credential_request($searchQueryText)) {
-        $notifyLevel = 'credential';
-    } elseif ($notifyLevel === '' && $selectedCategory === null && $resultCode !== 'abusive' && faq_is_retirement($searchQueryText)) {
-        $notifyLevel = 'retirement';
-    }
-    $logId = faq_chat_log_add($user, $screenCode, $loggedQuestionText, $selectedCategory, $resultCode,
+    // 呼びかけだけの文は、記録では「あいまい」として残す（記録の表の結果の種類は変えない）
+    $logId = faq_chat_log_add($user, $screenCode, $loggedQuestionText, $selectedCategory, $resultCode === 'opener' ? 'vague' : $resultCode,
         array_map('intval', array_column($matchedFaqList, 'id')), $isIgnored, $notifyLevel);
     return ['result' => $resultCode, 'ignored' => $isIgnored, 'distress_level' => $distressLevel, 'matches' => $matchedFaqList, 'log_id' => $logId];
 }
@@ -136,6 +110,7 @@ if (($_GET['format'] ?? '') === 'json') {
         'log_id'    => $chatAnswer['log_id'],
         'result'    => $chatAnswer['result'],
         'vague'     => $chatAnswer['result'] === 'vague',
+        'opener'    => $chatAnswer['result'] === 'opener',
         'unrelated' => $chatAnswer['result'] === 'unrelated',
         'abusive'   => $chatAnswer['result'] === 'abusive',
         'distress'  => $chatAnswer['distress_level'],

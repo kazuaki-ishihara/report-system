@@ -923,6 +923,12 @@
           addBubble('bot', M('その質問には返答できません。'));
           return;
         }
+        if (result.opener) {
+          // 呼びかけだけ（「大変です」）: 用件を聞き返す
+          addBubble('bot', M('どういったご用件でしょうか。'));
+          questionInput.focus();
+          return;
+        }
         if (result.vague) {
           addBubble('bot', M('どのことについて知りたいですか？　分野を選ぶか、「パスワード」「提出」「コメント」のように、知りたいことの言葉を入れてください。'));
           addCategoryChoices();
