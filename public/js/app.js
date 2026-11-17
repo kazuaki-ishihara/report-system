@@ -713,6 +713,7 @@
     if (askBlock && !askBlock.hasAttribute('data-has-error')) { askBlock.hidden = true; }
     var categoryRowTemplate = chatLog.querySelector('.chat-choices');   // サーバーが出した分野のボタンの並び（聞き返すときに写す）
     var lastQuestionText = '';
+    var shownFaqIdList = [];   // この会話で答えを出した質問の番号（「解決しない」のあと、同じ質問を出さない）
 
     function scrollToEnd() { chatLog.scrollTop = chatLog.scrollHeight; }
     function addBubble(speaker, text) {
@@ -758,6 +759,7 @@
       scrollToEnd();
     }
     function showAnswer(faqEntry) {
+      if (shownFaqIdList.indexOf(faqEntry.id) < 0) { shownFaqIdList.push(faqEntry.id); }
       var answerBubble = addBubble('bot', '');
       addTextLine(answerBubble, 'chat-question', 'Q. ' + faqEntry.question);
       addTextLine(answerBubble, 'chat-answer', faqEntry.answer);
@@ -803,6 +805,7 @@
         chatLog.appendChild(askBlock);
       }
       lastQuestionText = '';
+      shownFaqIdList = [];
       questionInput.value = '';
       chatLog.scrollTop = 0;
       questionInput.focus();
@@ -814,8 +817,41 @@
           sendFeedback(logId, 'solved', faqId);
           resetChat();
         } },
-        { label: M('解決しない'), onChoose: function () { sendFeedback(logId, 'unsolved', faqId); offerAsk(logId); } }
+        { label: M('解決しない'), onChoose: function () { sendFeedback(logId, 'unsolved', faqId); offerRelated(logId, faqId); } }
       ]);
+    }
+    /**
+     * 解決しないとき: そこで終えず、関係がありそうな質問を出す（G-25 §2.15）。
+     * 無いとき・「この中にない」を押したときは、くわしく聞き直す（offerNextSteps）
+     */
+    function offerRelated(logId, faqId) {
+      var waitingBubble = addBubble('bot', M('探しています…'));
+      waitingBubble.classList.add('chat-waiting');
+      var requestUrl = new URL(chatForm.action, window.location.href);
+      requestUrl.search = '?format=json&related=' + encodeURIComponent(String(faqId)) + '&exclude=' + encodeURIComponent(shownFaqIdList.join(','));
+      fetch(requestUrl.toString(), { credentials: 'same-origin', headers: { Accept: 'application/json' } })
+        .then(function (response) { return response.json(); })
+        .then(function (result) {
+          waitingBubble.remove();
+          var relatedList = (result && result.ok && result.matches) ? result.matches : [];
+          if (relatedList.length === 0) { offerNextSteps(logId); return; }
+          addBubble('bot', M('お役に立てず、すみません。関係がありそうな質問です。近いものはありますか？'));
+          addChoices(relatedList.map(function (faqEntry) {
+            return { label: faqEntry.question, onChoose: function () { addBubble('user', faqEntry.question); showAnswer(faqEntry); askSolved(logId, faqEntry.id); } };
+          }).concat([{ label: M('この中にない'), onChoose: function () { offerNextSteps(logId); } }]));
+        })
+        .catch(function () { waitingBubble.remove(); offerNextSteps(logId); });
+    }
+    /** 関係がありそうな質問でも解決しないとき: くわしく聞き直し、言葉を変える・分野から選ぶ・質問として送る（課長・確認者）の道を出す */
+    function offerNextSteps(logId) {
+      addBubble('bot', M('困っていることを、もう少しくわしく教えてください。「どの画面で」「何をしようとして」「どうなったか（出た文など）」を入れると、近い答えを探しやすくなります。'));
+      var retryChoice = { label: M('くわしく入れ直す'), onChoose: function () { questionInput.value = lastQuestionText; questionInput.focus(); } };
+      var categoryChoice = { label: M('分野から選ぶ'), onChoose: addCategoryChoices };
+      if (askRole === 'ask') {
+        addChoices([retryChoice, categoryChoice, { label: M('質問として送る'), onChoose: function () { offerAsk(logId); } }]);
+      } else {
+        addChoices([retryChoice, categoryChoice, { label: M('だれに聞けばよいか'), onChoose: function () { offerAsk(logId); } }]);
+      }
     }
     /** 答えが見つからないとき: 課長・確認者には送る欄（送ったことは、この記録に残す）、ほかの人には案内 */
     function offerAsk(logId) {
@@ -838,7 +874,7 @@
     function addQuestionChoices(faqEntryList, logId) {
       addChoices(faqEntryList.map(function (faqEntry) {
         return { label: faqEntry.question, onChoose: function () { addBubble('user', faqEntry.question); showAnswer(faqEntry); askSolved(logId, faqEntry.id); } };
-      }).concat([{ label: M('この中にない'), onChoose: function () { sendFeedback(logId, 'unsolved', null); offerAsk(logId); } }]));
+      }).concat([{ label: M('この中にない'), onChoose: function () { sendFeedback(logId, 'unsolved', null); offerNextSteps(logId); } }]));
     }
     /** サーバーに聞く（?format=json と、q か category。開いていた画面も付ける） */
     function fetchFaq(queryName, queryValue, onResult) {

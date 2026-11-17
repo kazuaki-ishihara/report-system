@@ -110,6 +110,19 @@ function faq_answer_chat(array $user, array $faqList, string $searchQueryText, ?
             'context' => $contextTopic, 'harassment' => $isHarassmentBySuperior];
 }
 
+// ---- 関係がありそうな質問（「解決しない」を押したとき。JavaScript が ?format=json&related=<番号>&exclude=<番号,...> で聞く。G-25 §2.15） ----
+if (($_GET['format'] ?? '') === 'json' && isset($_GET['related'])) {
+    $relatedBaseFaqId = input_id('related');
+    $excludedFaqIdList = array_values(array_filter(array_map('intval', explode(',', is_string($_GET['exclude'] ?? null) ? $_GET['exclude'] : '')), static function (int $faqId): bool { return $faqId > 0; }));
+    $relatedFaqList = faq_related_entries(faq_visible_entries(db_all('SELECT * FROM faq_entries ORDER BY sort_order, id'), $user), $relatedBaseFaqId, array_slice($excludedFaqIdList, 0, 50));
+    json_response([
+        'ok'      => true,
+        'matches' => array_map(static function (array $relatedFaqRow): array {
+            return ['id' => (int) $relatedFaqRow['id'], 'question' => (string) $relatedFaqRow['question'], 'answer' => (string) $relatedFaqRow['answer']];
+        }, $relatedFaqList),
+    ]);
+}
+
 // ---- チャットの答え（JavaScript が ?format=json&q= または ?format=json&category= で聞く。G-25 §2.1・§2.3・§2.6） ----
 if (($_GET['format'] ?? '') === 'json') {
     if ($searchQueryText === '' && $selectedCategory === null) {

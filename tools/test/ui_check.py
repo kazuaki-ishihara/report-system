@@ -333,6 +333,23 @@ def main():
         check("よくある質問で「解決した」を押すと、チャットを開いたときと同じ状態に戻る",
               after_solved_child_count == initial_child_count and has_initial_only and chosen_after_reset == 0, (initial_child_count, after_solved_child_count, has_initial_only, chosen_after_reset))
 
+        # ---- よくある質問（G-25 §2.15）: 「解決しない」を押すと、関係がありそうな質問を出し、「この中にない」でくわしく聞き直す ----
+        b.fill("#faq_search_query", "パスワードを忘れた")
+        b.click("#faq-chat form.faq-chat-input button[type=submit]")
+        time.sleep(1.5)
+        click_choice_js = "(function (labelText) { var buttons = Array.prototype.filter.call(document.querySelectorAll('#faq-chat .chat-choices button'), function (choiceButton) { return choiceButton.textContent === labelText && !choiceButton.disabled; }); buttons[buttons.length - 1].click(); })"
+        b.eval(click_choice_js + "('解決しない')")
+        time.sleep(1.5)
+        related_bubble_shown = b.eval("Array.prototype.some.call(document.querySelectorAll('#faq-chat .chat-bot'), function (bubble) { return bubble.textContent.indexOf('関係がありそうな質問です') >= 0; })")
+        shot("faq_unsolved_related")
+        check("よくある質問で「解決しない」を押すと、関係がありそうな質問を出す（そこで終えない）", related_bubble_shown)
+        b.eval(click_choice_js + "('この中にない')")
+        time.sleep(0.5)
+        next_step_labels = b.eval("(function () { var rows = document.querySelectorAll('#faq-chat .faq-chat-log > .chat-choices'); return Array.prototype.map.call(rows[rows.length - 1].querySelectorAll('button'), function (choiceButton) { return choiceButton.textContent; }); })()") or []
+        shot("faq_unsolved_next_steps")
+        check("「この中にない」を押すと、くわしく入れ直す・分野から選ぶ・質問として送る を出す",
+              "くわしく入れ直す" in next_step_labels and "分野から選ぶ" in next_step_labels and ("質問として送る" in next_step_labels or "だれに聞けばよいか" in next_step_labels), next_step_labels)
+
         # ---- 予備のコード（G-16）: スマートフォンの幅で「コピー」を押すと、1 つ 1 行でクリップボードに入る ----
         b.call("Browser.grantPermissions", {"origin": a.base, "permissions": ["clipboardReadWrite", "clipboardSanitizedWrite"]})
         b.mobile(True)

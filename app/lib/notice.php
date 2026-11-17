@@ -891,6 +891,46 @@ function faq_is_clarification(string $questionText): bool
     return $compactText === '' && trim(faq_normalize_text($questionText)) !== '';
 }
 
+/** 「解決しない」のあとに出す、関係がありそうな質問の数 */
+const FAQ_RELATED_MAX_COUNT = 5;
+
+/**
+ * 関係がありそうな質問（「解決しない」を押したとき。G-25 §2.15）。
+ * 答えた質問の文で近い質問を探し、足りなければ同じ分野の質問で補う。出した質問（$excludedFaqIdList）は除く。
+ *
+ * @param array<int, array<string, mixed>> $faqList 見せてよい質問
+ * @param int[] $excludedFaqIdList
+ * @return array<int, array<string, mixed>>
+ */
+function faq_related_entries(array $faqList, int $baseFaqId, array $excludedFaqIdList): array
+{
+    $baseFaqRow = null;
+    foreach ($faqList as $faqRow) {
+        if ((int) $faqRow['id'] === $baseFaqId) {
+            $baseFaqRow = $faqRow;
+            break;
+        }
+    }
+    if ($baseFaqRow === null) {
+        return [];
+    }
+    $excludedIdSet = array_flip(array_merge([$baseFaqId], array_map('intval', $excludedFaqIdList)));
+    $relatedFaqList = [];
+    $candidateList = array_merge(faq_search((string) $baseFaqRow['question'], $faqList), faq_in_category($faqList, (string) $baseFaqRow['category']));
+    foreach ($candidateList as $candidateRow) {
+        $candidateId = (int) $candidateRow['id'];
+        if (isset($excludedIdSet[$candidateId])) {
+            continue;
+        }
+        $excludedIdSet[$candidateId] = true;
+        $relatedFaqList[] = $candidateRow;
+        if (count($relatedFaqList) >= FAQ_RELATED_MAX_COUNT) {
+            break;
+        }
+    }
+    return $relatedFaqList;
+}
+
 /** 会話を終える（「解決した」を押したとき。次の発言から新しい会話） */
 function faq_conversation_reset(): void
 {

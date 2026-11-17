@@ -354,6 +354,23 @@ def main():
     after_solved_result = ask_chat(leader_client, "締め日はいつ")
     solved_conversation_rows = database.execute("SELECT conversation_id FROM faq_chat_logs WHERE id IN (?, ?) ORDER BY id",
                                                 (chat_result["log_id"], after_solved_result["log_id"])).fetchall()
+    # 「解決しない」のあと: 関係がありそうな質問（G-25 §2.15）
+    base_faq_id = chat_result["matches"][0]["id"]
+    log_count_before_related = database.execute("SELECT COUNT(*) FROM faq_chat_logs").fetchone()[0]
+    _status_code, _location, related_json_text = leader_client.get("/faq.php?format=json&related=%d&exclude=%d" % (base_faq_id, base_faq_id))
+    related_result = json.loads(related_json_text)
+    related_id_list = [related_row["id"] for related_row in related_result.get("matches", [])]
+    check("J: 解決しない: 関係がありそうな質問を出す（答えた質問は除く・5 件まで）",
+          related_result.get("ok") is True and 0 < len(related_id_list) <= 5 and base_faq_id not in related_id_list, related_id_list)
+    _status_code, _location, related_excluded_json_text = leader_client.get("/faq.php?format=json&related=%d&exclude=%s" % (base_faq_id, ",".join(str(related_id) for related_id in related_id_list)))
+    check("J: 解決しない: 出した質問は、次の関係がありそうな質問から除く",
+          not (set(related_id_list) & {related_row["id"] for related_row in json.loads(related_excluded_json_text).get("matches", [])}))
+    check("J: 解決しない: 関係がありそうな質問を出しても、チャットの記録は増やさない",
+          database.execute("SELECT COUNT(*) FROM faq_chat_logs").fetchone()[0] == log_count_before_related)
+    admin_only_faq_row = database.execute("SELECT id FROM faq_entries WHERE category = 'admin' ORDER BY id LIMIT 1").fetchone()
+    if admin_only_faq_row is not None:
+        _status_code, _location, hidden_related_json_text = leader_client.get("/faq.php?format=json&related=%d" % admin_only_faq_row[0])
+        check("J: 解決しない: 見られない分野の質問を元にしても、何も出さない", json.loads(hidden_related_json_text).get("matches") == [])
     check("J: 「解決した」のあとの発言は、新しい会話になる（チャットを開いたときの状態に戻る）",
           len(solved_conversation_rows) == 2 and solved_conversation_rows[1][0] != "" and solved_conversation_rows[0][0] != solved_conversation_rows[1][0], solved_conversation_rows)
     _status_code, _location, member_faq_html = member_client.get("/faq.php")
