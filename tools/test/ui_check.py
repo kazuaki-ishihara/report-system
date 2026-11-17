@@ -17,7 +17,7 @@ import time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import lib_http  # noqa: E402
 from cdp import Browser  # noqa: E402
-from lib_http import summary, totp  # noqa: E402
+from lib_http import section, summary  # noqa: E402
 
 # 見学（--slow）のとき、確かめた結果を画面の字幕にも出すためのブラウザー
 WATCHED_BROWSER = {"browser": None}
@@ -58,7 +58,6 @@ def main():
     today = datetime.date.today()
     prev = (today.replace(day=1) - datetime.timedelta(days=1)).strftime("%Y-%m")
     shot_no = [0]
-    used = {}
 
     b = Browser(headless=not a.show, attach_port=a.browser_port or None)
     if a.slow > 0:
@@ -77,12 +76,8 @@ def main():
         b.fill("#password", U[login_id]["password"])
         b.click("form.form button[type=submit]", navigate=True)
         if b.exists("#code"):
-            # 同じ人の同じ 30 秒区間のコードは 2 回使えない（アプリの仕様）ので、次の区間まで待つ
-            step = int(time.time() // 30)
-            if used.get(login_id) == step:
-                time.sleep(31 - time.time() % 30)
-            b.fill("#code", totp(U[login_id]["totp"]))
-            used[login_id] = int(time.time() // 30)
+            # 同じ人の使った区間のコードは 2 回使えない（アプリの仕様）。前後 1 区間を順に使い、待たずに済ませる
+            b.fill("#code", lib_http.next_login_code(login_id, U[login_id]["totp"]))
             b.click("form.form button[type=submit]", navigate=True)
         return "ホーム" in (b.eval("document.title") or "")
 
@@ -91,6 +86,7 @@ def main():
 
     try:
         # ---- スマートフォンの幅で部下が報告を作る ----
+        section("G-04", "スマートフォンの幅で部下が報告を作る")
         b.mobile(True)
         check("部下がログインできる（2 段階認証を含む）", login("ippan_a1"))
         shot("home_mobile")
@@ -167,6 +163,7 @@ def main():
         check("写したあとは、離れるときの確認を出す", b.eval(LEAVE_PROBE) is True)
 
         # ---- 確認者がコメントし、チェックする（スマートフォン） ----
+        section("G-05", "確認者がコメントし、チェックする（スマートフォン）")
         # 前提: 課のコメントの定型文（G-19）を 1 つ入れておく（画面の確認用。この準備だけ DB に書く）
         setup_database = sqlite3.connect(a.db, timeout=10, isolation_level=None)
         department_a_id = setup_database.execute("SELECT department_id FROM users WHERE id = ?", (U["ippan_a1"]["id"],)).fetchone()[0]
@@ -201,6 +198,7 @@ def main():
         check("返信できる", "返信しました" in b.text() and "回答あり" in b.text())
 
         # ---- PC の幅で課長が横並び・項目マスタ・出力を使う ----
+        section("G-09", "PC の幅で課長が横並び・項目マスタ・出力を使う")
         b.mobile(False)
         check("課長がログインできる", login("kacho_a"))
         b.goto(a.base + "/status/compare.php?period=" + prev)
@@ -259,6 +257,7 @@ def main():
         b.mobile(False)
 
         # ---- 管理画面（管理者） ----
+        section("G-21", "管理画面（管理者）")
         check("管理者がログインできる", login("admin01"))
         check("課のない管理者のホームには、報告の欄の代わりに管理画面への入口が出る",
               "今月の報告を作る" not in b.text() and "所属の課が設定されていません" not in b.text() and b.exists(".shortcut-list"))
@@ -279,6 +278,7 @@ def main():
         check("管理画面の上に道しるべ（管理から組織・ユーザーへ）が出る", b.exists(".admin-nav .breadcrumb") and "組織・ユーザー" in b.eval("document.querySelector('.admin-nav .breadcrumb').textContent"))
 
         # ---- 課長の「課の管理」（G-23。K-042・K-039） ----
+        section("G-23", "課長の「課の管理」（G-23。K-042・K-039）")
         check("課長がログインできる（課の管理）", login("kacho_a"))
         b.goto(a.base + "/admin/department.php?dept=1")
         shot("department_manage")
@@ -298,21 +298,23 @@ def main():
         check("管理のトップに、管理の仕事ごとのカードが出る", b.eval("document.querySelectorAll('.admin-card').length") >= 4)
 
         # ---- 文字の字体（共通編）: BIZ UDゴシックで統一し、system-ui は使わない ----
+        section("共通", "文字の字体（共通編）: BIZ UDゴシックで統一し、system-ui は使わない")
         body_font = b.eval("getComputedStyle(document.body).fontFamily") or ""
         check("本文の字体は BIZ UDゴシック（system-ui を使わない）", body_font.startswith('"BIZ UDGothic"') and "system-ui" not in body_font, body_font)
         button_font = b.eval("getComputedStyle(document.querySelector('button')).fontFamily") or ""
         check("ボタンも本文と同じ字体", button_font == body_font, button_font)
 
         # ---- よくある質問（G-25）: 押した見た目は、最後に押した分野のボタン 1 つだけ ----
+        section("G-25", "よくある質問（G-25）: 押した見た目は、最後に押した分野のボタン 1 つだけ")
         b.goto(a.base + "/faq.php")
         if b.exists('button[value="import_standard"]'):
             b.click('button[value="import_standard"]', navigate=True)
             b.goto(a.base + "/faq.php")
         category_link_selector = "#faq-chat .faq-chat-log > .chat-choices a[data-category]"
         b.click("%s:nth-child(1)" % category_link_selector)
-        time.sleep(1)
+        b.wait_until("!document.querySelector('#faq-chat .chat-waiting')")
         b.click("%s:nth-child(2)" % category_link_selector)
-        time.sleep(1)
+        b.wait_until("!document.querySelector('#faq-chat .chat-waiting')")
         chosen_count = b.eval("document.querySelectorAll('#faq-chat a[data-category].chosen').length")
         second_chosen = b.eval("document.querySelector('%s:nth-child(2)').classList.contains('chosen')" % category_link_selector)
         shot("faq_category_chosen")
@@ -323,9 +325,9 @@ def main():
         initial_child_count = b.eval("document.querySelectorAll('#faq-chat .faq-chat-log > :not([hidden])').length")
         b.fill("#faq_search_query", "パスワードを忘れた")
         b.click("#faq-chat form.faq-chat-input button[type=submit]")
-        time.sleep(1.5)
+        b.wait_until("Array.prototype.some.call(document.querySelectorAll('#faq-chat .chat-choices button'), function (choiceButton) { return choiceButton.textContent === '解決した'; })")
         b.eval("Array.prototype.find.call(document.querySelectorAll('#faq-chat .chat-choices button'), function (choiceButton) { return choiceButton.textContent === '解決した'; }).click()")
-        time.sleep(0.5)
+        b.wait_until("!document.querySelector('#faq-chat .chat-choices:not(.chat-initial)')")
         after_solved_child_count = b.eval("document.querySelectorAll('#faq-chat .faq-chat-log > :not([hidden])').length")
         has_initial_only = b.eval("Array.prototype.every.call(document.querySelectorAll('#faq-chat .faq-chat-log > :not([hidden])'), function (childElement) { return childElement.classList.contains('chat-initial'); })")
         chosen_after_reset = b.eval("document.querySelectorAll('#faq-chat a[data-category].chosen').length")
@@ -336,21 +338,22 @@ def main():
         # ---- よくある質問（G-25 §2.15）: 「解決しない」を押すと、関係がありそうな質問を出し、「この中にない」で詳しく聞き直す ----
         b.fill("#faq_search_query", "パスワードを忘れた")
         b.click("#faq-chat form.faq-chat-input button[type=submit]")
-        time.sleep(1.5)
+        b.wait_until("Array.prototype.some.call(document.querySelectorAll('#faq-chat .chat-choices button'), function (choiceButton) { return choiceButton.textContent === '解決しない' && !choiceButton.disabled; })")
         click_choice_js = "(function (labelText) { var buttons = Array.prototype.filter.call(document.querySelectorAll('#faq-chat .chat-choices button'), function (choiceButton) { return choiceButton.textContent === labelText && !choiceButton.disabled; }); buttons[buttons.length - 1].click(); })"
         b.eval(click_choice_js + "('解決しない')")
-        time.sleep(1.5)
+        b.wait_until("Array.prototype.some.call(document.querySelectorAll('#faq-chat .chat-bot'), function (bubble) { return bubble.textContent.indexOf('関係がありそうな質問です') >= 0 || bubble.textContent.indexOf('もう少し詳しく') >= 0; })")
         related_bubble_shown = b.eval("Array.prototype.some.call(document.querySelectorAll('#faq-chat .chat-bot'), function (bubble) { return bubble.textContent.indexOf('関係がありそうな質問です') >= 0; })")
         shot("faq_unsolved_related")
         check("よくある質問で「解決しない」を押すと、関係がありそうな質問を出す（そこで終えない）", related_bubble_shown)
         b.eval(click_choice_js + "('この中にない')")
-        time.sleep(0.5)
+        b.wait_until("Array.prototype.some.call(document.querySelectorAll('#faq-chat .chat-choices button'), function (choiceButton) { return choiceButton.textContent === '分野から選ぶ' && !choiceButton.disabled; })")
         next_step_labels = b.eval("(function () { var rows = document.querySelectorAll('#faq-chat .faq-chat-log > .chat-choices'); return Array.prototype.map.call(rows[rows.length - 1].querySelectorAll('button'), function (choiceButton) { return choiceButton.textContent; }); })()") or []
         shot("faq_unsolved_next_steps")
         check("「この中にない」を押すと、詳しく入れ直す・分野から選ぶ・質問として送る を出す",
               "詳しく入れ直す" in next_step_labels and "分野から選ぶ" in next_step_labels and ("質問として送る" in next_step_labels or "だれに聞けばよいか" in next_step_labels), next_step_labels)
 
         # ---- 予備のコード（G-16）: スマートフォンの幅で「コピー」を押すと、1 つ 1 行でクリップボードに入る ----
+        section("G-16", "予備のコード（G-16）: スマートフォンの幅で「コピー」を押すと、1 つ 1 行でクリップボードに入る")
         b.call("Browser.grantPermissions", {"origin": a.base, "permissions": ["clipboardReadWrite", "clipboardSanitizedWrite"]})
         b.mobile(True)
         b.goto(a.base + "/account.php?tab=codes")
@@ -403,6 +406,7 @@ def main():
         check("さくらを選ぶと見出しに花が付く", b.eval("getComputedStyle(document.querySelector('.app-title'), '::before').content").find("🌸") != -1)
 
         # ---- 画面の作りの確認 ----
+        section("共通", "画面の作りの確認")
         csp = [e for e in b.errors if "Content Security Policy" in e or "Refused" in e]
         check("CSP の違反がない", not csp, csp[:3])
         js = [e for e in b.errors if e.startswith("JS")]

@@ -13,7 +13,7 @@ import sqlite3
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from lib_http import check, csrf, login, rkey, summary  # noqa: E402
+from lib_http import check, csrf, login, rkey, section, summary  # noqa: E402
 
 
 def month_shift(ym, n):
@@ -49,6 +49,7 @@ def main():
     a1 = login(a.base, "ippan_a1", U["ippan_a1"])
 
     # ---- 前提: 2 か月前（項目を多めに）と前月の報告を提出 ----
+    section("G-04", "前提: 2 か月前（項目を多めに）と前月の報告を提出")
     s, _, body = a1.get("/reports/edit.php?period=" + pm2)
     form = {"csrf_token": csrf(body), "request_key": rkey(body), "period": pm2, "action": "submit",
             "b[0][project]": str(P["P-0001"]), "b[0][f][%d]" % F["phase"]: "requirements", "b[0][f][%d]" % F["progress"]: "delayed",

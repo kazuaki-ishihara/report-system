@@ -19,7 +19,7 @@ import sqlite3
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from lib_http import check, csrf, login, summary  # noqa: E402
+from lib_http import check, csrf, login, section, summary  # noqa: E402
 
 REQUEST_TITLE = "提出状況の色分けをしてほしい"
 REQUEST_BODY = "提出済みと未作成が同じ色で、ぱっと見で分かりません。\n色を分けてください。"
@@ -54,6 +54,7 @@ def main():
     deputy_client = login(arguments.base, "hosa01", user_info_by_login_id["hosa01"])
 
     # ---- 出す ----
+    section("G-22", "出す")
     _status_code, _location, kacho_home_html = kacho_client.get("/index.php")
     check("課長のメニューに「要望・依頼」", "/requests/index.php" in kacho_home_html)
     status_code, request_id, _page_html = create_request(kacho_client, REQUEST_TITLE, REQUEST_BODY)

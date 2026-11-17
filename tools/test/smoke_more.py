@@ -17,7 +17,7 @@ import sys
 import zipfile
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from lib_http import check, csrf, login, rkey, summary  # noqa: E402
+from lib_http import check, csrf, login, rkey, section, summary  # noqa: E402
 
 
 def main():
@@ -41,6 +41,7 @@ def main():
         return d
 
     # ---- 前月の報告を提出 → 当月は「変更なし」で提出 ----
+    section("G-04", "前月の報告を提出 → 当月は「変更なし」で提出")
     a1 = login(a.base, "ippan_a1", U["ippan_a1"])
     s, _, body = a1.get("/reports/edit.php?period=" + prev)
     check("前月の報告がないときは「変更なし」が出ない", 'value="unchanged"' not in body)   # 画面の使い方の文にも同じ言葉があるので、ボタンで見る
@@ -62,6 +63,7 @@ def main():
     check("自分の報告一覧に 2 か月分", s == 200 and body.count("/reports/view.php?id=") >= 2, s)
 
     # ---- 提出状況 ----
+    section("G-08", "提出状況")
     kacho = login(a.base, "kacho_a", U["kacho_a"])
     s, _, body = kacho.get("/status/index.php?period=%s&dept=%d" % (cur, json.load(open(os.path.join(here, "output_dev_users.json"), encoding="utf-8"))["dept_a"]))
     check("提出状況が開ける", s == 200 and "A一般1" in body and "A一般2" in body, s)
@@ -75,6 +77,7 @@ def main():
     check("別の課の提出状況は開けない（403）", s == 403, s)
 
     # ---- 横並び・まとめ ----
+    section("G-09", "横並び・まとめ")
     leader = login(a.base, "leader_a", U["leader_a"])
     s, _, body = leader.get("/status/compare.php?period=" + prev)
     check("横並びに案件と選択肢の表示名", s == 200 and "P-0001" in body and "製造・単体" in body, s)
@@ -91,6 +94,7 @@ def main():
     check("まとめに終了が近い案件・人員の動き", "終了が近い案件（1件）" in body and "人員の動きがある現場（1件）" in body)
 
     # ---- 臨時の調査 ----
+    section("G-11", "臨時の調査")
     s, loc, body = kacho.get("/surveys/survey_edit.php")
     due = (today + datetime.timedelta(days=3)).isoformat()
     s, loc, _ = kacho.post("/surveys/survey_edit.php", {"csrf_token": csrf(body), "request_key": rkey(body), "action": "save_meta",
@@ -113,6 +117,7 @@ def main():
     s, _, _ = kacho.post("/surveys/survey_edit.php?id=%d" % sid, {"csrf_token": csrf(body), "request_key": rkey(body), "action": "add_custom", "q_label": "x", "q_type": "radio", "q_options": "a", "q_conf": "normal"})
     check("公開後は質問を足せない", s == 400, s)
     s, _, home = a1.get("/index.php")
+    section("G-07", "臨時の調査への回答")
     check("対象者のホームに臨時の調査", "AI の利用状況" in home)
     s, _, ab = a1.get("/surveys/answer.php?id=%d" % sid)
     check("依頼元と結果の扱いが表示される", "経営企画" in ab and "集計のみ" in ab)
@@ -125,11 +130,13 @@ def main():
     check("回答できる", s == 303, (s, loc))
     s, _, _ = b1.get("/surveys/answer.php?id=%d" % sid)
     check("対象外の人は回答画面を開けない（404）", s == 404, s)
+    section("G-11", "臨時の調査の結果")
     s, _, rb = kacho.get("/surveys/result.php?id=%d" % sid)
     check("結果に回答 1/", "回答 <strong>1/" in rb, s)
     check("未回答者が出る", "A一般2" in rb)
 
     # ---- 出力 ----
+    section("G-10", "出力")
     s, _, eb = kacho.get("/export/index.php")
     base = {"csrf_token": csrf(eb), "type": "report", "dept": "1", "from": prev, "to": prev, "content": "both", "free": "1"}
     s, _, _ = kacho.post("/export/index.php", dict(base, format="xlsx"))
@@ -161,6 +168,7 @@ def main():
     check("出力が記録される", n >= 4, n)
 
     # ---- 記録・削除データ ----
+    section("G-15", "記録・削除データ")
     a2 = login(a.base, "ippan_a2", U["ippan_a2"])
     s, _, body = a2.get("/reports/edit.php?period=" + prev)
     f2 = {"csrf_token": csrf(body), "request_key": rkey(body), "period": prev, "action": "draft"}

@@ -18,7 +18,7 @@ import sqlite3
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from lib_http import Client, check, csrf, login, summary  # noqa: E402
+from lib_http import Client, check, csrf, login, section, summary  # noqa: E402
 
 
 def main():
@@ -52,6 +52,7 @@ def main():
     admin_client = login(arguments.base, "admin01", user_info_by_login_id["admin01"])
 
     # ---- 代行できる管理の画面 ----
+    section("G-21", "代行できる管理の画面")
     for path in ["/admin/index.php", "/admin/org.php?tab=departments", "/admin/org.php?tab=users", "/admin/projects.php",
                  "/admin/fields.php", "/admin/messages.php", "/admin/logs.php", "/admin/trash.php",
                  "/admin/user_edit.php?id=%d" % user_id_of("ippan_a1")]:
@@ -62,6 +63,7 @@ def main():
           all(label in menu_html for label in ["組織・ユーザー", "案件の管理", "記録・削除データ", "メッセージ"]))
 
     # ---- 個々の情報は見られない ----
+    section("共通", "個々の情報は見られない")
     report_id = database.execute(
         "INSERT INTO report_records (user_id, department_id, period, status, revision, submitted_at, created_at, updated_at)"
         " VALUES (?, ?, ?, 'submitted', 0, datetime('now'), datetime('now'), datetime('now'))",
@@ -96,6 +98,7 @@ def main():
     check("管理者の削除データには中身の一覧が出る（今のまま）", "A一般1" in admin_trash_html)
 
     # ---- 管理者・補佐の利用者と役は変えられない ----
+    section("G-14", "管理者・補佐の利用者と役は変えられない")
     status_code, _location, _page_html = deputy_client.get("/admin/user_edit.php?id=%d" % user_id_of("admin01"))
     check("補佐は管理者の利用者を開けない", status_code == 403, status_code)
     status_code, _location, _page_html = deputy_client.get("/admin/user_edit.php?id=%d" % user_id_of("hosa01"))
@@ -115,6 +118,7 @@ def main():
     check("補佐は管理者の仮のパスワードを発行できない", status_code == 403, status_code)
 
     # ---- 予備のコードの初期化（管理者・補佐。本人がコードをメール・チャットに貼った、などのとき） ----
+    section("G-14", "予備のコードの初期化（管理者・補佐。本人がコードをメール・チャットに貼った、などのとき）")
     def unused_backup_code_count(login_id):
         return database.execute("SELECT COUNT(*) FROM user_backup_codes WHERE user_id = ? AND used_at IS NULL", (user_id_of(login_id),)).fetchone()[0]
 
@@ -158,6 +162,7 @@ def main():
     check("2 段階認証が未設定の人には、予備のコードの初期化を出さない", 'value="reset_backup_codes"' not in user_edit_html and "予備のコード</span><span>—" in user_edit_html)
 
     # ---- 補佐（開発担当。K-059）: 補佐のうち 1 名だけ、管理者・補佐の予備のコードも初期化できる ----
+    section("G-14", "補佐（開発担当。K-059）: 補佐のうち 1 名だけ、管理者・補佐の予備のコードも初期化できる")
     status_code, _location, _page_html = save_user(deputy_client, "ippan_a1", {"is_admin_deputy_lead": "1"})
     check("補佐は、補佐（開発担当）の印を付けられない",
           database.execute("SELECT is_admin_deputy_lead FROM users WHERE id = ?", (user_id_of("ippan_a1"),)).fetchone()[0] == 0, status_code)
@@ -202,6 +207,7 @@ def main():
     check("補佐の CSV で管理者の行を変えようとすると、反映できない", "管理者と補佐の利用者は、管理者だけが変えられます" in preview_html)
 
     # ---- 補佐としての記録と、管理者への知らせ ----
+    section("G-15", "補佐としての記録と、管理者への知らせ")
     deputy_log_count = database.execute("SELECT COUNT(*) FROM access_logs WHERE user_id = ? AND acted_as_deputy = 1", (user_id_of("hosa01"),)).fetchone()[0]
     check("補佐の管理の操作は「補佐として」記録する", deputy_log_count >= 3, deputy_log_count)
     _status_code, _location, admin_home_html = admin_client.get("/admin/index.php")
@@ -210,6 +216,7 @@ def main():
     check("補佐の管理のトップには、補佐の操作の札を出さない", "補佐の操作（7 日）" not in deputy_home_html)
 
     # ---- 付け外しは管理者だけ。最大 3 名、管理者と兼ねない ----
+    section("G-14", "付け外しは管理者だけ。最大 3 名、管理者と兼ねない")
     status_code, _location, _page_html = save_user(admin_client, "ippan_b1", {"is_admin_deputy": "1"})
     check("管理者は補佐を付けられる（2 人目）", database.execute("SELECT is_admin_deputy FROM users WHERE id = ?", (user_id_of("ippan_b1"),)).fetchone()[0] == 1, status_code)
     save_user(admin_client, "ippan_a2", {"is_admin_deputy": "1"})

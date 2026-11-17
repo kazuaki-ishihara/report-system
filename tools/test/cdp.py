@@ -319,6 +319,18 @@ class Browser:
             raise RuntimeError("JS error: " + str(r["exceptionDetails"].get("exception", {}).get("description", r["exceptionDetails"])))
         return r.get("result", {}).get("value")
 
+    def wait_until(self, js_condition, timeout=10):
+        """JavaScript の条件が true になるまで待つ（決まった秒数を待つより速く、遅い端末でも外れない）。なれば True"""
+        end = time.time() + timeout
+        while time.time() < end:
+            try:
+                if self.eval(js_condition) is True:
+                    return True
+            except Exception:  # noqa: BLE001
+                pass
+            time.sleep(0.1)
+        return False
+
     def wait_load(self, timeout=20):
         end = time.time() + timeout
         while time.time() < end:

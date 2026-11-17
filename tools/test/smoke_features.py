@@ -26,7 +26,7 @@ import sys
 import urllib.parse
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from lib_http import check, csrf, login, rkey, summary  # noqa: E402
+from lib_http import check, csrf, login, rkey, section, summary  # noqa: E402
 
 
 def shift_month(year_month_text, month_offset):
@@ -78,6 +78,7 @@ def main():
     # ================================================================
     # G-08 「変更なし」の報告のまとめてチェック
     # ================================================================
+    section("G-08", "G-08 「変更なし」の報告のまとめてチェック")
     member_a1_client = login(arguments.base, "ippan_a1", user_info_by_login_id["ippan_a1"])
     member_a2_client = login(arguments.base, "ippan_a2", user_info_by_login_id["ippan_a2"])
     for member_client in (member_a1_client, member_a2_client):
@@ -137,6 +138,7 @@ def main():
     # ================================================================
     # G-04 過去の報告から 1 案件だけ写す（課 B の人。案件 P-0003・P-0004）
     # ================================================================
+    section("G-04", "G-04 過去の報告から 1 案件だけ写す（課 B の人。案件 P-0003・P-0004）")
     member_b1_client = login(arguments.base, "ippan_b1", user_info_by_login_id["ippan_b1"])
     status_code, _location, edit_html = member_b1_client.get("/reports/edit.php?period=" + previous_month)
     member_b1_client.post("/reports/save.php", {
@@ -177,6 +179,7 @@ def main():
     # ================================================================
     # G-04・G-05 前月との差分の表示
     # ================================================================
+    section("G-05", "G-04・G-05 前月との差分の表示")
     # A一般2: 前月の報告に「限定」の項目（人員の動きの詳細）を足しておく。当月は提出後にフェーズを変えてある
     status_code, _location, edit_html = member_a2_client.get("/reports/edit.php?period=" + previous_month)
     member_a2_client.post("/reports/save.php", {
@@ -206,6 +209,7 @@ def main():
     # ================================================================
     # G-18 コメントの一覧
     # ================================================================
+    section("G-18", "G-18 コメントの一覧")
     report_a2_project_block_id = database.execute("SELECT id FROM report_projects WHERE report_id = ? ORDER BY id LIMIT 1", (report_a2_id,)).fetchone()[0]
     status_code, _location, view_html = leader_client.get("/reports/view.php?id=%d" % report_a2_id)
     status_code, _location, _page_html = leader_client.post("/reports/act.php", {
@@ -236,6 +240,7 @@ def main():
     # ================================================================
     # G-19 コメントの定型文（リーダーを確認者から外す前に確かめる）
     # ================================================================
+    section("G-19", "G-19 コメントの定型文（リーダーを確認者から外す前に確かめる）")
     templates_path = "/admin/comment_templates.php?scope=department&dept=%d" % department_a_id
 
     def post_template(client, action, body_text=None, template_id=None):
@@ -269,6 +274,7 @@ def main():
     check("課長でない確認者は課の定型文を開けない（403）", status_code == 403, status_code)
 
     # ---- K-014 自分だけの定型文 ----
+    section("G-19", "K-014 自分だけの定型文")
     personal_templates_path = "/admin/comment_templates.php?scope=mine"
     status_code, _location, personal_html = leader_client.get(personal_templates_path)
     check("確認者は自分の定型文の画面を開ける", status_code == 200 and "自分だけが使う定型文" in personal_html, status_code)
@@ -308,6 +314,7 @@ def main():
     # ================================================================
     # G-20 検索
     # ================================================================
+    section("G-20", "G-20 検索")
     def search_path(**condition_values):
         return "/reports/search.php?" + urllib.parse.urlencode(dict({"search": "1", "from": shift_month(current_month, -3), "to": current_month}, **condition_values))
 
@@ -351,6 +358,7 @@ def main():
     # ================================================================
     # G-12 項目の追加: コードの自動付与・表示の条件のチェックボックス
     # ================================================================
+    section("G-12", "G-12 項目の追加: コードの自動付与・表示の条件のチェックボックス")
     field_edit_path = "/admin/field_edit.php?dept=%d" % department_a_id
     status_code, _location, field_edit_html = kacho_a_client.get(field_edit_path)
     check("表示の条件は、項目を選ぶ形で出る", '<select id="show_when_field"' in field_edit_html and 'name="show_when_value[]"' in field_edit_html)
@@ -378,6 +386,7 @@ def main():
     # ================================================================
     # G-12 共通の項目の課ごとの選択肢（課 B の課長が「作業フェーズ」を自分の課向けに変える）
     # ================================================================
+    section("G-12", "G-12 共通の項目の課ごとの選択肢（課 B の課長が「作業フェーズ」を自分の課向けに変える）")
     department_b_id = seed_info["dept_b"]
     phase_field_id = field_id_by_code["phase"]
     field_options_path = "/admin/field_options.php?field=%d&dept=%d" % (phase_field_id, department_b_id)
@@ -437,6 +446,7 @@ def main():
     check("この課で出す選択肢が 0 になる保存はできない", status_code == 200 and "1 つ以上" in response_html, status_code)
 
     # ---- 課の項目の選択肢の削除（G-12 項目の編集） ----
+    section("G-12", "課の項目の選択肢の削除（G-12 項目の編集）")
     system_type_field_id = field_id_by_code["system_type"]
     system_type_option_code_list = [row[0] for row in database.execute(
         "SELECT code FROM report_field_options WHERE field_id = ? ORDER BY sort_order, id", (system_type_field_id,))]
@@ -468,6 +478,7 @@ def main():
     # ================================================================
     # G-16 画面のテーマ
     # ================================================================
+    section("G-16", "G-16 画面のテーマ")
     def save_theme(client, theme_name):
         status_code, _location, account_html = client.get("/account.php?tab=theme")
         return client.post("/account.php?tab=theme", {"csrf_token": csrf(account_html), "action": "theme_save", "ui_theme": theme_name})
@@ -510,6 +521,7 @@ def main():
     # ================================================================
     # K-026 管理者でも、確認者でない課の報告の中身は見られない（admin01 はどの課の確認者でもない）
     # ================================================================
+    section("G-05", "K-026 管理者でも、確認者でない課の報告の中身は見られない（admin01 はどの課の確認者でもない）")
     status_code, _location, _page_html = admin_client.get("/reports/view.php?id=%d" % report_a1_id)
     check("K-026 管理者は、提出済みの報告を開けない（404）", status_code == 404, status_code)
     status_code, _location, _page_html = admin_client.get("/reports/view.php?id=%d" % report_id_of("ippan_b1", current_month))
@@ -537,6 +549,7 @@ def main():
     # ================================================================
     # G-14 組織の改訂（K-029〜K-031）
     # ================================================================
+    section("G-14", "G-14 組織の改訂（K-029〜K-031）")
     org_edit_path_a = "/admin/org.php?tab=departments&edit=%d" % department_a_id
     org_edit_path_b = "/admin/org.php?tab=departments&edit=%d" % department_b_id
 
@@ -587,6 +600,7 @@ def main():
     # ================================================================
     # G-21 管理のトップ
     # ================================================================
+    section("G-21", "G-21 管理のトップ")
     status_code, _location, admin_home_html = admin_client.get("/admin/index.php")
     check("管理者は管理のトップを開け、組織・案件・記録のカードが出る",
           status_code == 200 and "admin-card" in admin_home_html and "組織・ユーザー" in admin_home_html and "記録・削除データ" in admin_home_html, status_code)

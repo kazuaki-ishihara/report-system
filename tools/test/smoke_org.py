@@ -23,7 +23,7 @@ import sqlite3
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from lib_http import check, csrf, login, rkey, summary  # noqa: E402
+from lib_http import check, csrf, login, rkey, section, summary  # noqa: E402
 
 
 def shift_month(year_month_text, month_offset):
@@ -104,6 +104,7 @@ def main():
         return client_of(login_id).get("/reports/view.php?id=%d" % report_id)[0]
 
     # ---- K-042 課の管理は課長。管理者は個々の課を管理しない ----
+    section("G-23", "K-042 課の管理は課長。管理者は個々の課を管理しない")
     check("課長は「課の管理」を開ける", client_of("kacho_a").get(department_manage_path_a)[0] == 200)
     check("課長代理は「課の管理」を開けない（403）", client_of("dairi_a").get(department_manage_path_a)[0] == 403)
     check("管理者は（課長でなければ）「課の管理」を開けない（403）", admin_client.get(department_manage_path_a)[0] == 403)
@@ -120,6 +121,7 @@ def main():
     check("管理者は確認者をまとめて変えられない（400）", status_code == 400, status_code)
 
     # ---- K-025 班ごとの課を作る（課長） ----
+    section("G-23", "K-025 班ごとの課を作る（課長）")
     status_code, location, _page_html = save_department_a("team")
     check("課長が課を「班ごと」にできる", status_code == 303 and database.execute(
         "SELECT review_scope FROM departments WHERE id = ?", (department_a_id,)).fetchone()[0] == "team", (status_code, location))
@@ -168,12 +170,14 @@ def main():
     check("班ごと: 横並びは担当の班の人の報告だけ", "A一般1" in compare_html and "A一般2" not in compare_html)
 
     # ---- K-033 班を移ると、過去の報告も今の班が見る ----
+    section("G-05", "K-033 班を移ると、過去の報告も今の班が見る")
     save_members_a({"dairi_a": yamada_team_id, "leader_a": sato_team_id}, {"ippan_a1": sato_team_id, "ippan_a2": sato_team_id}, {"dairi_a", "leader_a"})
     client_by_login_id.clear()   # 1 回の要求の中で覚えた権限が残らないよう、ログインし直す（サーバー側は要求ごと）
     check("班を移ると、前の班の課長代理は過去の報告を開けない", status_of("dairi_a", report_a1_id) == 404)
     check("班を移ると、今の班のリーダーが過去の報告を開ける", status_of("leader_a", report_a1_id) == 200)
 
     # ---- K-032 課を移った人の、移る前の報告 ----
+    section("G-05", "K-032 課を移った人の、移る前の報告")
     save_user_department("ippan_a2", department_b_id)
     check("課を移ると班は外れる（班は課長が決める）", database.execute("SELECT team_id FROM users WHERE id = ?", (user_id_of("ippan_a2"),)).fetchone()[0] is None)
     check("課を移った人の移る前の報告を、新しい課の課長が開ける", status_of("kacho_b", report_a2_id) == 200)
@@ -181,10 +185,12 @@ def main():
     check("前の課の、担当の班の確認者は（今の班が違うので）開けない", status_of("leader_a", report_a2_id) == 404)
 
     # ---- 課全体に戻す ----
+    section("G-23", "課全体に戻す")
     save_department_a("department")
     check("「課全体」に戻すと、課長代理は課の全員の報告を開ける", status_of("dairi_a", report_a1_id) == 200)
 
     # ---- K-039 課長代理・リーダーの「チェックする／しない」（課長が決める） ----
+    section("G-23", "K-039 課長代理・リーダーの「チェックする／しない」（課長が決める）")
     save_members_a({"dairi_a": None, "leader_a": None}, {"ippan_a1": None}, {"dairi_a"})
     check("課長がリーダーを「チェックしない」にできる",
           database.execute("SELECT does_check FROM department_reviewers WHERE user_id = ? AND department_id = ?", (user_id_of("leader_a"), department_a_id)).fetchone()[0] == 0)
@@ -208,6 +214,7 @@ def main():
     save_members_a({"dairi_a": None, "leader_a": None}, {"ippan_a1": None}, {"dairi_a", "leader_a"})
 
     # ---- 班を無効にすると、所属と担当が外れる ----
+    section("G-23", "班を無効にすると、所属と担当が外れる")
     save_members_a({"dairi_a": None, "leader_a": sato_team_id}, {"ippan_a1": sato_team_id}, {"dairi_a", "leader_a"})
     post_department_a({"action": "team_update", "team_id": str(sato_team_id), "team_name": "佐藤班"})
     check("班を無効にすると、所属の人と担当の確認者の班が外れる",
@@ -215,12 +222,14 @@ def main():
           and database.execute("SELECT COUNT(*) FROM department_reviewers WHERE team_id = ?", (sato_team_id,)).fetchone()[0] == 0)
 
     # ---- K-006 メッセージは管理担当の課の課長だけ ----
+    section("G-17", "K-006 メッセージは管理担当の課の課長だけ")
     check("管理担当の課（A課）の課長はメッセージを開ける", client_of("kacho_a").get("/admin/messages.php")[0] == 200)
     check("ほかの課の課長はメッセージを開けない（403）", client_of("kacho_b").get("/admin/messages.php")[0] == 403)
     check("管理担当の課が記録されている", database.execute(
         "SELECT value FROM app_state WHERE name = 'management_department_id'").fetchone()[0] == str(department_a_id))
 
     # ---- K-031 課長がいない課を、管理者のホームで知らせる ----
+    section("G-21", "K-031 課長がいない課を、管理者のホームで知らせる")
     status_code, _location, home_html = admin_client.get("/index.php")
     check("課長がいる間は知らせない", "課長がいない課があります" not in home_html)
     status_code, _location, _page_html = post_org("/admin/org.php?tab=departments&edit=%d" % department_b_id, {"action": "final_save", "dept_id": str(department_b_id), "final_user_id": ""})
@@ -233,6 +242,7 @@ def main():
     # ================================================================
     # K-034 組織の一括の入れ替え（CSV）
     # ================================================================
+    section("G-14", "K-034 組織の一括の入れ替え（CSV）")
     status_code, _location, _csv_text = admin_client.get("/admin/org.php?tab=bulk&csv=1")
     exported_csv_text = admin_client.last_raw.decode("utf-8-sig")
     check("今の組織を CSV に出力できる（社外秘の見出し・列）", status_code == 200 and exported_csv_text.startswith('"社外秘"')
@@ -284,6 +294,7 @@ def main():
     check("反映が記録に残る", database.execute("SELECT 1 FROM access_logs WHERE target LIKE 'organization:bulk_apply:%'").fetchone() is not None)
 
     # ---- 課の並び順: 範囲外・負の数・数字以外はエラーにし、黙って 0 にしない（検証官の指摘） ----
+    section("G-14", "課の並び順: 範囲外・負の数・数字以外はエラーにし、黙って 0 にしない（検証官の指摘）")
     original_sort_order = database.execute("SELECT sort_order FROM departments WHERE id = ?", (department_b_id,)).fetchone()[0]
     department_b_name = database.execute("SELECT name FROM departments WHERE id = ?", (department_b_id,)).fetchone()[0]
     org_edit_path_b = "/admin/org.php?tab=departments&edit=%d" % department_b_id

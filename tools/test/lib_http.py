@@ -11,11 +11,22 @@ import urllib.parse
 import urllib.request
 
 RESULTS = []
+# 今の確かめの区切り（画面の番号と見出し）。section() で変え、check() の行の頭に [画面の番号] を付ける。
+# 自動検証（verify_all.py）は、この印で画面ごとに数え、検証項目一覧を作る
+CURRENT_SECTION = {"screen": "", "title": ""}
+
+
+def section(screen_code, title=""):
+    """ここからの確かめが、どの画面（G-01〜G-25）・共通の単位（共通・DB・道具）のものかを決める"""
+    CURRENT_SECTION["screen"] = screen_code
+    CURRENT_SECTION["title"] = title
+    print("##  [%s] %s" % (screen_code, title))
 
 
 def check(name, ok, detail=""):
+    screen_code = CURRENT_SECTION["screen"]
     RESULTS.append((name, bool(ok), detail))
-    print(("OK  " if ok else "NG  ") + name + ("" if ok else "  " + str(detail)))
+    print(("OK  " if ok else "NG  ") + ("[%s] " % screen_code if screen_code else "") + name + ("" if ok else "  " + str(detail)))
 
 
 def summary():
@@ -104,9 +115,13 @@ def rkey(html):
 
 
 def totp(secret_b32, offset=0):
+    return totp_at_step(secret_b32, int(time.time() // 30) + offset)
+
+
+def totp_at_step(secret_b32, step):
+    """30 秒の区間の番号を決めて、その区間のコードを作る"""
     s = secret_b32.replace(" ", "").upper()
     key = base64.b32decode(s + "=" * ((8 - len(s) % 8) % 8))
-    step = int(time.time() // 30) + offset
     h = hmac.new(key, struct.pack(">Q", step), hashlib.sha1).digest()
     o = h[19] & 0x0F
     v = ((h[o] & 0x7F) << 24) | (h[o + 1] << 16) | (h[o + 2] << 8) | h[o + 3]
@@ -116,19 +131,34 @@ def totp(secret_b32, offset=0):
 _used_steps = {}
 
 
+def next_login_code(login_id, secret_b32):
+    """ログインに使う 2 段階認証のコード。アプリは前後 1 区間を許し、使った区間以前は断るので、
+    1 つ前の区間から順に使う（同じ人が 30 秒のうちに 3 回までログインでき、待たずに済む）。
+    区間の変わり目の直前は、送るまでに区間がずれないよう、変わるまで待つ"""
+    while True:
+        now_time = time.time()
+        if now_time % 30 > 28.5:
+            time.sleep(30.2 - now_time % 30)
+            continue
+        current_step = int(now_time // 30)
+        last_used_step = _used_steps.get(login_id)
+        login_step = current_step - 1 if last_used_step is None else max(current_step - 1, last_used_step + 1)
+        if login_step <= current_step + 1:
+            break
+        time.sleep(30.2 - now_time % 30)
+    _used_steps[login_id] = login_step
+    return totp_at_step(secret_b32, login_step)
+
+
 def login(base, login_id, info):
-    """パスワードと TOTP でログインした Client を返す（同じ人の同じ 30 秒区間のコードは再利用できないので待つ）。"""
+    """パスワードと TOTP でログインした Client を返す（コードは next_login_code()。待たずに続けてログインできる）。"""
     c = Client(base)
     s, _, body = c.get("/login.php")
     s, loc, _ = c.post("/login.php", {"csrf_token": csrf(body), "action": "password", "login_id": login_id, "password": info["password"]})
     if "step=2" not in loc:
         raise SystemExit("ログインできません: %s %s %s" % (login_id, s, loc))
-    step = int(time.time() // 30)
-    if _used_steps.get(login_id) == step:
-        time.sleep(31 - time.time() % 30)
     s, _, body = c.get("/login.php?step=2")
-    s, loc, _ = c.post("/login.php", {"csrf_token": csrf(body), "action": "code", "code": totp(info["totp"]), "remember": "0"})
-    _used_steps[login_id] = int(time.time() // 30)
+    s, loc, _ = c.post("/login.php", {"csrf_token": csrf(body), "action": "code", "code": next_login_code(login_id, info["totp"]), "remember": "0"})
     if "/index.php" not in loc:
         raise SystemExit("2 段階認証で失敗: %s %s %s" % (login_id, s, loc))
     return c

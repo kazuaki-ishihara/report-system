@@ -17,7 +17,7 @@ import sys
 import urllib.parse
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from lib_http import Client, check, csrf, login, summary  # noqa: E402
+from lib_http import Client, check, csrf, login, section, summary  # noqa: E402
 
 
 def main():
@@ -47,6 +47,7 @@ def main():
     leader_client = login(arguments.base, "leader_a", user_info_by_login_id["leader_a"])
 
     # ---------------- A 更新のお知らせ ----------------
+    section("G-24", "A 更新のお知らせ")
     check("A: 部下は更新のお知らせの管理を開けない", member_client.get("/admin/notices.php")[0] == 403)
     status_code, _location, _page_html = post_form(admin_client, "/admin/notices.php", {
         "action": "save", "id": "", "source_request_id": "", "title": "提出状況の札を色分けしました", "body": "提出済みは緑、未作成は灰色です。",
@@ -64,11 +65,13 @@ def main():
     check("A: 出す最後の日が出す日より前なら保存しない", status_code == 200 and "出す最後の日は" in error_html, status_code)
 
     # ---------------- I 画面ごとの使い方 ----------------
+    section("共通", "I 画面ごとの使い方")
     check("I: ホームに「この画面の使い方」", "この画面の使い方" in member_home_html)
     _status_code, _location, edit_html = member_client.get("/reports/edit.php?period=" + today.strftime("%Y-%m"))
     check("I: 報告の作成にも使い方（下書き保存・必須の説明）", "この画面の使い方" in edit_html and "下書き保存" in edit_html)
 
     # ---------------- J よくある質問 ----------------
+    section("G-25", "J よくある質問")
     status_code, _location, _page_html = post_form(admin_client, "/faq.php", {
         "action": "save", "id": "", "source_request_id": "", "question": "締め日を過ぎても直せますか", "answer": "当月と過去 3 か月の報告は直せます。"})
     check("J: 管理者がよくある質問を載せられる", status_code in (302, 303), status_code)
@@ -243,6 +246,7 @@ def main():
     check("J: 補佐は、心の不調の記録には「対応した」を押せない（403）", status_code == 403, status_code)
     post_form(admin_client, "/admin/faq_logs.php", {"action": "distress_handled", "log_id": str(distress_for_deputy["log_id"])})
     # J 無い ID でのログインは、システム管理者と補佐の両方に知らせる（K-058）
+    section("G-01", "J 無い ID でのログインは、システム管理者と補佐の両方に知らせる（K-058）")
     stranger_client = Client(arguments.base)
     _status_code, _location, stranger_login_html = stranger_client.get("/login.php")
     stranger_client.post("/login.php", {"csrf_token": csrf(stranger_login_html), "action": "password", "login_id": "no_such_user_9", "password": "wrong-password-123"})
@@ -255,6 +259,7 @@ def main():
     status_code, _location, _page_html = post_form(deputy_notice_client, "/admin/logs.php", {"action": "unknown_login_checked"})
     check("J: 補佐が「確かめた」を押すと、知らせが消える", "無い ID でログインしようとした記録があります" not in admin_client.get("/index.php")[2], status_code)
     # J お悔やみは、亡くなったと書かれたときだけ添える（いなくなった・交代した、だけでは決めつけない）
+    section("G-25", "J お悔やみは、亡くなったと書かれたときだけ添える（いなくなった・交代した、だけでは決めつけない）")
     _status_code, _location, json_text = kacho_client.get("/faq.php?format=json&q=" + urllib.parse.quote("管理者が急逝し、代表取締役から管理者権限を与えられた。どうしたらよいか"))
     death_matches = json.loads(json_text)["matches"]
     check("J: 亡くなったと書かれた質問は、関係のある質問として答える", death_matches[:1] and death_matches[0]["question"].startswith("システム管理者の権限がほしい"), death_matches[:1])
@@ -522,6 +527,7 @@ def main():
     check("J: 要配慮の記録からは「よくある質問に載せる」を開けない（404）", admin_client.get("/faq.php?draft_log=%d" % sensitive_result["log_id"])[0] == 404)
 
     # ---------------- B 返信の定型文 / D 対応の予定 / C 重複をまとめる / E CSV ----------------
+    section("G-22", "B 返信の定型文 / D 対応の予定 / C 重複をまとめる / E CSV")
     status_code, _location, _page_html = post_form(admin_client, "/requests/index.php", {"action": "template_add", "template_kind": "", "template_body": "ユーザーを追加しました。仮のパスワードは別にお伝えします。"})
     post_form(admin_client, "/requests/index.php", {"action": "template_add", "template_kind": "bug", "template_body": "不具合を直しました。もう一度お試しください。"})
     check("B: 管理者が返信の定型文を種類ごとに足せる", database.execute("SELECT COUNT(*) FROM support_reply_templates").fetchone()[0] == 2, status_code)
@@ -561,6 +567,7 @@ def main():
     check("E: 課長は CSV に出せない", kacho_client.get("/requests/index.php?status=all&csv=1")[0] == 403)
 
     # ---------------- G 組織の改訂の予約 ----------------
+    section("G-14", "G 組織の改訂の予約")
     def preview_csv(csv_body_text):
         _status_code, _location, bulk_html = admin_client.get("/admin/org.php?tab=bulk")
         csv_bytes = ("ログイン ID,表示名,所属の課,班,役割,担当の班,項目管理者,有効\r\n" + csv_body_text).encode("utf-8")
@@ -593,11 +600,13 @@ def main():
     check("G: 予約を取り消せる", database.execute("SELECT status FROM org_schedules WHERE id = ?", (cancel_schedule_id,)).fetchone()[0] == "cancelled")
 
     # ---------------- H バックアップの状態 ----------------
+    section("G-21", "H バックアップの状態")
     check("H: 管理のトップに DB の大きさと最後のバックアップ", "DB の大きさ" in admin_top_html and "最後のバックアップ" in admin_top_html)
     _status_code, _location, kacho_top_html = kacho_client.get("/admin/index.php")
     check("H: 課長の管理のトップには出さない", "DB の大きさ" not in kacho_top_html)
 
     # ---------------- F メンテナンス中 ----------------
+    section("G-21", "F メンテナンス中")
     until_text = (datetime.datetime.now() + datetime.timedelta(hours=1)).strftime("%Y-%m-%dT%H:%M")
     status_code, _location, _page_html = post_form(admin_client, "/admin/index.php", {"action": "maintenance_start", "until": until_text, "message": "新しい版に入れ替えています"})
     check("F: 管理者がメンテナンス中にできる", database.execute("SELECT COUNT(*) FROM app_state WHERE name = 'maintenance'").fetchone()[0] == 1, status_code)

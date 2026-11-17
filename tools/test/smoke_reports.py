@@ -13,7 +13,7 @@ import sqlite3
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from lib_http import Client, check, csrf, login, rkey, summary  # noqa: E402
+from lib_http import Client, check, csrf, login, rkey, section, summary  # noqa: E402
 
 
 def main():
@@ -33,6 +33,7 @@ def main():
     prev = (today.replace(day=1) - datetime.timedelta(days=1)).strftime("%Y-%m")
 
     # ---- 部下: 前月の報告を作る ----
+    section("G-04", "部下: 前月の報告を作る")
     a1 = login(a.base, "ippan_a1", U["ippan_a1"])
     s, _, body = a1.get("/reports/edit.php?period=" + prev)
     check("報告の入力画面が開ける", s == 200 and "案件" in body, s)
@@ -85,6 +86,7 @@ def main():
     check("提出できる", s == 303 and "view.php?id=%d" % rid in loc, (s, loc))
 
     # ---- 閲覧の権限 ----
+    section("G-05", "閲覧の権限")
     leader = login(a.base, "leader_a", U["leader_a"])
     s, _, vbody = leader.get("/reports/view.php?id=%d" % rid)
     check("同じ課の確認者は見られる", s == 200 and "在庫の引当処理" in vbody, s)
@@ -99,6 +101,7 @@ def main():
         check("%s は見られない（404）" % who, s == 404, s)
 
     # ---- コメント: 依頼 → 本人の返信で回答あり → 解決 ----
+    section("G-05", "コメント: 依頼 → 本人の返信で回答あり → 解決")
     s, _, vbody = leader.get("/reports/view.php?id=%d" % rid)
     s, loc, _ = leader.post("/reports/act.php", {"csrf_token": csrf(vbody), "request_key": rkey(vbody), "action": "comment", "report_id": rid,
                                                  "field_id": F["phase"], "report_project_id": db.execute("SELECT id FROM report_projects WHERE report_id = ?", (rid,)).fetchone()[0],
@@ -123,6 +126,7 @@ def main():
     check("依頼した人が解決にできる", st == "resolved", st)
 
     # ---- チェック → 本人が修正 → 更新あり ----
+    section("G-05", "チェック → 本人が修正 → 更新あり")
     s, _, vb = leader.get("/reports/view.php?id=%d" % rid)
     leader.post("/reports/act.php", {"csrf_token": csrf(vb), "request_key": rkey(vb), "action": "check", "report_id": rid})
     s, _, vb = leader.get("/reports/view.php?id=%d" % rid)
@@ -147,6 +151,7 @@ def main():
     check("変更がなければ更新の回数は上がらない", rev2 == rev, rev2)
 
     # ---- 確認完了 ----
+    section("G-05", "確認完了")
     s, _, vb = leader.get("/reports/view.php?id=%d" % rid)
     s, loc, _ = leader.post("/reports/act.php", {"csrf_token": csrf(vb), "request_key": rkey(vb), "action": "confirm", "report_id": rid})
     check("確認者は確認完了にできない（403）", s == 403, s)
@@ -161,6 +166,7 @@ def main():
     check("確認完了の報告への保存は断られる", s == 400, s)
 
     # ---- 前月からの引き継ぎ ----
+    section("G-04", "前月からの引き継ぎ")
     s, _, eb = a1.get("/reports/edit.php?period=" + cur)
     check("当月の画面に前月の内容が入る", "前月の報告の内容を写しています" in eb and 'value="build_unit" selected' in eb, s)
     staffing_note_textarea = re.search(r'<textarea id="b0_%d"[^>]*>(.*?)</textarea>' % F["staffing_note"], eb, re.S)
@@ -168,6 +174,7 @@ def main():
           staffing_note_textarea is not None and "来月 2 名増員" not in staffing_note_textarea.group(1), staffing_note_textarea is not None)
 
     # ---- 管理画面の権限 ----
+    section("共通", "管理画面の権限")
     s, _, _ = a1.get("/admin/fields.php")
     check("部下は項目マスタを開けない（403）", s == 403, s)
     s, _, fb = kacho.get("/admin/fields.php")

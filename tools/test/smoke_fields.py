@@ -14,7 +14,7 @@ import sqlite3
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from lib_http import check, csrf, login, rkey, summary  # noqa: E402
+from lib_http import check, csrf, login, rkey, section, summary  # noqa: E402
 
 
 def main():
@@ -66,6 +66,7 @@ def main():
         return c.post(path, data)
 
     # ---- 前提: 部下が前月の報告を提出（項目にデータがある状態を作る） ----
+    section("G-12", "前提: 部下が前月の報告を提出（項目にデータがある状態を作る）")
     a1 = login(a.base, "ippan_a1", U["ippan_a1"])
     f = F()
     s, _, body = a1.get("/reports/edit.php?period=" + prev)

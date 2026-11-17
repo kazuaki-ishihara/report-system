@@ -16,7 +16,7 @@ import sqlite3
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from lib_http import Client, check, csrf, login, rkey, summary  # noqa: E402
+from lib_http import Client, check, csrf, login, rkey, section, summary  # noqa: E402
 
 
 def month_shift(ym, n):
@@ -68,6 +68,7 @@ def main():
     a1 = login(a.base, "ippan_a1", U["ippan_a1"])
 
     # ---- APP-001 ホームの件数に移行データを数えない ----
+    section("G-03", "APP-001 ホームの件数に移行データを数えない")
     before = home_counts(kacho)
     legacy("ippan_a1", cur)
     legacy("ippan_a1", prev)
@@ -77,6 +78,7 @@ def main():
     check("APP-001 ホームの未チェック・未提出に移行データを数えない", before is not None and before == after, (before, after))
 
     # ---- APP-012 確認者から外れた人のチェックを数えない ----
+    section("G-03", "APP-012 確認者から外れた人のチェックを数えない")
     rid = submit(a1, prev)
     check("前提: 前月の報告を提出", rid > 0, rid)
     leader = login(a.base, "leader_a", U["leader_a"])
@@ -86,11 +88,14 @@ def main():
     check("前提: リーダーのチェックが数えられる（1/3）", "チェック 1/3" in mb, re.findall(r"チェック \d+/\d+", mb))
     db.execute("DELETE FROM department_reviewers WHERE user_id = ?", (U["leader_a"]["id"],))
     s, _, mb = a1.get("/reports/mine.php")
+    section("G-06", "APP-012 確認者から外れた人のチェックを数えない")
     check("APP-012 自分の報告一覧: 外れた確認者のチェックを数えない（0/2）", "チェック 0/2" in mb, re.findall(r"チェック \d+/\d+", mb))
     s, _, sb = kacho.get("/status/index.php?period=%s&dept=%d" % (prev, dept_a))
+    section("G-08", "APP-012 確認者から外れた人のチェックを数えない")
     check("APP-012 提出状況: 外れた確認者のチェックを数えない（0/2）", "✓" + "0/2" in sb, ascii(re.findall("✓" + r"\d+/\d+", sb)))
 
     # ---- APP-003 本人は管理者でも最初のコメントを付けない ----
+    section("G-05", "APP-003 本人は管理者でも最初のコメントを付けない")
     kb = login(a.base, "kacho_b", U["kacho_b"])
     kid = submit(kb, prev, "P-0003")
     db.execute("UPDATE users SET is_admin = 1 WHERE id = ?", (U["kacho_b"]["id"],))
@@ -107,13 +112,16 @@ def main():
     db.execute("UPDATE users SET is_admin = 0 WHERE id = ?", (U["kacho_b"]["id"],))
 
     # ---- APP-004 編集できる期間を過ぎた下書き ----
+    section("G-04", "APP-004 編集できる期間を過ぎた下書き")
     a2 = login(a.base, "ippan_a2", U["ippan_a2"])
     db.execute("INSERT INTO report_records (user_id, department_id, period, status, created_at, updated_at) VALUES (?, ?, ?, 'draft', ?, ?)",
                (U["ippan_a2"]["id"], dept_a, old, now, now))
     old_id = db.execute("SELECT last_insert_rowid()").fetchone()[0]
     s, _, mb = a2.get("/reports/mine.php")
+    section("G-06", "APP-004 期間を過ぎた下書きは、自分の報告一覧から詳細へ")
     check("APP-004 古い下書きは編集画面ではなく詳細へリンク", "/reports/view.php?id=%d" % old_id in mb and "edit.php?period=" + old not in mb)
     s, _, vb = a2.get("/reports/view.php?id=%d" % old_id)
+    section("G-04", "APP-004 期間を過ぎた下書き")
     check("APP-004 古い下書きの詳細が開け、削除できる表示", s == 200 and "下書きを削除" in vb and "編集する" not in vb, s)
     s, loc, _ = a2.post("/reports/save.php", {"csrf_token": csrf(vb), "request_key": rkey(vb), "period": old, "action": "delete"})
     d = db.execute("SELECT deleted_at FROM report_records WHERE id = ?", (old_id,)).fetchone()[0]
@@ -123,6 +131,7 @@ def main():
     check("APP-004 古い月の保存は今までどおり断る（400）", s == 400, s)
 
     # ---- APP-008・009 削除データを戻す ----
+    section("G-15", "APP-008・009 削除データを戻す")
     adm = login(a.base, "admin01", U["admin01"])
     expired = (datetime.datetime.now() - datetime.timedelta(days=40)).strftime("%Y-%m-%d %H:%M:%S")
     db.execute("UPDATE report_records SET deleted_at = ? WHERE id = ?", (expired, old_id))
@@ -141,12 +150,14 @@ def main():
     check("APP-009 移行データは同じ月に別の報告があっても戻せる（仕様）", d is None, d)
 
     # ---- APP-010 記録の期間 ----
+    section("G-15", "APP-010 記録の期間")
     s, _, lb = adm.get("/admin/logs.php?from=%s&to=%s" % (datetime.date.today().isoformat(), (datetime.date.today() - datetime.timedelta(days=3)).isoformat()))
     check("APP-010 開始が終了より後なら専用の文言", s == 400 and "期間の開始は、終了と同じ日かそれより前" in lb and "1 年以内" not in lb, s)
     s, _, lb = adm.get("/admin/logs.php?from=2020-01-01&to=%s" % datetime.date.today().isoformat())
     check("APP-010 1 年を超える期間は今までの文言", s == 400 and "1 年以内" in lb, s)
 
     # ---- APP-006 結果の画面は公開した依頼だけ ----
+    section("G-11", "APP-006 結果の画面は公開した依頼だけ")
     s, _, body = kacho.get("/surveys/survey_edit.php")
     s, loc, _ = kacho.post("/surveys/survey_edit.php", {"csrf_token": csrf(body), "request_key": rkey(body), "action": "save_meta",
                                                         "department_id": str(dept_a), "title": "下書きの調査", "requester": "総務", "purpose": "確認",
@@ -161,6 +172,7 @@ def main():
     check("APP-006 ひな形の結果は開けない（404）", s == 404, s)
 
     # ---- APP-007 表示の条件 ----
+    section("G-12", "APP-007 表示の条件")
     def new_field(code, scope, sw_field, sw_values):
         s, _, body = kacho.get("/admin/field_edit.php?dept=%d" % dept_a)
         data = {"csrf_token": csrf(body), "request_key": rkey(body), "code": code, "label": "条件の確認", "field_type": "multi_text",
@@ -184,6 +196,7 @@ def main():
     check("APP-007 同じ様式・同じ区分の有効な選択式の項目と、その選択肢なら保存できる", made, s)
 
     # ---- APP-005 再設定の文言をそろえる ----
+    section("G-02", "APP-005 再設定の文言をそろえる")
     def reset(login_id, code):
         c = Client(a.base)
         s, _, body = c.get("/password_reset.php")
@@ -201,6 +214,7 @@ def main():
     db.execute("DELETE FROM login_throttle")
 
     # ---- APP-011 設定が済む前は端末の解除・すべての端末からのログアウトをしない ----
+    section("G-16", "APP-011 設定が済む前は端末の解除・すべての端末からのログアウトをしない")
     def account_post(c, action, extra=None):
         s, _, body = c.get("/account.php")
         data = {"csrf_token": csrf(body), "action": action}

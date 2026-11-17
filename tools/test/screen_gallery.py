@@ -27,7 +27,7 @@ import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from cdp import Browser  # noqa: E402
-from lib_http import totp  # noqa: E402
+from lib_http import next_login_code  # noqa: E402
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
@@ -131,7 +131,6 @@ class ScreenGallery:
         self.base_url = base_url.rstrip("/")
         self.user_by_login_id = user_by_login_id
         self.output_directory = output_directory
-        self.used_totp_step_by_login_id = {}
         self.shot_records = []  # 1 枚ごとの dict（一覧のページの材料）
 
     # ---- 操作 ----
@@ -154,11 +153,8 @@ class ScreenGallery:
         self.browser.fill("#password", self.user_by_login_id[login_id]["password"])
         self.browser.click("form.form button[type=submit]", navigate=True)
         if self.browser.exists("#code"):
-            current_step = int(time.time() // 30)
-            if self.used_totp_step_by_login_id.get(login_id) == current_step:
-                time.sleep(31 - time.time() % 30)  # 同じ区間のコードは 2 回使えない
-            self.browser.fill("#code", totp(self.user_by_login_id[login_id]["totp"]))
-            self.used_totp_step_by_login_id[login_id] = int(time.time() // 30)
+            # 同じ区間のコードは 2 回使えない。前後 1 区間を順に使い、待たずに済ませる
+            self.browser.fill("#code", next_login_code(login_id, self.user_by_login_id[login_id]["totp"]))
             self.browser.click("form.form button[type=submit]", navigate=True)
         return "ホーム" in (self.browser.eval("document.title") or "")
 

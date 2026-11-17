@@ -16,7 +16,7 @@ import sys
 import tempfile
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from lib_http import check, csrf, login, rkey, summary  # noqa: E402
+from lib_http import check, csrf, login, rkey, section, summary  # noqa: E402
 
 TEST_DIR = os.path.dirname(os.path.abspath(__file__))
 REPO_ROOT = os.path.abspath(os.path.join(TEST_DIR, "..", ".."))
@@ -43,6 +43,7 @@ def main():
 
     try:
         # ---- G-13 の CSV 出力 ----
+        section("G-13", "G-13 の CSV 出力")
         admin_client = login(arguments.base, "admin01", user_info_by_login_id["admin01"])
         # 呼び名に客先名らしい文を入れておく（台帳と突き合わせて見つけられるか確かめる）
         status_code, _location, projects_html = admin_client.get("/admin/projects.php")
@@ -64,6 +65,7 @@ def main():
         open(system_csv_path, "wb").write(system_csv_bytes)
 
         # ---- 台帳の道具 ----
+        section("道具", "台帳の道具")
         exit_code, tool_output = run_ledger_tool("check")
         check("台帳がないときは誤りにする（終了コード 2）", exit_code == 2 and "init" in tool_output, (exit_code, tool_output))
         inside_repo_exit_code, inside_repo_output = subprocess.run(

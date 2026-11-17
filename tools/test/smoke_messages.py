@@ -18,7 +18,7 @@ import sys
 import urllib.parse
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from lib_http import check, csrf, login, rkey, summary  # noqa: E402
+from lib_http import check, csrf, login, rkey, section, summary  # noqa: E402
 
 
 def main():
@@ -46,6 +46,7 @@ def main():
         return override_row[0] if override_row else None
 
     # ---- 開ける人 ----
+    section("G-17", "開ける人")
     kacho_client = login(arguments.base, "kacho_a", user_info_by_login_id["kacho_a"])
     status_code, _location, page_html = kacho_client.get("/admin/messages.php")
     check("課長はメッセージの画面を開ける", status_code == 200 and "画面に出す文言" in page_html, status_code)

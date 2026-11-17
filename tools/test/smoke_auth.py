@@ -20,12 +20,18 @@ import urllib.parse
 import urllib.request
 
 RESULTS = []
+CURRENT_SECTION = {"screen": ""}   # 今の確かめの画面の番号（lib_http.section() と同じ書き方。ほかの道具に頼らず単独で動かすため、ここにも持つ）
+
+
+def section(screen_code, title=""):
+    CURRENT_SECTION["screen"] = screen_code
+    print("##  [%s] %s" % (screen_code, title))
 
 
 def check(name, ok, detail=""):
     RESULTS.append((name, bool(ok), detail))
     mark = "OK  " if ok else "NG  "
-    print(mark + name + ("" if ok else "  " + str(detail)))
+    print(mark + ("[%s] " % CURRENT_SECTION["screen"] if CURRENT_SECTION["screen"] else "") + name + ("" if ok else "  " + str(detail)))
 
 
 class NoRedirect(urllib.request.HTTPRedirectHandler):
@@ -103,6 +109,7 @@ def main():
         return 2
 
     # ---- 共通 ----
+    section("共通", "共通")
     c = Client(a.base)
     s, _, body, h = c.get("/health.php")
     check("health が ok を返す", s == 200 and body.strip() == "ok", (s, body[:50]))
@@ -116,6 +123,7 @@ def main():
     check("CSRF トークンなしの POST は 403", s == 403, s)
 
     # ---- 存在しない ID とパスワード違いは同じ表示 ----
+    section("G-01", "存在しない ID とパスワード違いは同じ表示")
     s, _, body, _ = c.get("/login.php")
     s1, _, b1, _ = c.post("/login.php", {"csrf_token": csrf(body), "action": "password", "login_id": "nobody-xyz", "password": "wrong-password"})
     s2, _, b2, _ = c.post("/login.php", {"csrf_token": csrf(body), "action": "password", "login_id": a.login, "password": "wrong-password"})
@@ -126,6 +134,7 @@ def main():
     check("ID の形に合わないものでも同じ表示", s3 == 200 and msg in b3, s3)
 
     # ---- 初回ログイン → 2 段階認証の設定 ----
+    section("G-01", "初回ログイン → 2 段階認証の設定")
     s, loc, body, _ = c.post("/login.php", {"csrf_token": csrf(body), "action": "password", "login_id": a.login,
                                              "password": a.temp_password, "next": "//evil.example/"})
     check("初回は 2 段階認証の設定へ", s == 303 and "/account.php?tab=totp" in loc, (s, loc))
@@ -151,6 +160,7 @@ def main():
     check("外のサイトへの next は使われない", "evil.example" not in body)
 
     # ---- 仮のパスワード → 変更 ----
+    section("G-01", "仮のパスワード → 変更")
     s, loc, _, _ = c.get("/index.php")
     check("仮のパスワードの間はパスワード変更へ", s == 303 and "tab=password" in loc, (s, loc))
     s, _, body, _ = c.get("/account.php?tab=password")
@@ -173,6 +183,7 @@ def main():
         check("管理者でなければ管理者のメニューが出ない", "組織・ユーザー" not in body)
 
     # ---- ログアウト → 記憶した端末では 2 段階認証なしで入れる ----
+    section("G-01", "ログアウト → 記憶した端末では 2 段階認証なしで入れる")
     s, loc, _, _ = c.post("/logout.php", {"csrf_token": csrf(body)})
     check("ログアウトできる", s == 303 and "/login.php" in loc, (s, loc))
     s, _, body, _ = c.get("/login.php")
@@ -180,6 +191,7 @@ def main():
     check("記憶した端末ではコードなしでログイン", s == 303 and "/index.php" in loc, (s, loc))
 
     # ---- 別の端末（Cookie なし）は 2 段階認証が必要。予備のコードで入る ----
+    section("G-01", "別の端末（Cookie なし）は 2 段階認証が必要。予備のコードで入る")
     d = Client(a.base)
     s, _, body, _ = d.get("/login.php")
     s, loc, _, _ = d.post("/login.php", {"csrf_token": csrf(body), "action": "password", "login_id": a.login, "password": a.new_password})
@@ -199,12 +211,14 @@ def main():
     check("使用済みの予備のコードは使えない", "コードが違います" in body2, (s, loc))
 
     # ---- 別の端末から「すべての端末からログアウト」→ 最初の端末も切れる ----
+    section("G-16", "別の端末から「すべての端末からログアウト」→ 最初の端末も切れる")
     s, _, body, _ = d.get("/account.php?tab=devices")
     s, loc, _, _ = d.post("/account.php?tab=devices", {"csrf_token": csrf(body), "action": "logout_all"})
     s, loc, _, _ = c.get("/index.php")
     check("すべての端末からログアウトで、ほかの端末のセッションも切れる", s == 303 and "/login.php" in loc, (s, loc))
 
     # ---- ロック ----
+    section("G-01", "ロック")
     if a.lock_user:
         f = Client(a.base)
         s, _, body, _ = f.get("/login.php")
