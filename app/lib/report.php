@@ -106,8 +106,8 @@ function report_values(int $reportId): array
 function selectable_projects(?int $deptId): array
 {
     return db_all(
-        'SELECT id, code, alias FROM projects WHERE is_active = 1 AND (department_id IS NULL OR department_id = ?) ORDER BY code',
-        [$deptId ?? 0]
+        'SELECT id, code, alias FROM projects WHERE is_active = 1 AND (department_id IS NULL OR department_id = ?) ORDER BY code = ? DESC, code',
+        [$deptId ?? 0, NO_PROJECT_CODE]
     );
 }
 

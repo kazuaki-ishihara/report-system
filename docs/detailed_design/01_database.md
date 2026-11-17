@@ -40,7 +40,7 @@ SQLite 3。テーブルは `app/lib/schema.php` の `schema_ensure()` で作る�
 | | `department_successions` | 組織の改訂で引き継いだ課（G-14 §6.6） |
 | | `department_teams` | 課の班（G-14 §6.7） |
 | | `warning_words` | 客先名らしい言葉の一覧 |
-| 案件 | `projects` | 案件コードと社内向けの呼び名 |
+| 案件 | `projects` | 案件コードと社内向けの呼び名（予約の案件「案件なし」を 1 つ持つ。G-13 §6.5） |
 | 報告 | `report_records` | 月次報告 |
 | | `report_record_fields` | 報告の作成時の項目の定義 |
 | | `report_projects` | 報告の中の案件ブロック |

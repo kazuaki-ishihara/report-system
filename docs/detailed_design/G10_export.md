@@ -140,4 +140,4 @@
 - 作った xlsx の zip の構造が正しい。
 - 出力するたびに記録が残る。
 - 別の課の課長が出力できない（`smoke_screens.py`）。`=1+1` などの値が数式として動かない・xlsx の XML が正しい（`check_units.php`）。
-- 自動の検証にまだないもの: Excel と LibreOffice Calc で開けること（目で確かめる）。
+- Excel で xlsx・CSV が開け、見出し・値・数式に見える値（文字のまま）・記号が読める（`check_office.py`。Excel を COM で読み取り専用で開く）。LibreOffice Calc が入っていればそれでも開く（入っていない端末では、結果に「未実施」と出る）。

@@ -5,6 +5,8 @@ declare(strict_types=1);
 // ====================================================================
 // 画面を通さずに確かめる決まり（関数の出力）。サーバー・DB は使わない
 //   php tools/test/check_units.php
+// 共通: 検証の印（verify_mode）は、MR_VERIFY_DB が無ければ false。
+// G-03: 対象月が締め日の前後・月末・年の変わり目で正しく切り替わる（日付を渡す。使い捨ての DB）。
 // G-10: 出力の CSV で、= + - @ で始まる値が数式として動かない。xlsx の中身が XML として正しく、
 //       < & " などが文字のまま入る（設計書 G-10 §9 の「自動の検証にまだないもの」）。
 // ====================================================================
@@ -12,6 +14,8 @@ declare(strict_types=1);
 if (PHP_SAPI !== 'cli') {
     exit(1);
 }
+// 本番・ふだんの環境と同じく、検証用の DB の指定（MR_VERIFY_DB）が無い状態で設定を読む（検証の印が false になることを確かめる）
+putenv('MR_VERIFY_DB');
 require __DIR__ . '/../../app/bootstrap.php';
 require_once APP_DIR . '/lib/export.php';
 
@@ -22,6 +26,9 @@ $check = function (string $screenCode, string $name, bool $isOk) use (&$ngCount)
         $ngCount++;
     }
 };
+
+// ---- 共通: 検証の印（verify_mode）は、検証用の DB の指定が無ければ false（同時の操作を再現する待ちが本番で働かない） ----
+$check('共通', '検証の印（verify_mode）は、MR_VERIFY_DB が無ければ false（報告の保存の待ちが働かない）', cfg('verify_mode') === false);
 
 // ---- G-10 CSV: 数式として動かない ----
 $formulaValueList = ['=1+1', '+1+1', '-1+1', '@SUM(A1)', "\t=1", "=HYPERLINK(\"http://example.com\")"];
@@ -57,6 +64,31 @@ $parsedSheet = $sheetXml !== '' ? simplexml_load_string($sheetXml) : false;
 $check('G-10', 'xlsx のシートは XML として正しい', $parsedSheet !== false);
 $check('G-10', 'xlsx に < & " を文字として入れる（タグにならない）', strpos($sheetXml, '&lt;script&gt;&amp;&quot;') !== false && strpos($sheetXml, '<script>') === false);
 $check('G-10', 'xlsx の値は文字列として入れる（数式の欄 <f> を作らない）', strpos($sheetXml, '<f>') === false && strpos($sheetXml, 't="inlineStr"') !== false);
+
+// ---- G-03 対象月: 締め日の前後で切り替わる（日付を渡して確かめる。使い捨ての DB） ----
+$temporaryDatabasePath = sys_get_temp_dir() . '/mr_units_' . getmypid() . '.sqlite';
+@unlink($temporaryDatabasePath);
+$GLOBALS['APP_CONFIG']['db_path'] = $temporaryDatabasePath;
+tx(function (PDO $pdo) {
+    schema_ensure($pdo);
+});
+$createdAt = now();
+db_exec('INSERT INTO departments (name, sort_order, close_day, created_at, updated_at) VALUES (?, 10, 10, ?, ?)', ['締め日 10 日の課', $createdAt, $createdAt]);
+$closeTenDepartmentId = (int) db()->lastInsertId();
+db_exec('INSERT INTO departments (name, sort_order, close_day, created_at, updated_at) VALUES (?, 20, 31, ?, ?)', ['締め日 31 日の課', $createdAt, $createdAt]);
+$closeLastDepartmentId = (int) db()->lastInsertId();
+db_exec('INSERT INTO departments (name, sort_order, close_day, created_at, updated_at) VALUES (?, 30, NULL, ?, ?)', ['締め日なしの課', $createdAt, $createdAt]);
+$noCloseDepartmentId = (int) db()->lastInsertId();
+$periodOn = static function (?int $departmentId, string $dateText): string {
+    return report_target_period(['department_id' => $departmentId], (int) strtotime($dateText . ' 12:00:00'));
+};
+$check('G-03', '締め日（10 日）の当日までは、前の月が対象', $periodOn($closeTenDepartmentId, '2026-11-10') === '2026-10');
+$check('G-03', '締め日（10 日）の次の日から、その月が対象', $periodOn($closeTenDepartmentId, '2026-11-11') === '2026-11');
+$check('G-03', '月の始め（1 日）は、前の月が対象', $periodOn($closeTenDepartmentId, '2026-12-01') === '2026-11');
+$check('G-03', '締め日 31 日の課は、2 月は月末（28 日）が締め日になる', $periodOn($closeLastDepartmentId, '2026-02-28') === '2026-01' && $periodOn($closeLastDepartmentId, '2026-03-01') === '2026-02');
+$check('G-03', '年をまたいでも正しい（1 月 5 日は前の年の 12 月）', $periodOn($closeTenDepartmentId, '2027-01-05') === '2026-12');
+$check('G-03', '締め日が決まっていない課・課の無い人は、前の月が対象', $periodOn($noCloseDepartmentId, '2026-11-25') === '2026-10' && $periodOn(null, '2026-11-25') === '2026-10');
+@unlink($temporaryDatabasePath);
 
 echo $ngCount === 0 ? "すべて OK\n" : "NG {$ngCount} 件\n";
 exit($ngCount === 0 ? 0 : 1);

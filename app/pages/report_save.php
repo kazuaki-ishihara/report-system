@@ -42,6 +42,10 @@ if (isset($_POST['copy_from']) && $_POST['copy_from'] !== '') {
 rk_begin('report.' . $action, $uid);
 
 $report = report_find_own($uid, $period);
+// 自動検証だけ: 同時の新規作成（別の画面が先に作った）を再現するため、報告を探したあとに待つ（verify_mode は本番では常に false）
+if (cfg('verify_mode') === true && ($_SERVER['HTTP_X_VERIFY_PAUSE'] ?? '') === 'report_save') {
+    usleep(1500000);
+}
 if ($report !== null && $report['status'] === 'confirmed') {
     rk_cancel();
     error_page(400, msg('この報告は確認が完了しているため、変更できません。'));
@@ -162,6 +166,19 @@ $parseGroup = function (array $groupFields, array $raw, string $keyPrefix, array
 $blocks = [];      // ['project_id' => int, 'values' => [fid => value]]
 $seen = [];
 $stateBlocks = []; // 入力エラーで戻すときの画面の状態
+$newBlockRawValues = null;   // 「案件を追加するとき」の欄に、案件を選ばずに入れた値（黙って捨てずに知らせる）
+/** 入れた値が 1 つでもあるか（空白だけ・空の選択は入れていないとみなす） */
+$hasAnyInput = function ($rawValue) use (&$hasAnyInput): bool {
+    if (is_array($rawValue)) {
+        foreach ($rawValue as $childValue) {
+            if ($hasAnyInput($childValue)) {
+                return true;
+            }
+        }
+        return false;
+    }
+    return is_string($rawValue) && trim($rawValue) !== '';
+};
 foreach (array_values($rawBlocks) as $i => $rb) {
     if (!is_array($rb)) {
         error_page(400);
@@ -173,6 +190,8 @@ foreach (array_values($rawBlocks) as $i => $rb) {
         // 案件を選んでいない欄・外す欄は保存しない（入力があって案件がないときは知らせる）
         if ($pidRaw === '' && !$remove && $i < count($existingBlocks)) {
             $errors['b' . $i . '_project'] = msg('案件を選んでください（外すときは「この案件を外す」）');
+        } elseif ($pidRaw === '' && !$remove && $hasAnyInput($rawF)) {
+            $newBlockRawValues = $rawF;
         }
         continue;
     }
@@ -196,6 +215,12 @@ foreach (array_values($rawBlocks) as $i => $rb) {
 if (count($blocks) > 10) {
     $errors['general'] = msg('案件は 10 件までにしてください');
 }
+$newBlockValues = [];
+if ($newBlockRawValues !== null) {
+    // 案件を選ばずに入れた値は保存できない。知らせて、入力をその欄に残して戻す（案件がない人は「案件なし（社内待機・研修など）」を選ぶ）
+    $errors['b' . count($stateBlocks) . '_project'] = msg('案件を選んでください。案件がないとき（社内待機・研修など）は「案件なし」を選んでください');
+    $newBlockValues = $parseGroup($blockFields, $newBlockRawValues, 'bnew_', []);
+}
 $reportVals = $parseGroup($reportFields, $rawReport, 'r_', $oldValues[0] ?? []);
 
 if ($errors) {
@@ -203,7 +228,7 @@ if ($errors) {
     if ($isJson) {
         json_response(['ok' => false, 'reason' => 'invalid']);
     }
-    $state = ['blocks' => $stateBlocks, 'report' => $reportVals, 'warnings' => [], 'carry_from' => null, 'copy_from' => $copyFrom];
+    $state = ['blocks' => $stateBlocks, 'report' => $reportVals, 'warnings' => [], 'carry_from' => null, 'copy_from' => $copyFrom, 'new_block' => $newBlockValues];
     $notices = $unchanged ? [msg('前月の内容に入力が必要な項目があります。入力して「提出する」を押してください。')] : [];
     report_edit_render($user, $period, $report, $fields, $state, $errors, $notices);
 }

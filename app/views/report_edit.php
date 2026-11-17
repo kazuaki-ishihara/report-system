@@ -14,7 +14,7 @@ $isDraft = $status === null || $status === 'draft';
 $blockFields = array_values(array_filter($fields, function ($f) { return $f['scope'] === 'project' && $f['type'] !== 'project'; }));
 $reportFields = array_values(array_filter($fields, function ($f) { return $f['scope'] === 'report'; }));
 $blocks = $state['blocks'];
-$blocks[] = ['project_id' => 0, 'values' => [], 'new' => true];
+$blocks[] = ['project_id' => 0, 'values' => $state['new_block'] ?? [], 'new' => true];   // 案件を選ばずに入れて戻されたときは、その入力を残す
 $err = function (string $k) use ($errors): ?string { return $errors[$k] ?? null; };
 ?>
 <section class="card">
@@ -79,7 +79,7 @@ $err = function (string $k) use ($errors): ?string { return $errors[$k] ?? null;
         </select>
         <?php if ($e = $err('b' . $i . '_project')): ?><p class="field-error"><?= h_lines($e) ?></p><?php endif; ?>
         <?php if ($isNew): ?>
-          <p class="note">新しい案件に入ったときは、ここで案件を選んで入力してください。さらに追加する場合は、一度保存すると入力欄が増えます。</p>
+          <p class="note">新しい案件に入ったときは、ここで案件を選んで入力してください。案件がないとき（社内待機・研修など）は「案件なし」を選んでください。さらに追加する場合は、一度保存すると入力欄が増えます。</p>
         <?php else: ?>
           <label class="check"><input type="checkbox" name="b[<?= $i ?>][remove]" value="1"> この案件を外す（終わった案件）</label>
           <button type="button" class="small duplicate-block" data-source-block-index="<?= $i ?>" hidden>この内容で案件を追加</button>

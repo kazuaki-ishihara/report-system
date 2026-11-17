@@ -8,6 +8,14 @@ declare(strict_types=1);
 // 画面からは呼ばない（app/bin/migrate.php から呼ぶ）。
 // ====================================================================
 
+/**
+ * 案件がない人（社内待機・研修など）が選ぶ、予約の案件のコード（2026-11-17 指示）。
+ * schema_ensure() が 1 つだけ作り、いつも有効にする。課の指定はなく、どの課でも選べる。
+ * 案件の管理の一覧・案件の一覧の CSV（案件台帳の道具）には出さず、管理者も編集・終了できない。
+ */
+const NO_PROJECT_CODE = '案件なし';
+const NO_PROJECT_ALIAS = '社内待機・研修など';
+
 function schema_ensure(PDO $pdo): array
 {
     $log = [];
@@ -540,6 +548,12 @@ function schema_ensure(PDO $pdo): array
     $pdo->exec("UPDATE report_field_options SET label = 'システムテスト'
                  WHERE code = 'system_test' AND label = '総合テスト'
                    AND field_id IN (SELECT id FROM report_fields WHERE code = 'phase')");
+
+    // 案件がない人（社内待機・研修など）が選ぶ予約の案件。いつも有効で、課の指定はない
+    $pdo->prepare('INSERT OR IGNORE INTO projects (code, alias, department_id, is_active, created_at, updated_at) VALUES (?, ?, NULL, 1, ?, ?)')
+        ->execute([NO_PROJECT_CODE, NO_PROJECT_ALIAS, now(), now()]);
+    $pdo->prepare('UPDATE projects SET is_active = 1, ended_on = NULL, department_id = NULL WHERE code = ? AND (is_active = 0 OR ended_on IS NOT NULL OR department_id IS NOT NULL)')
+        ->execute([NO_PROJECT_CODE]);
 
     // 客先名らしい言葉の初期値（一般的な言葉だけ。実際の客先名は入れない）
     $words = ['株式会社', '（株）', '(株)', '㈱', '有限会社', '（有）', '㈲', '合同会社', '様', '御中', 'Inc.', 'Co., Ltd.', 'Corporation', 'Ltd.'];

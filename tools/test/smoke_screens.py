@@ -3,7 +3,7 @@
 
 G-01（同じコード・手順の飛ばし・セッション ID・記憶した端末・ロック中）、G-02（文言・予備のコード・ほかの端末・失敗の数）、
 G-03（部下と確認者の欄）、G-10（別の課の課長）、G-12（物理削除・表示名）、G-13（客先名の列）、
-G-14（自分の管理者・@・仮のパスワードの記録・無効・課長の一意。最後の管理者は、画面からは自分の管理者の決まりが先に効くので確かめられない）、G-16（ほかの人の端末・予備のコードのハッシュ）。
+G-14（自分の管理者・最後の管理者・@・仮のパスワードの記録・無効・課長の一意）、G-16（ほかの人の端末・予備のコードのハッシュ）。
 
     php tools/test/dev_seed.php --yes
     python3 tools/test/smoke_screens.py --base http://127.0.0.1:8000 --db app/data/dev.sqlite
@@ -224,6 +224,21 @@ def main():
 
     _status_code, _location, self_admin_html = save_user(admin_client, admin_user_id, {"display_name": "管理者", "department_id": "", "is_admin": "0"})
     check("自分の管理者は外せない", "自分自身の管理者は外せません" in self_admin_html and database.execute("SELECT is_admin FROM users WHERE id = ?", (admin_user_id,)).fetchone()[0] == 1)
+    # 最後の管理者: 管理者でない操作者は、補佐（開発担当。管理者と同じことができる。K-059）だけ。管理者が admin01 だけのとき、外す・無効にするのを断る
+    database.execute("UPDATE users SET is_admin_deputy_lead = 1 WHERE login_id = 'hosa01'")
+    deputy_lead_client = login(arguments.base, "hosa01", user_info_by_login_id["hosa01"])
+    check("管理者は admin01 の 1 人だけ（前提）", database.execute("SELECT COUNT(*) FROM users WHERE is_admin = 1 AND is_active = 1").fetchone()[0] == 1)
+    _status_code, _location, last_admin_html = save_user(deputy_lead_client, admin_user_id, {"display_name": "管理者", "department_id": "", "is_admin": "0"})
+    check("最後の管理者は、管理者を外せない（「管理者が 1 人もいなくなるため」）",
+          "管理者が 1 人もいなくなるため" in last_admin_html and database.execute("SELECT is_admin FROM users WHERE id = ?", (admin_user_id,)).fetchone()[0] == 1)
+    _status_code, _location, last_admin_inactive_html = save_user(deputy_lead_client, admin_user_id, {"display_name": "管理者", "department_id": "", "is_admin": "1", "is_active": "0"})
+    check("最後の管理者は、無効にもできない",
+          "管理者が 1 人もいなくなるため" in last_admin_inactive_html and database.execute("SELECT is_active FROM users WHERE id = ?", (admin_user_id,)).fetchone()[0] == 1)
+    database.execute("UPDATE users SET is_admin = 1 WHERE login_id = 'kacho_a'")   # 管理者が 2 人なら外せる（上の確かめが空振りでないこと）
+    _status_code, _location, _page = save_user(deputy_lead_client, user_info_by_login_id["kacho_a"]["id"], {"display_name": "A課長", "role_title": "課長", "is_admin": "0"})
+    check("管理者が 2 人いれば、1 人の管理者を外せる", database.execute("SELECT is_admin FROM users WHERE login_id = 'kacho_a'").fetchone()[0] == 0)
+    database.execute("UPDATE users SET is_admin_deputy_lead = 0 WHERE login_id = 'hosa01'")
+
     _status_code, _location, at_mark_html = save_user(admin_client, None, {"login_id": "someone@example.com", "display_name": "メールの人"})
     check("ログイン ID に @ を含められない", "ログイン ID にメールアドレスは使えません" in at_mark_html
           and database.execute("SELECT COUNT(*) FROM users WHERE login_id LIKE '%@%'").fetchone()[0] == 0)

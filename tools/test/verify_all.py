@@ -119,12 +119,15 @@ class Runner:
         ng_lines = re.findall(r"^NG  .*$", out, re.M)
         step = {"name": name, "ok": code == 0, "code": code, "passed": ok_n, "failed": len(ng_lines),
                 "ng": ng_lines[:30], "seconds": round(time.time() - t0, 1), "log": os.path.basename(log_path), "tail": out[-1500:]}
+        step["not_done"] = re.findall(r"^--  (.*)$", out, re.M)   # 確かめられなかった（ソフトが無いなど）。結果に「未実施」として出す
         step["screen_counts"] = count_by_screen(out, default_screen)
         step["items"] = check_items(out, default_screen)
         self.steps.append(step)
         say("%s  %s（OK %d / NG %d、%.1f 秒）" % ("成功" if step["ok"] else "失敗", name, ok_n, len(ng_lines), step["seconds"]))
         for line in ng_lines[:10]:
             say("    " + line)
+        for not_done_text in step["not_done"]:
+            say("    未実施: " + not_done_text)
         return step
 
     def add(self, name, ok, passed, ng, seconds=0.0, default_screen="共通"):
@@ -282,6 +285,8 @@ STEP_TABLE = [
     {"key": "fixes", "name": "件数の数え方・権限と状態の確認・入力の確認・文言（APP-001〜012）", "script": "smoke_fixes.py", "screen": "共通"},
     {"key": "features", "name": "報告まわりの便利機能（コメント一覧・定型文・検索・管理者のホーム など）", "script": "smoke_features.py", "screen": "共通"},
     {"key": "screens", "name": "設計書の検証の観点の残り（ログイン・再設定・ホーム・出力・項目・案件・利用者・アカウント）", "script": "smoke_screens.py", "screen": "共通"},
+    {"key": "edges", "name": "設計書で未検証だった項目（時間に頼るもの・同時の新規作成・境目・二重送信 など）", "script": "smoke_edges.py", "screen": "共通"},
+    {"key": "viewpoints", "name": "設計書の検証の観点の突き合わせで見つかった残り（G-03〜G-16）", "script": "smoke_viewpoints.py", "screen": "共通"},
     {"key": "org", "name": "組織（班ごと・異動・管理担当・課長がいない課）", "script": "smoke_org.py", "screen": "G-14"},
     {"key": "deputy", "name": "システム管理者補佐（代行できること・見られないもの）", "script": "smoke_deputy.py", "screen": "G-14"},
     {"key": "theme", "name": "自分の色（土台・強調・背景、読めない組み合わせを断る）", "script": "smoke_theme.py", "screen": "G-16"},
@@ -290,7 +295,7 @@ STEP_TABLE = [
     {"key": "ledger", "name": "案件台帳の道具・案件の一覧の CSV 出力", "script": "smoke_project_ledger.py", "screen": "G-13"},
     {"key": "conveniences", "name": "便利機能 A〜J（お知らせ・定型文・予定・CSV・メンテナンス・予約・バックアップ・使い方・よくある質問）", "script": "smoke_conveniences.py", "screen": "G-25"},
 ]
-STEP_KEYS = [step["key"] for step in STEP_TABLE] + ["ui", "retention", "units"]
+STEP_KEYS = [step["key"] for step in STEP_TABLE] + ["ui", "retention", "units", "office"]
 
 
 def selected_steps(skip_keys, only_values, with_ui):
@@ -401,9 +406,12 @@ def main():
         r.run("メッセージの一覧が最新", [sys.executable, "-I", os.path.join(ROOT, "tools", "lib", "msg_catalog.py"), "--check"], default_screen="コード")
         # よくある質問のチャットの判定（システムに寄る・グレーゾーン・明確にアウトの入力。tools/test/faq_input_cases.tsv）。サーバー・DB は使わない
         r.run("よくある質問の自動入力検証", [php, os.path.join("tools", "test", "faq_input_check.php")], default_screen="G-25")
-        if "units" not in skip and (not only or "units" in only or "G-10" in only):
-            # 画面を通さずに確かめる決まり（出力の数式・XML の扱い）。サーバー・DB は使わない
-            r.run("関数の確かめ（出力の数式・XML）", [php, os.path.join("tools", "test", "check_units.php")], default_screen="G-10")
+        if "units" not in skip and (not only or only & {"units", "G-10", "G-03", "共通"}):
+            # 画面を通さずに確かめる決まり（検証の印・対象月の切り替え・出力の数式・XML）。サーバー・検証の DB は使わない
+            r.run("関数の確かめ（検証の印・対象月・出力の数式・XML）", [php, os.path.join("tools", "test", "check_units.php")], default_screen="G-10")
+        if "office" not in skip and (not only or "office" in only or "G-10" in only):
+            # 出力の xlsx・CSV を表計算のソフト（Excel・あれば LibreOffice）で実際に開く
+            r.run("表計算のソフトで開く（出力の xlsx・CSV）", [py, "-I", os.path.join(HERE, "check_office.py"), "--php", php], default_screen="G-10", timeout=600)
 
         port = free_port()
         base = "http://127.0.0.1:%d" % port
@@ -432,6 +440,9 @@ def main():
                         command.append("--show")
                     if a.browser_port:
                         command += ["--browser-port", str(a.browser_port)]
+                elif step["key"] == "edges":
+                    # 同時の新規作成で、同じ DB のサーバーをもう 1 本立てるので PHP を渡す
+                    command = [py, "-I", os.path.join(HERE, step["script"]), "--base", base, "--db", db, "--php", php]
                 else:
                     command = [py, "-I", os.path.join(HERE, step["script"]), "--base", base, "--db", db]
                 r.run(step["name"], command, default_screen=step["screen"])
@@ -471,6 +482,9 @@ def main():
     for screen_code in sorted(set(screen_totals) | set(screen_names), key=screen_sort_key):
         screen_ok, screen_ng = screen_totals.get(screen_code, [0, 0])
         lines.append("| %s | %s | %d | %d |" % (screen_code, screen_names.get(screen_code, COMMON_UNIT_LABELS.get(screen_code, "")), screen_ok, screen_ng))
+    not_done_list = [(s["name"], text) for s in r.steps for text in s.get("not_done", [])]
+    if not_done_list:
+        lines += ["", "## 未実施（確かめられなかったもの）", ""] + ["- %s: %s" % (step_name, text) for step_name, text in not_done_list]
     bad = [s for s in r.steps if not s["ok"]]
     if bad:
         lines += ["", "## 失敗の内容", ""]
@@ -490,7 +504,7 @@ def main():
             w.writerow(["日時", "判定", "OK", "NG", "画面の自動操作"])
         w.writerow([stamp, verdict, passed, failed, "実施" if a.ui else "省略"])
     try:
-        print("\n判定: %s（OK %d / NG %d）%s" % (verdict, passed, failed, "　中断の理由: " + interrupted_reason if interrupted_reason else ""))
+        print("\n判定: %s（OK %d / NG %d%s）%s" % (verdict, passed, failed, "・未実施 %d" % len(not_done_list) if not_done_list else "", "　中断の理由: " + interrupted_reason if interrupted_reason else ""))
         print("記録: " + os.path.join(out, "結果.md"))
     except (OSError, ValueError):
         pass

@@ -49,6 +49,10 @@ $config = [
     // 開発用: true で 2 段階認証を飛ばす（https => false のときだけ効く）。
     // 自動検証（verify_all.py）は、下の MR_VERIFY_DB で自分用の DB を使い、このとき自動で false にする
     'dev_skip_2fa'          => false,
+
+    // 自動検証の印（下の MR_VERIFY_DB のときだけ true になる。本番・ふだんのローカル検証環境では常に false）。
+    // true のときだけ、検証が送る見出し X-Verify-Pause で、同時の操作を再現するための待ちを入れられる
+    'verify_mode'           => false,
 ];
 
 $local = __DIR__ . '/config.local.php';
@@ -63,6 +67,7 @@ if (is_file($local)) {
     if (is_string($verifyDatabasePath) && $verifyDatabasePath !== '' && ($config['allow_dev_seed'] ?? false) === true && ($config['https'] ?? true) === false) {
         $config['db_path'] = $verifyDatabasePath;
         $config['dev_skip_2fa'] = false;
+        $config['verify_mode'] = true;
     }
 }
 

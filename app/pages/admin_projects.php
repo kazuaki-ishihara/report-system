@@ -49,7 +49,7 @@ if (is_post()) {
                 flash('success', msg('案件 {code} を追加しました', ['code' => $code]));
             } else {
                 $id = input_id('id', 'POST');
-                if (db_one('SELECT id FROM projects WHERE id = ?', [$id]) === null) {
+                if (db_one('SELECT id FROM projects WHERE id = ? AND code <> ?', [$id, NO_PROJECT_CODE]) === null) {   // 予約の「案件なし」は変えない
                     error_page(404);
                 }
                 db_exec('UPDATE projects SET alias = ?, department_id = ?, updated_at = ? WHERE id = ?', [$alias, $deptId, now(), $id]);
@@ -64,8 +64,8 @@ if (is_post()) {
         rk_cancel();
     } elseif ($action === 'end' || $action === 'reopen') {
         $id = input_id('id', 'POST');
-        if (db_one('SELECT id FROM projects WHERE id = ?', [$id]) === null) {
-            error_page(404);
+        if (db_one('SELECT id FROM projects WHERE id = ? AND code <> ?', [$id, NO_PROJECT_CODE]) === null) {
+            error_page(404);   // 予約の「案件なし」は終了・再開しない
         }
         if ($action === 'end') {
             $clear = ($_POST['clear_alias'] ?? '') === '1';
@@ -97,7 +97,7 @@ if (($_GET['csv'] ?? '') === '1') {
                   WHERE rp.project_id = p.id AND r.deleted_at IS NULL AND r.is_legacy = 0
                     AND r.period = (SELECT MAX(r2.period) FROM report_projects rp2 JOIN report_records r2 ON r2.id = rp2.report_id
                                      WHERE rp2.project_id = p.id AND r2.deleted_at IS NULL AND r2.is_legacy = 0)) AS last_used_user_count
-           FROM projects p LEFT JOIN departments d ON d.id = p.department_id ORDER BY p.code"
+           FROM projects p LEFT JOIN departments d ON d.id = p.department_id WHERE p.code <> " . db()->quote(NO_PROJECT_CODE) . " ORDER BY p.code"
     ) as $projectRow) {
         $projectCsvRowList[] = [
             (string) $projectRow['code'], (string) $projectRow['alias'], (string) ($projectRow['dept_name'] ?? ''),
@@ -127,7 +127,7 @@ $projects = db_all(
             (SELECT COUNT(DISTINCT r.user_id) FROM report_projects rp JOIN report_records r ON r.id = rp.report_id
               WHERE rp.project_id = p.id AND r.period = ? AND r.deleted_at IS NULL) AS users_now
        FROM projects p LEFT JOIN departments d ON d.id = p.department_id
-      WHERE {$where} ORDER BY p.code",
+      WHERE {$where} AND p.code <> " . db()->quote(NO_PROJECT_CODE) . " ORDER BY p.code",
     [(string) $latest]
 );
 

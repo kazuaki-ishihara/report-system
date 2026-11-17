@@ -40,6 +40,7 @@ def main():
     parser.add_argument("--keep-open", action="store_true", help="終わったあともブラウザーを閉じない")
     parser.add_argument("--browser-port", type=int, default=0, help="起動済みのブラウザーにつなぐ（--remote-debugging-port の番号）")
     parser.add_argument("--php", default="", help="php の場所（省くと自動で探す）")
+    parser.add_argument("--db", default=WATCH_DB_PATH, help="見学で作り直す DB（既定 app/data/watch.sqlite。見る用の記録を残したいときは別の名前にする）")
     arguments = parser.parse_args()
     if arguments.slow <= 0:
         print("--slow は 0 より大きい秒数を指定してください（速く流すだけなら verify_all.py --ui を使います）")
@@ -54,10 +55,10 @@ def main():
     os.makedirs(output_dir, exist_ok=True)
 
     child_environment = dict(os.environ)
-    child_environment["MR_VERIFY_DB"] = WATCH_DB_PATH
+    child_environment["MR_VERIFY_DB"] = os.path.abspath(arguments.db)
     port_number = free_port()
     base_url = "http://127.0.0.1:%d" % port_number
-    print("見学 %s（サーバー: %s、DB: %s）" % (stamp, base_url, WATCH_DB_PATH))
+    print("見学 %s（サーバー: %s、DB: %s）" % (stamp, base_url, os.path.abspath(arguments.db)))
 
     server_process = subprocess.Popen([php_path, "-S", "127.0.0.1:%d" % port_number, "-t", os.path.join(REPOSITORY_ROOT, "public")],
                                       cwd=REPOSITORY_ROOT, env=child_environment,
@@ -74,8 +75,8 @@ def main():
             print(seed_result.stdout.decode("utf-8", "replace"))
             print("テストデータを作れませんでした")
             return 1
-        ui_command = [sys.executable, "-I", os.path.join(TEST_TOOL_DIR, "ui_check.py"),
-                      "--base", base_url, "--db", WATCH_DB_PATH, "--out", output_dir,
+        ui_command = [sys.executable, "-X", "utf8", "-I", os.path.join(TEST_TOOL_DIR, "ui_check.py"),
+                      "--base", base_url, "--db", os.path.abspath(arguments.db), "--out", output_dir,
                       "--show", "--slow", str(arguments.slow)]
         if arguments.keep_open:
             ui_command.append("--keep-open")
