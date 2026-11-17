@@ -118,7 +118,12 @@ foreach ($caseList as $case) {
         && !array_filter($expectation['matchedQuestionParts'], static fn (string $questionPart): bool => strpos($topQuestion, $questionPart) !== false)) {
         $reasonList[] = 'いちばんの答えが「' . implode('」か「', $expectation['matchedQuestionParts']) . '」の質問でない';
     }
-    if ($expectation['noticeLevel'] !== '' && $classification['noticeLevel'] !== $expectation['noticeLevel']) {
+    if ($expectation['noticeLevel'] === 'harassment') {
+        // 「+harassment」: 上司からのハラスメントとして、ほかの管理職・相談窓口への相談をすすめる返事にするか
+        if (empty($classification['harassmentBySuperior'])) {
+            $reasonList[] = '上司からのハラスメントとして扱っていない';
+        }
+    } elseif ($expectation['noticeLevel'] !== '' && $classification['noticeLevel'] !== $expectation['noticeLevel']) {
         $reasonList[] = '管理者への知らせが「' . $expectation['noticeLevel'] . '」でない（' . ($classification['noticeLevel'] === '' ? 'なし' : $classification['noticeLevel']) . '）';
     }
     $countByGroup[$case['group']]['all'] = ($countByGroup[$case['group']]['all'] ?? 0) + 1;
@@ -129,7 +134,8 @@ foreach ($caseList as $case) {
         $grayCountByCode[$resultCode] = ($grayCountByCode[$resultCode] ?? 0) + 1;
     }
     $resultText = ($contextTopicText !== '' ? '［前の話題「' . $contextTopicText . '」を補った］' : '') . $resultLabelByCode[$resultCode] . ($topQuestion !== '' ? '（' . $topQuestion . '）' : '')
-        . ($classification['noticeLevel'] !== '' ? ' [知らせ: ' . $classification['noticeLevel'] . ']' : '');
+        . ($classification['noticeLevel'] !== '' ? ' [知らせ: ' . $classification['noticeLevel'] . ']' : '')
+        . (!empty($classification['harassmentBySuperior']) ? ' [上司からのハラスメント: ほかの管理職へ]' : '');
     // 緊急・要配慮の文は、記録と同じく画面には出さない決まりだが、この入力は作り物の例文なのでそのまま出す
     if ($reasonList) {
         $mismatchList[] = sprintf('NG  [%s] %s => %s ／ %s（%d 行目）', $case['group'], $case['question'], $resultText, implode('、', $reasonList), $case['line']);

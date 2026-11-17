@@ -13,6 +13,7 @@
 /** @var string[] $errorTextList */
 /** @var string $searchQueryText 探す文（空なら探していない） */
 /** @var string $chatContextTopic 中身のない発言に、同じ会話の前の話題を補って答えたときの話題（G-25 §2.14。補っていなければ空） */
+/** @var bool $chatHarassment 上司からのハラスメントを書いた文（心の不調の返事を、ほかの管理職・相談窓口への相談をすすめる文にする） */
 /** @var string $chatResultCode 入れた文への答えの種類（faq_answer_chat()。matched・no_match・violence・opener・vague・unrelated・abusive。空は入れていない） */
 /** @var bool $isIgnored 関係のない質問・不適切な表現が続いたので、返事をしないか */
 /** @var string $distressLevel 心の不調らしい文の段階（urgent・concern。空はちがう） */
@@ -81,9 +82,11 @@ $renderCategoryChoices = static function () use ($categoryCountList, $categoryUr
         <?php elseif ($chatResultCode === 'retirement'): ?>
           <div class="chat-bubble chat-bot chat-care" role="status"><?= h_lines(msg('大切なことを書いてくれて、ありがとうございます。退職のことは、一人で抱えたり決めたりせず、まず上司（課長）に相談してください。気持ちや事情を話すことで、ほかの道が見つかることもあります。')) ?></div>
         <?php elseif ($chatResultCode === 'distress'): ?>
-          <div class="chat-bubble chat-bot chat-care" role="status"><?= h_lines($distressLevel === 'urgent'
+          <div class="chat-bubble chat-bot chat-care" role="status"><?= h_lines($chatHarassment
+              ? msg('つらい思いを書いてくれて、ありがとうございます。上司からのハラスメントは、その上司ではなく、ほかの管理職（別の課長・部長など）や、会社の相談窓口に相談してください。一人で抱え込まないでください。') . ($distressLevel === 'urgent' ? msg('今すぐ危ないと感じるときは、ためらわずに周りの人に助けを求めてください。') : '')
+              : ($distressLevel === 'urgent'
               ? msg('つらい気持ちを書いてくれて、ありがとうございます。一人で抱えずに、上司やシステム管理者に相談してください。今すぐ危ないと感じるときは、ためらわずに周りの人に助けを求めてください。')
-              : msg('おつかれさまです。無理をせず、つらいときは一人で抱えずに、上司やシステム管理者に相談してください。')) ?></div>
+              : msg('おつかれさまです。無理をせず、つらいときは一人で抱えずに、上司やシステム管理者に相談してください。'))) ?></div>
           <?php if ($matchedFaqList): ?>
             <div class="chat-bubble chat-bot">
               <p class="chat-question">Q. <?= h((string) $matchedFaqList[0]['question']) ?></p>

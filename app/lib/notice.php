@@ -436,6 +436,36 @@ const FAQ_VIOLENCE_WORDS = [
     '締め上げ', '締めあげ', 'しめあげ', '怒鳴ってしまっ', '怒鳴った', '怒鳴りたい', '怒鳴ってやる', '怒鳴りつけ', 'どなってしまっ', 'どなりつけ', '手を上げてしまっ', '手をあげてしまっ',
 ];
 
+/** 上の立場の人を表す言葉（上司からのハラスメントを見分ける） */
+const FAQ_SUPERIOR_WORDS = ['上司', '課長', '部長', '係長', '主任', 'リーダー', '先輩', '社長', '役員', '店長', 'マネージャー', '管理職'];
+/** ハラスメントを受けたことを表す言葉 */
+const FAQ_HARASSMENT_WORDS = ['パワハラ', 'セクハラ', 'モラハラ', 'マタハラ', 'ハラスメント', '怒鳴ら', '恫喝', '罵倒', '暴言', '嫌がらせ', 'いじめ', '無視され', '脅さ', '威圧', '干され', '追い出し'];
+
+/**
+ * 上司からのハラスメントを書いた文か（「上司のパワハラがひどい」「課長に怒鳴られた」）。
+ * 心の不調の返事で「上司に相談して」とは返さず、ほかの管理職や会社の相談窓口への相談をすすめる（2026-11-17 指示）
+ */
+function faq_is_harassment_by_superior(string $queryText): bool
+{
+    $normalizedQuery = faq_normalize_text($queryText);
+    $hasSuperiorWord = false;
+    foreach (FAQ_SUPERIOR_WORDS as $superiorWord) {
+        if (strpos($normalizedQuery, $superiorWord) !== false) {
+            $hasSuperiorWord = true;
+            break;
+        }
+    }
+    if (!$hasSuperiorWord) {
+        return false;
+    }
+    foreach (FAQ_HARASSMENT_WORDS as $harassmentWord) {
+        if (strpos($normalizedQuery, $harassmentWord) !== false) {
+            return true;
+        }
+    }
+    return false;
+}
+
 /** 人への暴力を書いた文か */
 function faq_is_violent(string $queryText): bool
 {
@@ -602,7 +632,7 @@ function faq_visible_entries(array $faqList, array $user): array
  * 心の不調らしい文は、心配な言葉の段階なら近い質問も探して一緒に返す（「助けて、ログインできない」など）。
  *
  * @param array<int, array<string, mixed>> $faqList 聞いた人に見えるよくある質問
- * @return array{code: string, matches: array<int, array<string, mixed>>, distressLevel: string, noticeLevel: string}
+ * @return array{code: string, matches: array<int, array<string, mixed>>, distressLevel: string, noticeLevel: string, harassmentBySuperior: bool}
  *   code: emergency・distress・retirement・sensitive・violence（人への暴力）・abusive・opener（呼びかけだけ）・vague・unrelated・matched・no_match。
  *   noticeLevel: 管理者に知らせる理由（心の不調の段階 → violence（人への暴力） → credential（K-057） → retirement（K-054）。なければ空）
  */
@@ -653,7 +683,10 @@ function faq_classify_question(string $questionText, array $faqList): array
     } elseif ($noticeLevel === '' && !in_array($resultCode, ['abusive', 'violence'], true) && faq_is_retirement($questionText)) {
         $noticeLevel = 'retirement';
     }
-    return ['code' => $resultCode, 'matches' => $matchedFaqList, 'distressLevel' => $distressLevel, 'noticeLevel' => $noticeLevel];
+    // 上司からのハラスメント: 心の不調の返事を、ほかの管理職・相談窓口への相談をすすめる文にする
+    $isHarassmentBySuperior = $resultCode === 'distress' && faq_is_harassment_by_superior($questionText);
+    return ['code' => $resultCode, 'matches' => $matchedFaqList, 'distressLevel' => $distressLevel, 'noticeLevel' => $noticeLevel,
+            'harassmentBySuperior' => $isHarassmentBySuperior];
 }
 
 // ---- 会話（G-25 §2.14。2026-11-17 指示: 複数の発言を一つの会話として扱う） ----
@@ -897,7 +930,7 @@ const FAQ_SEARCH_SYNONYMS = [
     'ログインしたまま' => '毎回 2段階認証 聞かれる 覚え', '安全' => 'セキュリティ 暗号化 安全', '暗号' => 'セキュリティ 暗号化 安全', '個人情報' => 'セキュリティ 暗号化 個人情報', '面倒' => '毎回 2段階認証 聞かれる', '勝手に' => '自動で',
     '文字を大き' => '文字を大きくしたい 拡大', 'ズーム' => '文字を大きくしたい 拡大', '拡大' => '文字を大きくしたい 拡大', '押しにくい' => '文字を大きくしたい 拡大', 'ガラケー' => 'スマートフォン 端末 使えるか',
     'チャットの内容' => 'チャットに入れた質問は記録されるか', '記録され' => 'チャットに入れた質問は記録されるか', '人が読' => 'チャットに入れた質問は記録されるか',
-    '誰が答え' => 'チャットに入れた質問は記録されるか', 'だれが答え' => 'チャットに入れた質問は記録されるか', '要望はどこ' => 'システムへの要望 伝えたい', '締め日はいつ' => '締切 期限', '締めた' => '締切 期限', '上司を変え' => '課長を変えたい 課を追加', '上司を替え' => '課長を変えたい 課を追加', '使えなくな' => '止まった 障害', '出力でき' => '出力の画面 pc から行ってください と出る', 'データ出力' => '出力', '会話' => 'チャット 合っていない ちぐはぐ', '開発担当' => '開発者 問い合わせ先', '開発者は' => '開発者 問い合わせ先', '他の人' => '他課 情報',
+    '誰が答え' => 'チャットに入れた質問は記録されるか', 'だれが答え' => 'チャットに入れた質問は記録されるか', '要望はどこ' => 'システムへの要望 伝えたい', '締め日はいつ' => '締切 期限', '締めた' => '締切 期限', '要約' => '機能 改善要望 要望 依頼', 'まとめてほしい' => '機能 ほしい 機能がない', '型式' => '課の報告の項目 足したい 変えたい', '形式を' => '課の報告の項目 足したい 変えたい', '様式' => '課の報告の項目 足したい 変えたい', 'フォーマット' => '課の報告の項目 足したい 変えたい', '上司を変え' => '課長を変えたい 課を追加', '上司を替え' => '課長を変えたい 課を追加', '使えなくな' => '止まった 障害', '出力でき' => '出力の画面 pc から行ってください と出る', 'データ出力' => '出力', '会話' => 'チャット 合っていない ちぐはぐ', '開発担当' => '開発者 問い合わせ先', '開発者は' => '開発者 問い合わせ先', '他の人' => '他課 情報',
     'ホウコク' => '報告', 'totp' => '2段階認証 コード', 'otp' => '2段階認証 コード', 'submit' => '提出', 'report' => '報告', 'deadline' => '締め日',
     '通知' => 'メール 通知 お知らせ', '通知を' => 'メールや通知は来るか お知らせの届き方', 'プッシュ' => 'メールや通知は来るか お知らせの届き方', 'メール' => 'メール 通知', '休みだった' => '出張 研修 締め日までに報告を出せない', '休んで' => '出張 研修 締め日までに報告を出せない', 'あなた' => 'チャット 何に答える 返答', 'きみは' => 'チャット 何に答える 返答', '君は' => 'チャット 何に答える 返答',
 ];

@@ -78,6 +78,7 @@ function faq_answer_chat(array $user, array $faqList, string $searchQueryText, ?
     // 会話（G-25 §2.14）: 同じ人が続けて入れた発言を 1 つの会話として記録し、中身のない発言には前の話題を補う
     $conversation = faq_conversation_current();
     $contextTopic = '';
+    $isHarassmentBySuperior = false;
     if ($selectedCategory !== null) {
         $resultCode = 'category';
         $matchedFaqList = faq_in_category($faqList, $selectedCategory);
@@ -91,6 +92,7 @@ function faq_answer_chat(array $user, array $faqList, string $searchQueryText, ?
         $contextTopic = $conversationJudgement['contextTopic'];
         $classification = $conversationJudgement['classification'];
         $resultCode = $classification['code'];
+        $isHarassmentBySuperior = (bool) ($classification['harassmentBySuperior'] ?? false);
         $matchedFaqList = $classification['matches'];
         $distressLevel = $classification['distressLevel'];
         $notifyLevel = $classification['noticeLevel'];
@@ -105,7 +107,7 @@ function faq_answer_chat(array $user, array $faqList, string $searchQueryText, ?
     $logId = faq_chat_log_add($user, $screenCode, $loggedQuestionText, $selectedCategory, $loggedResultCode,
         array_map('intval', array_column($matchedFaqList, 'id')), $isIgnored, $notifyLevel, $conversation['id']);
     return ['result' => $resultCode, 'ignored' => $isIgnored, 'distress_level' => $distressLevel, 'matches' => $matchedFaqList, 'log_id' => $logId,
-            'context' => $contextTopic];
+            'context' => $contextTopic, 'harassment' => $isHarassmentBySuperior];
 }
 
 // ---- チャットの答え（JavaScript が ?format=json&q= または ?format=json&category= で聞く。G-25 §2.1・§2.3・§2.6） ----
@@ -123,6 +125,7 @@ if (($_GET['format'] ?? '') === 'json') {
         'opener'    => $chatAnswer['result'] === 'opener',
         'violence'  => $chatAnswer['result'] === 'violence',
         'context'   => $chatAnswer['context'],
+        'harassment' => $chatAnswer['harassment'],
         'unrelated' => $chatAnswer['result'] === 'unrelated',
         'abusive'   => $chatAnswer['result'] === 'abusive',
         'distress'  => $chatAnswer['distress_level'],
@@ -319,6 +322,7 @@ render('faq', [
     'searchQueryText'   => $selectedCategory !== null ? '' : $searchQueryText,
     'chatResultCode'    => $chatResultCode,
     'chatContextTopic'  => $selectedCategory !== null ? '' : (string) ($chatAnswer['context'] ?? ''),
+    'chatHarassment'    => $selectedCategory === null && (bool) ($chatAnswer['harassment'] ?? false),
     'distressLevel'     => $chatAnswer['distress_level'],
     'isIgnored'         => $chatAnswer['ignored'],
     'chatLogId'         => $chatAnswer['log_id'],
