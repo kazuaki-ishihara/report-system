@@ -72,7 +72,12 @@ foreach ($users as [$login, $name, $dept, $admin, $role]) {
     if ($role !== null) {
         db_exec('INSERT INTO department_reviewers (department_id, user_id, is_final, sort_order) VALUES (?, ?, ?, ?)', [$dept, $id, $role === 'final' ? 1 : 0, $id * 10]);
     }
-    $out[$login] = ['id' => $id, 'password' => $password, 'totp' => $secret];
+    // 予備のコード: 実際の利用者は 2 段階認証の設定で必ず持つので、テスト用の利用者にも持たせる（無いとホームに作り直しの知らせが出る）。
+    // ハッシュを作るのに時間がかかる（自動検証は何度も作り直す）ので、1 人 1 つだけ
+    $backupCodePlain = substr(str_replace(['i', 'l', 'o'], '', strtolower(base32_encode(hash('sha1', 'dev-backup-' . $login, true)))), 0, 10);
+    db_exec('INSERT INTO user_backup_codes (user_id, code_hash, created_at) VALUES (?, ?, ?)', [$id, password_hash($backupCodePlain, PASSWORD_DEFAULT), $now]);
+    $out[$login] = ['id' => $id, 'password' => $password, 'totp' => $secret,
+                    'backup_code' => substr($backupCodePlain, 0, 4) . '-' . substr($backupCodePlain, 4)];
 }
 
 db_exec("UPDATE users SET is_admin_deputy = 1 WHERE login_id = 'hosa01'");

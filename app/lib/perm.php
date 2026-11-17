@@ -18,6 +18,25 @@ function is_admin_deputy(array $user): bool
     return (int) ($user['is_admin_deputy'] ?? 0) === 1;
 }
 
+/**
+ * 補佐（開発担当）か（K-059。補佐のうち 1 名。このシステムを作り保守する人）。
+ * 管理者と同じ権限を持つ（has_admin_authority()）。ただし、心の不調・退職に関わる質問（よくある質問のチャット）は見られない（is_admin() だけ）
+ */
+function is_admin_deputy_lead(array $user): bool
+{
+    return is_admin_deputy($user) && (int) ($user['is_admin_deputy_lead'] ?? 0) === 1;
+}
+
+/**
+ * 管理者の権限を持つか: 管理者と補佐（開発担当）（K-059）。
+ * 運用はレンタルサーバーの契約だけで、システムの保守は開発者が行うため、補佐（開発担当）には管理者と同じ権限を与える。
+ * 例外: 心の不調・退職に関わる質問の知らせ・中身は、管理者だけ（faq_chat_log.php は is_admin() のまま）
+ */
+function has_admin_authority(array $user): bool
+{
+    return is_admin($user) || is_admin_deputy_lead($user);
+}
+
 /** システム全体の管理（課・ユーザー・組織の改訂・項目・案件・注意の言葉）ができるか: 管理者と補佐 */
 function can_manage_system(array $user): bool
 {

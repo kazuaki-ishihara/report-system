@@ -1,5 +1,6 @@
 <?php
 /** @var array|null $target */
+/** @var int $backupCodeRemaining 使える予備のコードの数 */
 /** @var string|null $temp */
 /** @var array $errors */
 /** @var array $departments */
@@ -59,6 +60,9 @@ $selfUrl = $target === null ? '/admin/user_edit.php' : '/admin/user_edit.php?id=
       <?= ($v('is_admin_deputy', '0') !== '1' && $adminDeputyCount >= ADMIN_DEPUTY_MAX_COUNT) ? 'disabled' : '' ?>
       data-confirm-on="<?= h(msg('システム管理者補佐は、管理者が対応できないときに、管理の仕事（課・ユーザー・組織の改訂・項目・案件・注意の言葉・メッセージ）を代行できます。報告の中身・人ごとの提出状況・削除データの中身・閲覧と出力の記録は見られません。補佐の操作は記録に残ります')) ?>">
       システム管理者補佐（<?= (int) $adminDeputyCount ?>/<?= ADMIN_DEPUTY_MAX_COUNT ?> 名<?= ($v('is_admin_deputy', '0') !== '1' && $adminDeputyCount >= ADMIN_DEPUTY_MAX_COUNT) ? '。上限のため付けられません' : '' ?>）</label>
+    <label class="check"><input type="checkbox" name="is_admin_deputy_lead" value="1" <?= $v('is_admin_deputy_lead', '0') === '1' ? 'checked' : '' ?>
+      data-confirm-on="<?= h(msg('補佐（開発担当）は、管理者と同じ権限を持ちます（心の不調・退職に関わる質問は見られません）。このシステムの設計・製造・保守の担当者に 1 名だけ付けてください')) ?>">
+      補佐（開発担当。補佐のうち 1 名だけ。管理者と同じ権限。心の不調・退職に関わる質問は見られない。補佐の印も付けてください）</label>
     <?php endif; ?>
     <?php if ($target !== null): ?>
       <label class="check"><input type="checkbox" name="is_active" value="1" <?= $v('is_active', '1') === '1' ? 'checked' : '' ?>> 有効（外すとログインできなくなります。報告は残ります）</label>
@@ -70,6 +74,7 @@ $selfUrl = $target === null ? '/admin/user_edit.php' : '/admin/user_edit.php?id=
     <h2>状態</h2>
     <ul class="list">
       <li><span>2 段階認証</span><span><?= $target['totp_enabled_at'] !== null ? '設定済み（' . h(display_datetime($target['totp_enabled_at'])) . '）' : '未設定' ?></span></li>
+      <li><span>予備のコード</span><span><?= $target['totp_enabled_at'] === null ? '—' : '残り ' . (int) $backupCodeRemaining . ' 個' ?></span></li>
       <li><span>ロック</span><span><?= ($target['locked_until'] !== null && $target['locked_until'] > now()) ? 'ロック中（' . h(display_datetime((string) $target['locked_until'])) . ' まで）' : 'なし' ?></span></li>
       <li><span>最終ログイン</span><span><?= h($lastLogin === null ? '—' : display_datetime((string) $lastLogin)) ?></span></li>
       <li><span>パスワードの変更</span><span><?= (int) $target['must_change_password'] === 1 ? '仮のパスワード（未変更）' : h($target['password_changed_at'] === null ? '—' : display_datetime((string) $target['password_changed_at'])) ?></span></li>
@@ -79,9 +84,11 @@ $selfUrl = $target === null ? '/admin/user_edit.php' : '/admin/user_edit.php?id=
       <?php foreach ([
           ['temp_password', '仮のパスワードを発行', msg('仮のパスワードを発行します。今のパスワードは使えなくなり、ほかの端末はログアウトします。よろしいですか？')],
           ['reset_2fa', '2 段階認証を初期化', msg('2 段階認証を初期化します。次のログインで設定し直します。よろしいですか？')],
+          ['reset_backup_codes', '予備のコードを初期化', msg('予備のコードを初期化します。今のコードはすべて使えなくなります（認証アプリはそのまま使えます）。よろしいですか？')],
           ['unlock', 'ロックを解除', ''],
           ['logout_all', 'すべての端末からログアウト', msg('この人をすべての端末からログアウトさせます。よろしいですか？')],
       ] as $a): ?>
+        <?php if ($a[0] === 'reset_backup_codes' && $target['totp_enabled_at'] === null) { continue; } ?>
         <form method="post" action="<?= h(url($selfUrl)) ?>" class="inline" <?= $a[2] !== '' ? 'data-confirm="' . h($a[2]) . '"' : '' ?>>
           <?= form_hidden() ?>
           <input type="hidden" name="action" value="<?= h($a[0]) ?>">

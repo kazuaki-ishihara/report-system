@@ -11,7 +11,7 @@ $user = page_start();
 require_system_manager($user);
 $limit = date('Y-m-d H:i:s', strtotime('-' . (int) cfg('trash_days') . ' days'));
 // 補佐は削除データの中身（だれの・どの報告か）を見られず、戻せない。件数と種類だけ（K-043）
-$isOperatorDeputy = !is_admin($user);
+$isOperatorDeputy = !has_admin_authority($user);   // 補佐（開発担当）は管理者と同じ（K-059）
 
 if (is_post()) {
     if ($isOperatorDeputy) {

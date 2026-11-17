@@ -38,7 +38,7 @@ if (strtotime($to) - strtotime($from) > 366 * 86400) {
     error_page(400, msg('期間は 1 年以内にしてください。'));
 }
 // 補佐は「だれがどの報告を見た・出力した」は見られない（ログインと管理の操作の記録だけ。K-043）
-$isOperatorDeputy = !is_admin($user);
+$isOperatorDeputy = !has_admin_authority($user);   // 補佐（開発担当）は管理者と同じ（K-059）
 $allowedKindList = $isOperatorDeputy ? ['admin', 'auth', 'auth_fail', 'auth_unknown'] : ['view', 'export', 'admin', 'auth', 'auth_fail', 'auth_unknown'];
 if ($kind !== '' && !in_array($kind, $allowedKindList, true)) {
     error_page($isOperatorDeputy ? 403 : 400);

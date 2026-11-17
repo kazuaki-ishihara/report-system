@@ -52,6 +52,7 @@ function schema_ensure(PDO $pdo): array
         'ui_theme'             => "TEXT NOT NULL DEFAULT 'auto'",   // 画面のテーマ（G-16。UI_THEMES のキー）
         'team_id'              => 'INTEGER REFERENCES department_teams(id)',   // 今の班（「班ごと」の課。G-14 §6.7）
         'is_admin_deputy'      => 'INTEGER NOT NULL DEFAULT 0 CHECK (is_admin_deputy IN (0, 1))',
+        'is_admin_deputy_lead' => 'INTEGER NOT NULL DEFAULT 0 CHECK (is_admin_deputy_lead IN (0, 1))',   // 補佐（開発担当）。補佐のうち 1 名。管理者・補佐の予備のコードも初期化できる（G-14 §6.9。K-059）
         'ui_custom_colors'     => "TEXT NOT NULL DEFAULT ''",   // 自分の色（G-16 §4.6。JSON: base・accent・background）   // システム管理者補佐（G-14 §6.9。最大 3 名）
     ];
     $existing = [];
@@ -517,6 +518,19 @@ function schema_ensure(PDO $pdo): array
            BEGIN
              SELECT RAISE(ABORT, 'admin deputy: not with admin') WHERE NEW.is_admin = 1;
              SELECT RAISE(ABORT, 'admin deputy: max 3') WHERE (SELECT COUNT(*) FROM users WHERE is_admin_deputy = 1 AND is_active = 1) > 3;
+           END",
+        // 補佐（開発担当）: 補佐であること、有効な人で 1 名まで（K-059）
+        "CREATE TRIGGER IF NOT EXISTS tr_users_admin_deputy_lead_insert AFTER INSERT ON users
+           WHEN NEW.is_admin_deputy_lead = 1
+           BEGIN
+             SELECT RAISE(ABORT, 'admin deputy lead: must be deputy') WHERE NEW.is_admin_deputy <> 1;
+             SELECT RAISE(ABORT, 'admin deputy lead: max 1') WHERE (SELECT COUNT(*) FROM users WHERE is_admin_deputy_lead = 1 AND is_active = 1) > 1;
+           END",
+        "CREATE TRIGGER IF NOT EXISTS tr_users_admin_deputy_lead_update AFTER UPDATE OF is_admin_deputy_lead, is_admin_deputy, is_active ON users
+           WHEN NEW.is_admin_deputy_lead = 1
+           BEGIN
+             SELECT RAISE(ABORT, 'admin deputy lead: must be deputy') WHERE NEW.is_admin_deputy <> 1;
+             SELECT RAISE(ABORT, 'admin deputy lead: max 1') WHERE (SELECT COUNT(*) FROM users WHERE is_admin_deputy_lead = 1 AND is_active = 1) > 1;
            END",
     ] as $deputyTriggerSql) {
         $pdo->exec($deputyTriggerSql);

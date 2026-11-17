@@ -14,7 +14,7 @@ $adminMenuItemList = array_values(array_filter(menu_items($user), function (arra
 if (!$adminMenuItemList) {
     error_page(403);
 }
-$isAdmin = is_admin($user);
+$isAdmin = has_admin_authority($user);   // 管理者と補佐（開発担当。K-059）
 $isOperatorDeputy = !$isAdmin && is_admin_deputy($user);
 $canManageSystem = can_manage_system($user);
 

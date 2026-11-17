@@ -129,7 +129,7 @@
     <?php foreach ($users as $u): ?>
       <tr class="<?= (int) $u['is_active'] === 1 ? '' : 'muted' ?>">
         <td><?= h((string) $u['login_id']) ?></td>
-        <td><?= h($u['display_name']) ?><?= (int) $u['is_admin'] === 1 ? ' <span class="tag">管理者</span>' : '' ?><?= (int) $u['is_admin_deputy'] === 1 ? ' <span class="tag">補佐</span>' : '' ?></td>
+        <td><?= h($u['display_name']) ?><?= (int) $u['is_admin'] === 1 ? ' <span class="tag">管理者</span>' : '' ?><?= (int) $u['is_admin_deputy'] === 1 ? ' <span class="tag">' . ((int) ($u['is_admin_deputy_lead'] ?? 0) === 1 ? '補佐（開発担当）' : '補佐') . '</span>' : '' ?></td>
         <td><?= h((string) $u['dept_name']) ?></td>
         <td><?= h((string) ($u['team_name'] ?? '')) ?></td>
         <td><?= h((string) $u['roles']) ?></td>

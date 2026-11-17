@@ -24,7 +24,7 @@ if (!isset($depts[$deptId])) {
 $isReviewerOfDept = is_reviewer_of($uid, $deptId);
 $doesCheckInDept = $isReviewerOfDept && reviewer_does_check($uid, $deptId);   // 「チェックしない」の課長代理・リーダー（K-039）
 // 補佐は、確認者でない課では人ごとの行を出さない（課ごとの件数だけ。K-043）
-$isPersonRowsShown = is_admin($user) || !is_admin_deputy($user) || $isReviewerOfDept;
+$isPersonRowsShown = has_admin_authority($user) || !is_admin_deputy($user) || $isReviewerOfDept;   // 補佐（開発担当）は管理者と同じ（K-059）
 
 // ---- 「変更なし」の報告をまとめてチェック（G-08 §6.2） ----
 // 対象: この課・この月の、提出済み・確認完了で「前月から変更なし」のまま直していない（revision = 0）、自分以外の報告

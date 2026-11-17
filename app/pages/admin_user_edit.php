@@ -10,7 +10,7 @@ $user = page_start();
 require_system_manager($user);
 $me = (int) $user['id'];
 // 補佐は、管理者・補佐の役を付け外しできず、管理者・補佐の利用者（自分を含む）も変えられない（K-043）
-$isOperatorDeputy = !is_admin($user);
+$isOperatorDeputy = !has_admin_authority($user);   // 補佐（開発担当）は管理者と同じ（K-059）
 
 $id = isset($_GET['id']) ? input_id('id') : null;
 $target = null;
@@ -19,9 +19,9 @@ if ($id !== null) {
     if ($target === null) {
         error_page(404);
     }
-    if ($isOperatorDeputy && user_row_is_system_manager($target)) {
-        error_page(403, msg('管理者と補佐の利用者は、管理者だけが変えられます'));
-    }
+}
+if ($target !== null && $isOperatorDeputy && user_row_is_system_manager($target)) {
+    error_page(403, msg('管理者と補佐の利用者は、管理者だけが変えられます'));
 }
 $errors = [];
 $roleTitles = ['一般', '主任', '課長代理', '課長', '部長'];
@@ -42,6 +42,7 @@ if (is_post()) {
             $isAdminDeputy = 0;
         }
         $isActive = ($_POST['is_active'] ?? '') === '1' ? 1 : 0;
+        $isAdminDeputyLead = (!$isOperatorDeputy && $isAdminDeputy === 1 && ($_POST['is_admin_deputy_lead'] ?? '') === '1') ? 1 : 0;
         validate_text($display, '表示名', 20, true, $errors);
         if (!in_array($roleTitle, $roleTitles, true)) {
             $errors[] = msg('役職が正しくありません');
@@ -67,7 +68,7 @@ if (is_post()) {
             }
             $isActive = 1;
         } else {
-            if ((int) $target['id'] === $me && $isAdmin === 0) {
+            if ((int) $target['id'] === $me && (int) $target['is_admin'] === 1 && $isAdmin === 0) {
                 $errors[] = msg('自分自身の管理者は外せません');
             }
             if ((int) $target['id'] === $me && $isActive === 0) {
@@ -84,19 +85,26 @@ if (is_post()) {
             && admin_deputy_count($target === null ? null : (int) $target['id']) >= ADMIN_DEPUTY_MAX_COUNT) {
             $errors[] = msg('補佐は {max} 名までです。ほかの人の補佐を外してから付けてください', ['max' => ADMIN_DEPUTY_MAX_COUNT]);
         }
+        if ($isAdminDeputyLead === 1 && ($isActive === 1 || $target === null)
+            && admin_deputy_lead_count($target === null ? null : (int) $target['id']) >= 1) {
+            $errors[] = msg('補佐（開発担当）は 1 名だけです。ほかの人の印を外してから付けてください');
+        }
 
         if (!$errors) {
             if ($target === null) {
                 $temp = make_temp_password();
                 db_exec(
-                    'INSERT INTO users (username, password_hash, role_title, is_admin, is_admin_deputy, created_at, login_id, display_name, department_id, team_id, must_change_password, updated_at)
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)',
-                    [$loginId, password_hash($temp, PASSWORD_DEFAULT), $roleTitle, $isAdmin, $isAdminDeputy, now(), $loginId, $display, $deptId, $teamId, now()]
+                    'INSERT INTO users (username, password_hash, role_title, is_admin, is_admin_deputy, is_admin_deputy_lead, created_at, login_id, display_name, department_id, team_id, must_change_password, updated_at)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)',
+                    [$loginId, password_hash($temp, PASSWORD_DEFAULT), $roleTitle, $isAdmin, $isAdminDeputy, $isAdminDeputyLead, now(), $loginId, $display, $deptId, $teamId, now()]
                 );
                 $newId = (int) db()->lastInsertId();
                 audit_log('admin', 'user:' . $newId . ':create');
                 if ($isAdminDeputy === 1) {
                     audit_log('admin', 'user:' . $newId . ':deputy_on');
+                }
+                if ($isAdminDeputyLead === 1) {
+                    audit_log('admin', 'user:' . $newId . ':deputy_lead_on');
                 }
                 $_SESSION['show_temp_password'] = ['id' => $newId, 'password' => $temp];
                 rk_done('/admin/user_edit.php?id=' . $newId);
@@ -112,12 +120,13 @@ if (is_post()) {
                     $removedRoleTextList[] = $removedRoleRow['name'] . '（' . msg('項目管理者') . '）';
                 }
             }
-            tx(function () use ($tid, $display, $roleTitle, $deptId, $teamId, $isAdmin, $isAdminDeputy, $isActive, $target) {
+            tx(function () use ($tid, $display, $roleTitle, $deptId, $teamId, $isAdmin, $isAdminDeputy, $isAdminDeputyLead, $isActive, $target) {
                 db_exec(
-                    'UPDATE users SET display_name = ?, role_title = ?, department_id = ?, team_id = ?, is_admin = ?, is_admin_deputy = ?, is_active = ?, updated_at = ? WHERE id = ?',
-                    [$display, $roleTitle, $deptId, $teamId, $isAdmin, $isAdminDeputy, $isActive, now(), $tid]
+                    'UPDATE users SET display_name = ?, role_title = ?, department_id = ?, team_id = ?, is_admin = ?, is_admin_deputy = ?, is_admin_deputy_lead = ?, is_active = ?, updated_at = ? WHERE id = ?',
+                    [$display, $roleTitle, $deptId, $teamId, $isAdmin, $isAdminDeputy, $isAdminDeputyLead, $isActive, now(), $tid]
                 );
-                if ((int) $target['is_admin_deputy'] !== $isAdminDeputy || (int) $target['is_admin'] !== $isAdmin) {
+                if ((int) $target['is_admin_deputy'] !== $isAdminDeputy || (int) $target['is_admin'] !== $isAdmin
+                    || (int) ($target['is_admin_deputy_lead'] ?? 0) !== $isAdminDeputyLead) {
                     // 役が変わったら、今のログインを切る（新しい権限で入り直す）
                     db_exec('UPDATE users SET session_version = session_version + 1 WHERE id = ?', [$tid]);
                 }
@@ -137,12 +146,28 @@ if (is_post()) {
             if ((int) $target['is_admin_deputy'] !== $isAdminDeputy) {
                 audit_log('admin', 'user:' . $tid . ':' . ($isAdminDeputy === 1 ? 'deputy_on' : 'deputy_off'));
             }
+            if ((int) ($target['is_admin_deputy_lead'] ?? 0) !== $isAdminDeputyLead) {
+                audit_log('admin', 'user:' . $tid . ':' . ($isAdminDeputyLead === 1 ? 'deputy_lead_on' : 'deputy_lead_off'));
+            }
             audit_log('admin', 'user:' . $tid . ':' . ($isActive === 0 && (int) $target['is_active'] === 1 ? 'deactivate' : 'update'));
             flash('success', msg('保存しました'));
             rk_done('/admin/user_edit.php?id=' . $tid);
         }
         rk_cancel();
 
+    } elseif ($target !== null && $action === 'reset_backup_codes') {
+        // 予備のコードの初期化: 本人がコードをメール・チャットに貼った、なくした、などのとき。
+        // 今のコードをすべて使えなくする（認証アプリと端末の記憶はそのまま）。本人はアカウント設定で作り直す（ホームで促す）
+        $tid = (int) $target['id'];
+        if ($target['totp_enabled_at'] === null) {
+            flash('error', msg('2 段階認証が未設定のため、予備のコードはありません'));
+            rk_cancel();
+            redirect('/admin/user_edit.php?id=' . $tid);
+        }
+        db_exec('DELETE FROM user_backup_codes WHERE user_id = ?', [$tid]);
+        audit_log('admin', 'user:' . $tid . ':reset_backup_codes');
+        flash('success', msg('予備のコードを初期化しました。今のコードは使えません。本人に、アカウント設定の「予備のコード」で作り直すよう伝えてください'));
+        rk_done('/admin/user_edit.php?id=' . $tid);
     } elseif ($target !== null && in_array($action, ['temp_password', 'reset_2fa', 'unlock', 'logout_all'], true)) {
         $tid = (int) $target['id'];
         if ($action === 'temp_password') {
@@ -200,4 +225,5 @@ render('admin_user_edit', [
     'isOperatorDeputy' => $isOperatorDeputy,
     'adminDeputyCount' => admin_deputy_count($target === null ? null : (int) $target['id']),
     'lastLogin'   => $target === null ? null : db_val("SELECT MAX(created_at) FROM access_logs WHERE user_id = ? AND action = 'auth' AND target = 'login:ok'", [(int) $target['id']]),
+    'backupCodeRemaining' => $target === null ? 0 : (int) db_val('SELECT COUNT(*) FROM user_backup_codes WHERE user_id = ? AND used_at IS NULL', [(int) $target['id']]),
 ]);

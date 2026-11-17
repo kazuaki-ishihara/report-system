@@ -18,7 +18,7 @@ import sqlite3
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from lib_http import check, csrf, login, summary  # noqa: E402
+from lib_http import Client, check, csrf, login, summary  # noqa: E402
 
 
 def main():
@@ -114,6 +114,83 @@ def main():
                                                              {"action": "temp_password", "csrf_token": csrf(user_edit_html), "request_key": os.urandom(16).hex()})
     check("補佐は管理者の仮のパスワードを発行できない", status_code == 403, status_code)
 
+    # ---- 予備のコードの初期化（管理者・補佐。本人がコードをメール・チャットに貼った、などのとき） ----
+    def unused_backup_code_count(login_id):
+        return database.execute("SELECT COUNT(*) FROM user_backup_codes WHERE user_id = ? AND used_at IS NULL", (user_id_of(login_id),)).fetchone()[0]
+
+    def try_backup_code_login(login_id):
+        """予備のコードでログインを試す。ログインできれば True。"""
+        backup_client = Client(arguments.base)
+        _status_code, _location, login_html = backup_client.get("/login.php")
+        backup_client.post("/login.php", {"csrf_token": csrf(login_html), "action": "password", "login_id": login_id,
+                                          "password": user_info_by_login_id[login_id]["password"]})
+        _status_code, _location, code_html = backup_client.get("/login.php?step=2")
+        _status_code, location, _page_html = backup_client.post("/login.php", {"csrf_token": csrf(code_html), "action": "code",
+                                                                              "code": user_info_by_login_id[login_id]["backup_code"], "remember": "0"})
+        return "/index.php" in (location or "")
+
+    _status_code, _location, user_edit_html = deputy_client.get("/admin/user_edit.php?id=%d" % user_id_of("ippan_b1"))
+    check("ユーザーの編集に、予備のコードの残りと「予備のコードを初期化」が出る",
+          "残り 1 個" in user_edit_html and 'value="reset_backup_codes"' in user_edit_html)
+    totp_before_row = database.execute("SELECT totp_secret_enc, totp_enabled_at FROM users WHERE id = ?", (user_id_of("ippan_b1"),)).fetchone()
+    status_code, location, _page_html = post_form(deputy_client, "/admin/user_edit.php?id=%d" % user_id_of("ippan_b1"), {"action": "reset_backup_codes"})
+    totp_after_row = database.execute("SELECT totp_secret_enc, totp_enabled_at FROM users WHERE id = ?", (user_id_of("ippan_b1"),)).fetchone()
+    check("補佐は一般の利用者の予備のコードを初期化できる（使えるコードが 0 個）", status_code in (302, 303) and unused_backup_code_count("ippan_b1") == 0,
+          (status_code, unused_backup_code_count("ippan_b1")))
+    check("予備のコードの初期化では、認証アプリの設定は変えない", tuple(totp_before_row) == tuple(totp_after_row))
+    check("初期化した前の予備のコードではログインできない", not try_backup_code_login("ippan_b1"))
+    check("予備のコードの初期化を記録する（補佐として）",
+          database.execute("SELECT COUNT(*) FROM access_logs WHERE target = ?", ("user:%d:reset_backup_codes" % user_id_of("ippan_b1"),)).fetchone()[0] >= 1)
+    ippan_b1_client = login(arguments.base, "ippan_b1", user_info_by_login_id["ippan_b1"])
+    check("初期化された本人は、認証アプリのコードでログインできる", ippan_b1_client is not None)
+    _status_code, _location, home_html = ippan_b1_client.get("/index.php")
+    check("初期化された本人のホームに、予備のコードを作り直す知らせが出る", "予備のコードがありません" in home_html and "/account.php?tab=codes" in home_html)
+    post_form(ippan_b1_client, "/account.php?tab=codes", {"action": "codes_regen", "current_password": user_info_by_login_id["ippan_b1"]["password"]})
+    _status_code, _location, home_html = ippan_b1_client.get("/index.php")
+    check("本人が作り直すと、ホームの知らせが消える", "予備のコードがありません" not in home_html and unused_backup_code_count("ippan_b1") == 8,
+          unused_backup_code_count("ippan_b1"))
+    status_code, _location, _page_html = deputy_client.post("/admin/user_edit.php?id=%d" % user_id_of("admin01"),
+                                                             {"action": "reset_backup_codes", "csrf_token": csrf(user_edit_html), "request_key": os.urandom(16).hex()})
+    check("補佐は管理者の予備のコードを初期化できない", status_code == 403 and unused_backup_code_count("admin01") == 1, status_code)
+    status_code, _location, _page_html = post_form(admin_client, "/admin/user_edit.php?id=%d" % user_id_of("hosa01"), {"action": "reset_backup_codes"})
+    check("管理者は補佐の予備のコードも初期化できる", status_code in (302, 303) and unused_backup_code_count("hosa01") == 0, status_code)
+    _status_code, _location, user_edit_html = admin_client.get("/admin/user_edit.php?id=%d" % user_id_of("ippan_a2"))
+    check("2 段階認証が未設定の人には、予備のコードの初期化を出さない", 'value="reset_backup_codes"' not in user_edit_html and "予備のコード</span><span>—" in user_edit_html)
+
+    # ---- 補佐（開発担当。K-059）: 補佐のうち 1 名だけ、管理者・補佐の予備のコードも初期化できる ----
+    status_code, _location, _page_html = save_user(deputy_client, "ippan_a1", {"is_admin_deputy_lead": "1"})
+    check("補佐は、補佐（開発担当）の印を付けられない",
+          database.execute("SELECT is_admin_deputy_lead FROM users WHERE id = ?", (user_id_of("ippan_a1"),)).fetchone()[0] == 0, status_code)
+    status_code, _location, _page_html = save_user(admin_client, "hosa01", {"is_admin_deputy": "1", "is_admin_deputy_lead": "1"})
+    check("管理者は、補佐に補佐（開発担当）の印を付けられる",
+          database.execute("SELECT is_admin_deputy_lead FROM users WHERE id = ?", (user_id_of("hosa01"),)).fetchone()[0] == 1, status_code)
+    deputy_client = login(arguments.base, "hosa01", user_info_by_login_id["hosa01"])   # 役が変わるとログインし直す
+    # 補佐（開発担当）は管理者と同じ権限（K-059）。ただし心の不調・退職に関わる質問は見られない
+    status_code, _location, lead_view_html = deputy_client.get("/admin/user_edit.php?id=%d" % user_id_of("admin01"))
+    check("補佐（開発担当）は管理者のユーザーの編集を開け、保存・管理者と補佐の印も出る",
+          status_code == 200 and 'value="save"' in lead_view_html and 'name="is_admin"' in lead_view_html and 'name="is_admin_deputy_lead"' in lead_view_html, status_code)
+    status_code, _location, _page_html = post_form(deputy_client, "/admin/user_edit.php?id=%d" % user_id_of("admin01"), {"action": "unlock"})
+    check("補佐（開発担当）は管理者の利用者の操作ができる（ロックの解除）", status_code in (302, 303), status_code)
+    status_code, _location, _page_html = post_form(deputy_client, "/admin/user_edit.php?id=%d" % user_id_of("admin01"), {"action": "reset_backup_codes"})
+    check("補佐（開発担当）は管理者の予備のコードを初期化できる", status_code in (302, 303) and unused_backup_code_count("admin01") == 0, status_code)
+    check("補佐（開発担当）の操作も、補佐として記録する",
+          database.execute("SELECT COUNT(*) FROM access_logs WHERE target = ? AND user_id = ? AND acted_as_deputy = 1",
+                           ("user:%d:reset_backup_codes" % user_id_of("admin01"), user_id_of("hosa01"))).fetchone()[0] >= 1)
+    status_code, _location, _page_html = deputy_client.get("/admin/logs.php?kind=view")
+    check("補佐（開発担当）は閲覧の記録を見られる", status_code == 200, status_code)
+    _status_code, _location, lead_trash_html = deputy_client.get("/admin/trash.php")
+    check("補佐（開発担当）の削除データには中身の一覧が出る", "A一般1" in lead_trash_html)
+    _status_code, _location, lead_status_html = deputy_client.get("/status/index.php?period=%s&dept=%d" % (previous_month, department_a_id))
+    check("補佐（開発担当）の提出状況には人ごとの行が出る", "A一般1" in lead_status_html)
+    _status_code, _location, lead_faq_logs_html = deputy_client.get("/admin/faq_logs.php")
+    check("補佐（開発担当）でも、心の不調・退職に関わる質問は見られない",
+          "知らせる質問（ID やパスワードを求める質問）" in lead_faq_logs_html and "心の不調・退職・ID" not in lead_faq_logs_html)
+    _status_code, _location, users_html = admin_client.get("/admin/org.php?tab=users")
+    check("ユーザーの一覧に「補佐（開発担当）」と出る", "補佐（開発担当）" in users_html)
+    # 以降の確かめは、ふつうの補佐として行う（印を外してログインし直す。1 名だけの確かめは最後に付け直す）
+    save_user(admin_client, "hosa01", {"is_admin_deputy": "1"})
+    deputy_client = login(arguments.base, "hosa01", user_info_by_login_id["hosa01"])
+
     # CSV: 補佐は管理者の行を変えられない
     _status_code, _location, bulk_html = deputy_client.get("/admin/org.php?tab=bulk")
     csv_text = "ログイン ID,表示名,所属の課,班,役割,担当の班,項目管理者,有効\r\nadmin01,管理者,B課,,,,,1\r\n"
@@ -147,6 +224,21 @@ def main():
     except sqlite3.DatabaseError:
         database_refused = True
     check("DB でも 4 人目の補佐は止める", database_refused)
+    save_user(admin_client, "hosa01", {"is_admin_deputy": "1", "is_admin_deputy_lead": "1"})
+    status_code, _location, error_html = save_user(admin_client, "ippan_b1", {"is_admin_deputy": "1", "is_admin_deputy_lead": "1"})
+    check("補佐（開発担当）は 1 名だけ（2 人目は断る）", status_code == 200 and "1 名だけです" in error_html
+          and database.execute("SELECT is_admin_deputy_lead FROM users WHERE id = ?", (user_id_of("ippan_b1"),)).fetchone()[0] == 0, status_code)
+    for sql_text, check_name in [("UPDATE users SET is_admin_deputy_lead = 1 WHERE id = %d" % user_id_of("ippan_a2"), "DB でも補佐（開発担当）の 2 人目は止める"),
+                                 ("UPDATE users SET is_admin_deputy_lead = 1 WHERE id = %d" % user_id_of("leader_a"), "DB でも補佐でない人には補佐（開発担当）を付けない")]:
+        try:
+            database.execute(sql_text)
+            database_refused = False
+        except sqlite3.DatabaseError:
+            database_refused = True
+        check(check_name, database_refused)
+    save_user(admin_client, "hosa01", {"is_admin_deputy": "1"})
+    check("管理者は補佐（開発担当）の印を外せる",
+          database.execute("SELECT is_admin_deputy_lead FROM users WHERE id = ?", (user_id_of("hosa01"),)).fetchone()[0] == 0)
     save_user(admin_client, "ippan_b1", {})
     check("管理者は補佐を外せる", database.execute("SELECT is_admin_deputy FROM users WHERE id = ?", (user_id_of("ippan_b1"),)).fetchone()[0] == 0)
     return summary()

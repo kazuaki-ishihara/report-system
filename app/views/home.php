@@ -18,6 +18,10 @@ $editUrl = url('/reports/edit.php?period=' . rawurlencode($period));
     <a href="<?= h(url('/admin/org.php?tab=departments')) ?>">組織・ユーザーで設定する</a>
   </div>
 <?php endif; ?>
+<?php /** @var bool $hasNoBackupCode 2 段階認証を設定していて、使える予備のコードが 1 つもない */ ?>
+<?php if ($hasNoBackupCode): ?>
+  <div class="flash flash-error" role="alert"><a href="<?= h(url('/account.php?tab=codes')) ?>"><?= h(msg('予備のコードがありません。認証アプリが使えなくなったときに備えて、アカウント設定の「予備のコード」で作り直してください')) ?></a></div>
+<?php endif; ?>
 <?php /** @var int $supportRequestAnsweredCount 管理者側から返信があった自分の要望・依頼の数 */ ?>
 <?php /** @var array{open: int, waiting_reply: int}|null $supportRequestStaffCounts 管理者・補佐に知らせる要望・依頼の数 */ ?>
 <?php if ($supportRequestAnsweredCount > 0): ?>

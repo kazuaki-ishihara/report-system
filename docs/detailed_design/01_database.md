@@ -98,6 +98,7 @@ ALTER TABLE users ADD COLUMN ui_theme         TEXT NOT NULL DEFAULT 'auto';   --
 -- department_reviewers にも後から列を足す: does_check INTEGER NOT NULL DEFAULT 1（チェックするか。K-039。課長は常に 1。G-23 §5）
 ALTER TABLE users ADD COLUMN ui_custom_colors TEXT NOT NULL DEFAULT '';   -- 自分の色（G-16 §4.6。JSON: base・accent・background）
 ALTER TABLE users ADD COLUMN is_admin_deputy  INTEGER NOT NULL DEFAULT 0 CHECK (is_admin_deputy IN (0, 1));   -- システム管理者補佐（G-14 §6.9）
+ALTER TABLE users ADD COLUMN is_admin_deputy_lead INTEGER NOT NULL DEFAULT 0 CHECK (is_admin_deputy_lead IN (0, 1));   -- 補佐（開発担当）。補佐のうち有効な人で 1 名（G-14 §6.9。K-059。トリガー tr_users_admin_deputy_lead_*）
 -- 補佐は有効な人で 3 名まで、管理者と兼ねない（トリガー tr_users_admin_deputy_insert・tr_users_admin_deputy_update が RAISE(ABORT)）
 CREATE UNIQUE INDEX IF NOT EXISTS ux_users_login_id ON users (login_id);
 
