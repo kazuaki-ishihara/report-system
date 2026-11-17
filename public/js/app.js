@@ -143,23 +143,42 @@
     if (!copyButton) { return; }
     var copySource = document.getElementById(copyButton.getAttribute('data-copy-from'));
     if (!copySource) { return; }
-    var copyValue = copySource.value !== undefined ? copySource.value : copySource.textContent;
+    var copyValue;
+    if (copySource.value !== undefined) {
+      copyValue = copySource.value;
+    } else if (copySource.querySelector('li')) {
+      // 一覧（予備のコードなど）は 1 つ 1 行にしてコピーする
+      copyValue = Array.prototype.map.call(copySource.querySelectorAll('li'), function (listItem) { return listItem.textContent.trim(); }).join('\n');
+    } else {
+      copyValue = copySource.textContent.trim();
+    }
     if (!copyValue) {
       showCopyResult(copyButton, M('コピーする文字がありません'));
       return;
     }
     var onCopied = function () { showCopyResult(copyButton, M('コピーしました')); };
+    // クリップボードの API が使えないとき（http の画面・古いブラウザー）は、選んでコピーの命令を使う。
+    // iPhone の Safari は textarea の select() では選べないので、範囲（Range）で選ぶ
     var copyByCommand = function () {
-      var copyArea = document.createElement('textarea');
-      copyArea.value = copyValue;
-      copyArea.setAttribute('readonly', '');
-      copyArea.style.position = 'fixed';
-      copyArea.style.opacity = '0';
-      document.body.appendChild(copyArea);
-      copyArea.select();
+      var copyHolder = document.createElement('span');
+      copyHolder.textContent = copyValue;
+      copyHolder.style.whiteSpace = 'pre';
+      copyHolder.style.position = 'fixed';
+      copyHolder.style.top = '0';
+      copyHolder.style.left = '0';
+      copyHolder.style.opacity = '0';
+      copyHolder.style.userSelect = 'text';
+      copyHolder.style.webkitUserSelect = 'text';
+      document.body.appendChild(copyHolder);
+      var pageSelection = window.getSelection();
+      var copyRange = document.createRange();
+      copyRange.selectNodeContents(copyHolder);
+      pageSelection.removeAllRanges();
+      pageSelection.addRange(copyRange);
       var isCopied = false;
       try { isCopied = document.execCommand('copy'); } catch (copyError) { isCopied = false; }
-      document.body.removeChild(copyArea);
+      pageSelection.removeAllRanges();
+      document.body.removeChild(copyHolder);
       showCopyResult(copyButton, isCopied ? M('コピーしました') : M('コピーできませんでした。選んでコピーしてください'));
     };
     if (navigator.clipboard && window.isSecureContext) {
@@ -723,7 +742,7 @@
       if (!categoryRowTemplate) { return; }
       var categoryRow = categoryRowTemplate.cloneNode(true);
       categoryRow.classList.remove('chat-choices-done');
-      Array.prototype.forEach.call(categoryRow.querySelectorAll('.chosen'), function (choiceLink) { choiceLink.classList.remove('chosen'); });
+      Array.prototype.forEach.call(categoryRow.querySelectorAll('.chosen'), function (choiceLink) { choiceLink.classList.remove('chosen'); choiceLink.removeAttribute('aria-current'); });
       chatLog.appendChild(categoryRow);
       scrollToEnd();
     }
@@ -830,7 +849,13 @@
       var categoryRow = categoryLink.parentNode;
       if (categoryRow.classList.contains('chat-choices-done') && categoryRow !== categoryRowTemplate) { return; }
       if (categoryRow !== categoryRowTemplate) { categoryRow.classList.add('chat-choices-done'); }
+      // 押した印は、最後に押した 1 つだけに付ける（前に押したボタンは押す前の見た目に戻す）
+      Array.prototype.forEach.call(chatLog.querySelectorAll('a[data-category].chosen'), function (chosenLink) {
+        chosenLink.classList.remove('chosen');
+        chosenLink.removeAttribute('aria-current');
+      });
       categoryLink.classList.add('chosen');
+      categoryLink.setAttribute('aria-current', 'true');
       var categoryLabel = categoryLink.textContent.replace(/（\d+）$/, '');
       lastQuestionText = '';
       if (askBlock) { askBlock.hidden = true; }

@@ -297,6 +297,57 @@ def main():
         shot("admin_home")
         check("管理のトップに、管理の仕事ごとのカードが出る", b.eval("document.querySelectorAll('.admin-card').length") >= 4)
 
+        # ---- 文字の字体（共通編）: BIZ UDゴシックで統一し、system-ui は使わない ----
+        body_font = b.eval("getComputedStyle(document.body).fontFamily") or ""
+        check("本文の字体は BIZ UDゴシック（system-ui を使わない）", body_font.startswith('"BIZ UDGothic"') and "system-ui" not in body_font, body_font)
+        button_font = b.eval("getComputedStyle(document.querySelector('button')).fontFamily") or ""
+        check("ボタンも本文と同じ字体", button_font == body_font, button_font)
+
+        # ---- よくある質問（G-25）: 押した見た目は、最後に押した分野のボタン 1 つだけ ----
+        b.goto(a.base + "/faq.php")
+        if b.exists('button[value="import_standard"]'):
+            b.click('button[value="import_standard"]', navigate=True)
+            b.goto(a.base + "/faq.php")
+        category_link_selector = "#faq-chat .faq-chat-log > .chat-choices a[data-category]"
+        b.click("%s:nth-child(1)" % category_link_selector)
+        time.sleep(1)
+        b.click("%s:nth-child(2)" % category_link_selector)
+        time.sleep(1)
+        chosen_count = b.eval("document.querySelectorAll('#faq-chat a[data-category].chosen').length")
+        second_chosen = b.eval("document.querySelector('%s:nth-child(2)').classList.contains('chosen')" % category_link_selector)
+        shot("faq_category_chosen")
+        check("よくある質問で分野を続けて押すと、押した見た目は最後の 1 つだけ", chosen_count == 1 and second_chosen, (chosen_count, second_chosen))
+
+        # ---- 予備のコード（G-16）: スマートフォンの幅で「コピー」を押すと、1 つ 1 行でクリップボードに入る ----
+        b.call("Browser.grantPermissions", {"origin": a.base, "permissions": ["clipboardReadWrite", "clipboardSanitizedWrite"]})
+        b.mobile(True)
+        b.goto(a.base + "/account.php?tab=codes")
+        b.fill("#current_password_c", U["admin01"]["password"])
+        b.click('#current_password_c ~ button[type="submit"]', navigate=True)
+        backup_code_list = b.eval("Array.prototype.map.call(document.querySelectorAll('#backup-codes li'), function (li) { return li.textContent.trim(); })") or []
+        check("予備のコードを作り直すと、コードとコピーのボタンが出る", len(backup_code_list) >= 5 and b.visible('.copy-text[data-copy-from="backup-codes"]'), len(backup_code_list))
+        b.click('.copy-text[data-copy-from="backup-codes"]')
+        time.sleep(0.5)
+        copy_result_text = b.eval("document.querySelector('#backup-codes ~ p .copy-result').textContent")
+        clipboard_text = b.eval("navigator.clipboard.readText()")
+        shot("backup_codes_copied_mobile")
+        check("スマートフォンの幅で予備のコードをコピーできる（「コピーしました」）", copy_result_text == "コピーしました", copy_result_text)
+        # Windows のクリップボードは改行を \r\n にするので、そろえて比べる
+        check("コピーした中身は、予備のコードを 1 つ 1 行にしたもの", (clipboard_text or "").replace("\r\n", "\n") == "\n".join(backup_code_list), clipboard_text)
+        # クリップボードの API が無いブラウザー（http の画面・古いスマートフォン）でも、選んでコピーの命令でコピーできる
+        # （この命令は人が押したときだけ働くので、人の操作として押す）
+        b.eval("navigator.clipboard.writeText('')")
+        b.eval("Object.defineProperty(navigator, 'clipboard', {value: undefined, configurable: true}); document.querySelector('#backup-codes ~ p .copy-result').textContent = ''; true")
+        b.click('.copy-text[data-copy-from="backup-codes"]', user_gesture=True)
+        time.sleep(0.5)
+        fallback_result_text = b.eval("document.querySelector('#backup-codes ~ p .copy-result').textContent")
+        b.goto(a.base + "/account.php?tab=codes")  # クリップボードの API を戻して、中身を読む
+        fallback_clipboard_text = b.eval("navigator.clipboard.readText()")
+        check("クリップボードの API が無くてもコピーできる（中身も同じ）",
+              fallback_result_text == "コピーしました" and (fallback_clipboard_text or "").replace("\r\n", "\n") == "\n".join(backup_code_list),
+              (fallback_result_text, fallback_clipboard_text))
+        b.mobile(False)
+
         # ---- 画面のテーマ（G-16）: ダークを選ぶと背景が暗くなる ----
         b.goto(a.base + "/account.php?tab=theme")
         b.click('input[name="ui_theme"][value="dark"]')

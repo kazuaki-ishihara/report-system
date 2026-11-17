@@ -282,7 +282,7 @@ function export_xlsx(string $sheetName, array $headerLines, array $header, array
             . '</Relationships>',
         'xl/styles.xml' => '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
             . '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
-            . '<fonts count="3"><font><sz val="10"/><name val="Meiryo UI"/></font><font><b/><sz val="10"/><color rgb="FFCF222E"/><name val="Meiryo UI"/></font><font><b/><sz val="10"/><name val="Meiryo UI"/></font></fonts>'
+            . '<fonts count="3"><font><sz val="10"/><name val="BIZ UDゴシック"/></font><font><b/><sz val="10"/><color rgb="FFCF222E"/><name val="BIZ UDゴシック"/></font><font><b/><sz val="10"/><name val="BIZ UDゴシック"/></font></fonts>'
             . '<fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFEAEEF2"/></patternFill></fill></fills>'
             . '<borders count="1"><border/></borders>'
             . '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>'

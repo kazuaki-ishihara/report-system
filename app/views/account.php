@@ -86,9 +86,14 @@ $full = $stage === 'full' && (int) $user['must_change_password'] !== 1;
     <h2>予備のコード</h2>
     <?php if (is_array($codes)): ?>
       <p>認証アプリが使えないとき（機種変更など）に、1 つにつき 1 回使えます。<strong>この画面を離れると二度と表示されません。</strong>紙に書くなどして保管してください。</p>
-      <ul class="codes">
+      <ul class="codes" id="backup-codes">
         <?php foreach ($codes as $c): ?><li><?= h($c) ?></li><?php endforeach; ?>
       </ul>
+      <p>
+        <button type="button" class="small copy-text" data-copy-from="backup-codes">予備のコードをコピー</button>
+        <span class="copy-result" aria-live="polite"></span>
+      </p>
+      <p class="note">コピーしたコードは、パスワードの管理アプリなど安全な場所に貼り付けて保管してください。メールやチャットに貼らないでください。</p>
       <?php if ($afterNext !== ''): ?>
         <a class="button primary" href="<?= h(url($afterNext)) ?>">保管しました</a>
       <?php endif; ?>

@@ -13,6 +13,7 @@
   --ok-bg: #dafbe1;
   --err-bg: #ffebe9;
   --radius: 8px;
+  --font-body: "BIZ UDGothic", "BIZ UDゴシック", "Noto Sans JP", "Noto Sans CJK JP", "Hiragino Sans", Meiryo, sans-serif;
   --input-bg: #ffffff;
   --button-bg: #f6f8fa;
   --info-bg: #ddf4ff;
@@ -36,7 +37,9 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
-  font-family: system-ui, -apple-system, "Segoe UI", "Hiragino Sans", "Noto Sans JP", Meiryo, sans-serif;
+  /* 文字は BIZ UDゴシックで統一する（Windows 10 以降は標準で入っている）。
+     system-ui は Windows で細い游ゴシックになり読みにくいので使わない。BIZ UDゴシックがない端末（Linux・Mac）は Noto Sans JP などで出す */
+  font-family: var(--font-body);
   font-size: 16px;
   line-height: 1.6;
 }
@@ -67,6 +70,8 @@ h2 { font-size: 1.1rem; margin: 0 0 8px; }
 .form { display: flex; flex-direction: column; gap: 6px; }
 .form label { font-weight: 600; margin-top: 8px; }
 .form label.check { font-weight: 400; display: flex; gap: 8px; align-items: center; }
+/* 入力欄・ボタンは、ブラウザーの既定では本文の字体を引き継がないので、本文と同じ字体にする */
+input, select, textarea, button { font-family: inherit; }
 input[type=text], input[type=password], input[type=date], input[type=month], input[type=number], select, textarea {
   width: 100%; padding: 10px 12px; font-size: 16px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--input-bg); color: var(--text);
 }

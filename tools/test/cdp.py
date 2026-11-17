@@ -383,13 +383,19 @@ class Browser:
             json.dumps(selector), json.dumps(selector), json.dumps(value), typing_delay_ms)
         return self.eval(js)
 
-    def click(self, selector, navigate=False):
+    def click(self, selector, navigate=False, user_gesture=False):
+        """user_gesture=True は、人が押したものとして押す（選んでコピーの命令など、人の操作のときだけ働く機能を確かめるとき）。"""
         self._show_target(selector)
         if navigate:
             self.mark()
         js = ("(() => { const el = document.querySelector(%s); if (!el) throw new Error('not found: ' + %s);"
               " el.scrollIntoView(); el.click(); return true; })()") % (json.dumps(selector), json.dumps(selector))
-        self.eval(js)
+        if user_gesture:
+            result = self.call("Runtime.evaluate", {"expression": js, "returnByValue": True, "userGesture": True})
+            if "exceptionDetails" in result:
+                raise RuntimeError("JS error: " + str(result["exceptionDetails"].get("exception", {}).get("description", result["exceptionDetails"])))
+        else:
+            self.eval(js)
         if navigate:
             time.sleep(0.3)
             self.wait_load()
