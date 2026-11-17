@@ -12,6 +12,7 @@
 /** @var array<string, string> $typedValueByName */
 /** @var string[] $errorTextList */
 /** @var string $searchQueryText 探す文（空なら探していない） */
+/** @var string $chatContextTopic 中身のない発言に、同じ会話の前の話題を補って答えたときの話題（G-25 §2.14。補っていなければ空） */
 /** @var string $chatResultCode 入れた文への答えの種類（faq_answer_chat()。matched・no_match・violence・opener・vague・unrelated・abusive。空は入れていない） */
 /** @var bool $isIgnored 関係のない質問・不適切な表現が続いたので、返事をしないか */
 /** @var string $distressLevel 心の不調らしい文の段階（urgent・concern。空はちがう） */
@@ -109,6 +110,9 @@ $renderCategoryChoices = static function () use ($categoryCountList, $categoryUr
           <div class="chat-bubble chat-bot" role="status">どのことについて知りたいですか？　分野を選ぶか、「パスワード」「提出」「コメント」のように、知りたいことの言葉を入れてください。</div>
           <?php $renderCategoryChoices(); ?>
         <?php elseif ($matchedFaqList): ?>
+          <?php if ($chatContextTopic !== ''): ?>
+            <div class="chat-bubble chat-bot" role="status"><?= h(msg('「{topic}」についての答えです。', ['topic' => $chatContextTopic])) ?></div>
+          <?php endif; ?>
           <div class="chat-bubble chat-bot">
             <p class="chat-question">Q. <?= h((string) $matchedFaqList[0]['question']) ?></p>
             <div class="chat-answer"><?= h_lines((string) $matchedFaqList[0]['answer']) ?></div>

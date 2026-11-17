@@ -142,8 +142,10 @@ def main():
         if not chat_matches or chat_matches[0]["question"] != standard_question:
             self_miss_list.append(standard_question)
     check("J: 標準の質問は、その質問の文で探すといちばん上に出る（取り違えがない）", self_miss_list == [], self_miss_list[:3])
+    # 曖昧な質問だけを確かめるため、前の話題の無い新しい会話（別の部下のログイン）で聞く（同じ会話では前の話題を補う。G-25 §2.14）
+    vague_client = login(arguments.base, "ippan_a2", user_info_by_login_id["ippan_a2"])
     for vague_text in ["使い方がわからない", "教えて", "このシステムの使い方", "困った"]:
-        _status_code, _location, json_text = member_client.get("/faq.php?format=json&q=" + urllib.parse.quote(vague_text))
+        _status_code, _location, json_text = vague_client.get("/faq.php?format=json&q=" + urllib.parse.quote(vague_text))
         check("J: 曖昧な質問（%s）は分野を聞き返す" % vague_text, (json.loads(json_text)["vague"], json.loads(json_text)["unrelated"], json.loads(json_text)["matches"]) == (True, False, []), json_text[:120])
     for digit_text in ["10時に報告を出したい", "2026年の報告", "１２月の締め日", "12"]:
         status_code, _location, json_text = member_client.get("/faq.php?format=json&q=" + urllib.parse.quote(digit_text))
@@ -160,6 +162,26 @@ def main():
     opener_answer = json.loads(json_text)
     check("J: 「大変です。」は呼びかけとして聞き返し、6 回続けても断らない（返事をしなくならない）",
           (opener_answer["opener"], opener_answer["unrelated"], opener_answer["ignored"], opener_answer["matches"]) == (True, False, False, []), json_text[:160])
+    # 会話（G-25 §2.14）: 中身のない発言には同じ会話の前の話題を補い、記録には会話の番号を付ける
+    _status_code, _location, topic_json_text = member_client.get("/faq.php?format=json&q=" + urllib.parse.quote("締め日を過ぎてしまった"))
+    _status_code, _location, follow_json_text = member_client.get("/faq.php?format=json&q=" + urllib.parse.quote("どうすればいい？"))
+    follow_answer = json.loads(follow_json_text)
+    check("J: 会話: 「どうすればいい？」に、前の発言「締め日を過ぎてしまった」を補って答える",
+          follow_answer["context"] == "締め日を過ぎてしまった" and follow_answer["matches"] and follow_answer["matches"][0]["question"].startswith("締め日を過ぎても"), follow_json_text[:200])
+    conversation_rows = database.execute("SELECT conversation_id FROM faq_chat_logs WHERE id IN (?, ?)",
+                                         (json.loads(topic_json_text)["log_id"], follow_answer["log_id"])).fetchall()
+    check("J: 会話: 続けて入れた発言は、記録で同じ会話の番号になる", len(conversation_rows) == 2 and conversation_rows[0][0] != "" and conversation_rows[0][0] == conversation_rows[1][0], conversation_rows)
+    _status_code, _location, conversation_list_html = admin_client.get("/admin/faq_logs.php")
+    check("J: 会話: 管理者の記録の一覧に「会話（n 件）」のリンクが出る", ("conversation=" + conversation_rows[0][0]) in conversation_list_html)
+    _status_code, _location, conversation_html = admin_client.get("/admin/faq_logs.php?conversation=" + conversation_rows[0][0])
+    conversation_part = conversation_html.split('id="conversation"')[1] if 'id="conversation"' in conversation_html else ""
+    check("J: 会話: 会話を選ぶと、その会話の発言を古い順に出す",
+          "締め日を過ぎてしまった" in conversation_part and "どうすればいい？" in conversation_part
+          and conversation_part.index("締め日を過ぎてしまった") < conversation_part.index("どうすればいい？"))
+    _status_code, _location, unrelated_json_text = member_client.get("/faq.php?format=json&q=" + urllib.parse.quote("今日の天気は？"))
+    _status_code, _location, follow_json_text = member_client.get("/faq.php?format=json&q=" + urllib.parse.quote("どうすればいい？"))
+    check("J: 会話: 関係のない質問のあとは、前の話題を補わない（分野を聞き返す）",
+          json.loads(follow_json_text)["vague"] is True and json.loads(follow_json_text)["context"] == "", follow_json_text[:160])
     _status_code, _location, json_text = member_client.get("/faq.php?format=json&q=" + urllib.parse.quote("大変です、ログインできません"))
     check("J: 「大変です、ログインできません」は用件に答える", json.loads(json_text)["opener"] is False and len(json.loads(json_text)["matches"]) >= 1)
     # J セキュリティ: 分野「システムの管理」は管理者・補佐にだけ見せる。答えにシステムの内部の情報を書かない

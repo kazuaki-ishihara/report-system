@@ -13,7 +13,9 @@
 /** @var array<int, array<string, mixed>> $abusiveLogRowList 不適切な表現（新しい順） */
 /** @var array<int, array<string, mixed>> $distressLogRowList 心の不調らしい文（未対応 → 命に関わる言葉 → 新しい順） */
 /** @var bool $canReceiveNotice 心の不調・退職に関わる質問を見られるか（システム管理者だけ） */
-/** @var array<int, array<string, mixed>> $listedLogRowList 一覧（新しい順） */
+/** @var array<int, array<string, mixed>> $listedLogRowList 一覧（新しい順。会話を選んだときは、その会話の発言を古い順） */
+/** @var array<string, int> $conversationCountById 会話ごとの発言の数（G-25 §2.14） */
+/** @var string $conversationFilter 選んだ会話の番号（選んでいなければ空） */
 /** @var array<int|string, string> $faqQuestionById */
 
 $askedUserText = static function (array $logRow) use ($canSeeAskedUser): string {
@@ -169,12 +171,18 @@ $faqQuestionText = static function (?int $faqId) use ($faqQuestionById): string 
     </table>
   <?php endif; ?>
 
+  <?php if ($conversationFilter !== ''): ?>
+  <h2 id="conversation">この会話の発言（古い順。<?= count($listedLogRowList) ?> 件）</h2>
+  <p><a href="<?= h(url('/admin/faq_logs.php?days=' . (int) $periodDays)) ?>">← 新しい順の一覧に戻る</a></p>
+  <?php else: ?>
   <h2>新しい順（<?= count($listedLogRowList) ?> 件<?= count($listedLogRowList) >= 300 ? '。最大 300 件' : '' ?>）</h2>
+  <p class="note">「会話」は、同じ人が 10 分以内に続けて入れた発言のまとまりです。押すと、その会話の発言を順に出します。</p>
+  <?php endif; ?>
   <?php if (!$listedLogRowList): ?>
     <p class="note">ありません。</p>
   <?php else: ?>
     <table class="table">
-      <thead><tr><th>日時</th><th>聞いた人</th><th>画面</th><th>質問・分野</th><th>結果</th><th>出した答え</th><th>反応</th></tr></thead>
+      <thead><tr><th>日時</th><th>聞いた人</th><th>画面</th><th>質問・分野</th><th>結果</th><th>出した答え</th><th>反応</th><th>会話</th></tr></thead>
       <tbody>
       <?php foreach ($listedLogRowList as $logRow): ?>
         <?php $shownFaqIdList = array_values(array_filter(array_map('intval', explode(',', (string) $logRow['shown_faq_ids'])))); ?>
@@ -189,6 +197,12 @@ $faqQuestionText = static function (?int $faqId) use ($faqQuestionById): string 
             <?= h(FAQ_CHAT_LOG_FEEDBACK_LABELS[$logRow['feedback']] ?? '') ?>
             <?php if ($logRow['feedback'] !== '' && $logRow['feedback_faq_id'] !== null): ?>（<?= h($faqQuestionText((int) $logRow['feedback_faq_id'])) ?>）<?php endif; ?>
             <?php if ($logRow['request_id'] !== null): ?> <a href="<?= h(url('/requests/view.php?id=' . (int) $logRow['request_id'])) ?>">#<?= (int) $logRow['request_id'] ?></a><?php endif; ?>
+          </td>
+          <td>
+            <?php $conversationId = (string) ($logRow['conversation_id'] ?? ''); ?>
+            <?php if ($conversationFilter === '' && $conversationId !== '' && ($conversationCountById[$conversationId] ?? 0) > 1): ?>
+              <a href="<?= h(url('/admin/faq_logs.php?days=' . (int) $periodDays . '&conversation=' . $conversationId . '#conversation')) ?>">会話（<?= (int) $conversationCountById[$conversationId] ?> 件）</a>
+            <?php endif; ?>
           </td>
         </tr>
       <?php endforeach; ?>

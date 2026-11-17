@@ -7,7 +7,7 @@ declare(strict_types=1);
 //
 //   php tools/lib/faq_check.php self                   標準のよくある質問が、自分の質問の文で自分を見つけられるか
 //   php tools/lib/faq_check.php ask "質問の文" [ID]     1 つの質問の判定（探す言葉・近い答え・関係のない質問か）
-//   php tools/lib/faq_check.php logs [最初の番号]       この端末のチャットの記録を、今の作りで判定し直す
+//   php tools/lib/faq_check.php logs [最初の番号]       この端末のチャットの記録を、今の作りで判定し直す（会話ごとに、前の話題の補いも含めて）
 //   php tools/lib/faq_check.php csv <ファイル>          ほかの端末から受け取った記録（3_記録を書き出す.bat の CSV）を判定し直す
 //   php tools/lib/faq_check.php sync                   この端末の DB に、標準のよくある質問の追加・答えの変更を写す
 //
@@ -33,11 +33,14 @@ $commandName = $argv[1] ?? '';
  *
  * @param array<int, array<string, mixed>> $visibleFaqList 聞いた人に見えるよくある質問
  */
-function faq_check_judge(string $questionText, array $visibleFaqList): string
+function faq_check_judge(string $questionText, array $visibleFaqList, string $conversationTopic = '', string &$nextConversationTopic = ''): string
 {
-    // 判定はチャットと同じ関数（faq_classify_question()）。ここでは結果を読みやすい文にするだけ
-    $classification = faq_classify_question($questionText, $visibleFaqList);
+    // 判定はチャットと同じ関数（faq_classify_question()・会話の補いは faq_classify_in_conversation()）。ここでは結果を読みやすい文にするだけ
+    $conversationJudgement = faq_classify_in_conversation($questionText, $conversationTopic, $visibleFaqList);
+    $nextConversationTopic = $conversationJudgement['nextTopic'];
+    $classification = $conversationJudgement['classification'];
     $matchedFaqList = $classification['matches'];
+    $contextText = $conversationJudgement['contextTopic'] !== '' ? '［前の話題「' . $conversationJudgement['contextTopic'] . '」を補った］' : '';
     switch ($classification['code']) {
         case 'emergency':
             return '緊急（119 番）';
@@ -60,7 +63,7 @@ function faq_check_judge(string $questionText, array $visibleFaqList): string
         case 'no_match':
             return '見つからない';
     }
-    $answerText = '答え: ' . $matchedFaqList[0]['question'];
+    $answerText = $contextText . '答え: ' . $matchedFaqList[0]['question'];
     if (count($matchedFaqList) > 1) {
         $answerText .= ' ／ 2 番目: ' . $matchedFaqList[1]['question'];
     }
@@ -139,19 +142,34 @@ if ($commandName === 'logs') {
     $firstLogId = (int) ($argv[2] ?? 1);
     $faqQuestionById = array_column($allFaqList, 'question', 'id');
     $logRowList = db_all('SELECT l.*, u.login_id FROM faq_chat_logs l LEFT JOIN users u ON u.id = l.user_id WHERE l.id >= ? ORDER BY l.id', [$firstLogId]);
+    // 会話ごとの話題（G-25 §2.14。会話の番号の無い前の記録は、1 件ずつ話題なしで判定する）
+    $topicByConversationId = [];
+    $previousConversationId = null;
     foreach ($logRowList as $logRow) {
+        $conversationId = (string) ($logRow['conversation_id'] ?? '');
+        if ($conversationId !== '' && $conversationId !== $previousConversationId) {
+            echo '---- 会話 ', substr($conversationId, 0, 8), " ----\n";
+        }
+        $previousConversationId = $conversationId;
         $shownFaqIdList = array_values(array_filter(array_map('intval', explode(',', (string) $logRow['shown_faq_ids']))));
         $loggedAnswerText = $logRow['result'] === 'matched' && $shownFaqIdList ? ' → ' . ($faqQuestionById[$shownFaqIdList[0]] ?? '?') : '';
         $feedbackText = (string) $logRow['feedback'] !== '' ? ' [' . $logRow['feedback'] . ']' : '';
         echo "#{$logRow['id']} {$logRow['asked_at']} {$logRow['login_id']}\n";
         if ($logRow['result'] === 'category') {
             echo '  分野を選んだ: ', FAQ_CATEGORY_LABELS[(string) $logRow['category']] ?? (string) $logRow['category'], "\n";
+            $topicByConversationId[$conversationId] = '';
             continue;
         }
         $questionText = faq_chat_log_question_text($logRow);
+        $nextTopic = '';
+        $currentJudgementText = faq_check_judge($questionText, faq_check_visible_list($allFaqList, (string) $logRow['login_id']),
+            $conversationId !== '' ? ($topicByConversationId[$conversationId] ?? '') : '', $nextTopic);
+        if ($conversationId !== '') {
+            $topicByConversationId[$conversationId] = $nextTopic;
+        }
         echo '  質問: ', faq_check_shown_text($questionText), "\n";
         echo '  記録: ', $logRow['result'], $loggedAnswerText, $feedbackText, "\n";
-        echo '  今　: ', faq_check_judge($questionText, faq_check_visible_list($allFaqList, (string) $logRow['login_id'])), faq_check_notice_mark($questionText), "\n";
+        echo '  今　: ', $currentJudgementText, faq_check_notice_mark($questionText), "\n";
     }
     echo count($logRowList), " 件\n";
     exit(0);

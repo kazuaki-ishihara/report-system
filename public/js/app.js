@@ -952,6 +952,10 @@
           }
           return;
         }
+        if (result.context) {
+          // 中身のない発言に、同じ会話の前の話題を補って答えた（G-25 §2.14）
+          addBubble('bot', M('「{topic}」についての答えです。', { topic: result.context }));
+        }
         showAnswer(result.matches[0]);
         if (result.matches.length > 1) {
           addBubble('bot', M('ほかに近い質問もあります。押すと答えを出します。'));

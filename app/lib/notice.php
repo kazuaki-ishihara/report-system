@@ -155,11 +155,31 @@ const FAQ_VAGUE_WORDS = [
  * 返事は「どういったご用件でしょうか。」（G-25 §2.6。2026-11-17 指示）
  */
 const FAQ_OPENER_PHRASES = ['大変です', '大変', 'たいへんです', 'たいへん', '大変なんです', 'たいへんなんです', '大変です大変です', '大変だ'];
+/** 「大変」のあとに付いても用件にならない言い方（「大変なのです」「大変でした」「大変困惑」） */
+const FAQ_OPENER_TRAILING_WORDS = ['なのです', 'なんです', 'なんですが', 'でした', 'です', 'だった', 'だ', 'な', 'なこと', 'なことに', 'なった', 'になった', '困惑', '困って', '困った', '困ってます', '困っています', 'すぎる', '過ぎる'];
 
-/** 呼びかけだけの文か */
+/** 呼びかけだけの文か（「大変」「たいへん」で始まり、そのあとに用件がない） */
 function faq_is_opener(string $queryText): bool
 {
-    return in_array(str_replace(' ', '', faq_normalize_text($queryText)), FAQ_OPENER_PHRASES, true);
+    $compactText = str_replace(' ', '', faq_normalize_text($queryText));
+    if (in_array($compactText, FAQ_OPENER_PHRASES, true)) {
+        return true;
+    }
+    foreach (['大変', 'たいへん'] as $openerPrefix) {
+        if (strpos($compactText, $openerPrefix) !== 0) {
+            continue;
+        }
+        $remainingText = substr($compactText, strlen($openerPrefix));
+        $trailingWordList = FAQ_OPENER_TRAILING_WORDS;
+        usort($trailingWordList, static function (string $leftWord, string $rightWord): int {
+            return strlen($rightWord) <=> strlen($leftWord);
+        });
+        foreach (array_merge(['大変', 'たいへん'], $trailingWordList) as $trailingWord) {
+            $remainingText = str_replace($trailingWord, '', $remainingText);
+        }
+        return $remainingText === '';
+    }
+    return false;
 }
 
 // ---- 心の不調らしい文（G-25 §2.8。AI は使わない。返事を気づかいの言葉にし、システム管理者・補佐に知らせる） ----
@@ -448,7 +468,7 @@ const FAQ_SYSTEM_WORDS = [
     '修正', '訂正', '削除', '登録', '設定', '編集', '変更', '帳票', '余白', 'レイアウト', '添付', '開発者', '概要', '機能', 'チャット', '返答',
     '色彩', '配色', 'テーマ', '部下', '課長代理', '確認者', '課長', '班', '退職', '組織', '役職', '異動', '先月', '翌月', '前月', '今月', '当月',
     '管理者', '権限', 'パスワード', '障害', 'サーバー', '本番環境', '不正アクセス', '侵入', 'ランサムウェア', 'ファイアウォール', 'データベース', 'api',
-    '案件', 'プロジェクト', '提出', '未提出',
+    '案件', 'プロジェクト', '提出', '未提出', '会話',
 ];
 /**
  * 関係のない質問とみなす境目: 入れた文の言葉のうち、よくある質問の文・システムの言葉に出てくる割合がこれ以下で、
@@ -634,6 +654,82 @@ function faq_classify_question(string $questionText, array $faqList): array
     return ['code' => $resultCode, 'matches' => $matchedFaqList, 'distressLevel' => $distressLevel, 'noticeLevel' => $noticeLevel];
 }
 
+// ---- 会話（G-25 §2.14。2026-11-17 指示: 複数の発言を一つの会話として扱う） ----
+/** 同じ人の発言を 1 つの会話とみなす間隔（秒）。これより空いたら新しい会話にする */
+const FAQ_CONVERSATION_GAP_SECONDS = 600;
+/** 会話の話題として覚える文の長さ（文字。長い文は先頭だけ） */
+const FAQ_CONVERSATION_TOPIC_MAX_LENGTH = 100;
+
+/**
+ * 会話の中での判定。今の発言だけでは中身がない（曖昧な質問）とき、同じ会話の直前の話題とつなげて探し、答えが見つかればそれを返す。
+ * 話題にするのは、答えた・見つからなかった発言だけ（緊急・心の不調・要配慮・暴力・関係のない質問などの文は話題にしない）。
+ * チャット（faq_answer_chat()）と自動入力検証（tools/test/faq_input_check.php）が使う。記録・セッションには触れない。
+ *
+ * @param array<int, array<string, mixed>> $faqList 聞いた人に見えるよくある質問
+ * @return array{classification: array, contextTopic: string, nextTopic: string}
+ *   classification: faq_classify_question() と同じ形。contextTopic: 前の話題を補って答えたときの話題（補っていなければ空）。nextTopic: 次の発言で使う話題
+ */
+function faq_classify_in_conversation(string $questionText, string $previousTopic, array $faqList): array
+{
+    $classification = faq_classify_question($questionText, $faqList);
+    $contextTopic = '';
+    // 前の話題そのものの答えを出す（つなげた文で探し直すと、中身のない言葉で弱い答えに当たるため）。
+    // 返事への聞き返し（「どういうこと？」「はい？」）には補わない（同じ答えをくり返しても役に立たないため）
+    if ($classification['code'] === 'vague' && $previousTopic !== '' && !faq_is_clarification($questionText)) {
+        $topicClassification = faq_classify_question($previousTopic, $faqList);
+        if ($topicClassification['code'] === 'matched') {
+            $classification = $topicClassification;
+            $contextTopic = $previousTopic;
+        }
+    }
+    $nextTopic = $previousTopic;
+    if ($contextTopic === '' && in_array($classification['code'], ['matched', 'no_match'], true)) {
+        $topicCharacterList = preg_split('//u', trim($questionText), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+        $nextTopic = implode('', array_slice($topicCharacterList, 0, FAQ_CONVERSATION_TOPIC_MAX_LENGTH));
+    } elseif ($contextTopic === '' && !in_array($classification['code'], ['vague', 'opener'], true)) {
+        // 緊急・心の不調・関係のない質問などのあとは、前の話題を持ち越さない
+        $nextTopic = '';
+    }
+    return ['classification' => $classification, 'contextTopic' => $contextTopic, 'nextTopic' => $nextTopic];
+}
+
+/**
+ * 今の会話（セッションに持つ）。前の発言から FAQ_CONVERSATION_GAP_SECONDS 秒より空いていれば、新しい会話を始める。
+ *
+ * @return array{id: string, topic: string}
+ */
+function faq_conversation_current(): array
+{
+    $conversation = $_SESSION['faq_conversation'] ?? null;
+    if (!is_array($conversation) || time() - (int) ($conversation['last_at'] ?? 0) > FAQ_CONVERSATION_GAP_SECONDS) {
+        $conversation = ['id' => bin2hex(random_bytes(8)), 'topic' => '', 'last_at' => time()];
+    }
+    $conversation['last_at'] = time();
+    $_SESSION['faq_conversation'] = $conversation;
+    return ['id' => (string) $conversation['id'], 'topic' => (string) $conversation['topic']];
+}
+
+/** 返事への聞き返し（前の話題を補わない）。faq_normalize_text() でそろえ、空白を除いた文がこれだけでできているとき */
+const FAQ_CLARIFICATION_PHRASES = ['どういうこと', 'どういう意味', '意味がわからない', '意味が分からない', 'はい', 'え', 'えっ', 'なに', '何'];
+
+/** 返事への聞き返しか（「どういうこと？」「はい？」） */
+function faq_is_clarification(string $questionText): bool
+{
+    $compactText = str_replace(' ', '', faq_normalize_text($questionText));
+    foreach (FAQ_CLARIFICATION_PHRASES as $clarificationPhrase) {
+        $compactText = str_replace($clarificationPhrase, '', $compactText);
+    }
+    return $compactText === '' && trim(faq_normalize_text($questionText)) !== '';
+}
+
+/** 会話の話題を覚え直す（分野を選んだときは空にする） */
+function faq_conversation_set_topic(string $topicText): void
+{
+    if (isset($_SESSION['faq_conversation']) && is_array($_SESSION['faq_conversation'])) {
+        $_SESSION['faq_conversation']['topic'] = $topicText;
+    }
+}
+
 /** 分野のコードとして正しいか（空の「そのほか」も含む） */
 function faq_is_category(string $categoryCode): bool
 {
@@ -664,6 +760,11 @@ function faq_ensure_category_column(): void
 function faq_is_vague(string $queryText): bool
 {
     $normalizedQuery = faq_normalize_text($queryText);
+    // 1 文字だけの入力（「は」「わ」）は、打ち間違い・途中で送ったものとみなし、分野を選んでもらう（断らない）
+    $compactCharacterList = preg_split('//u', str_replace(' ', '', $normalizedQuery), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+    if (count($compactCharacterList) === 1) {
+        return true;
+    }
     $remainingText = $normalizedQuery;
     $vagueWordList = FAQ_VAGUE_WORDS;
     usort($vagueWordList, static function (string $leftWord, string $rightWord): int {
@@ -794,7 +895,7 @@ const FAQ_SEARCH_SYNONYMS = [
     'ログインしたまま' => '毎回 2段階認証 聞かれる 覚え', '安全' => 'セキュリティ 暗号化 安全', '暗号' => 'セキュリティ 暗号化 安全', '個人情報' => 'セキュリティ 暗号化 個人情報', '面倒' => '毎回 2段階認証 聞かれる', '勝手に' => '自動で',
     '文字を大き' => '文字を大きくしたい 拡大', 'ズーム' => '文字を大きくしたい 拡大', '拡大' => '文字を大きくしたい 拡大', '押しにくい' => '文字を大きくしたい 拡大', 'ガラケー' => 'スマートフォン 端末 使えるか',
     'チャットの内容' => 'チャットに入れた質問は記録されるか', '記録され' => 'チャットに入れた質問は記録されるか', '人が読' => 'チャットに入れた質問は記録されるか',
-    '誰が答え' => 'チャットに入れた質問は記録されるか', 'だれが答え' => 'チャットに入れた質問は記録されるか', '要望はどこ' => 'システムへの要望 伝えたい', '締め日はいつ' => '締切 期限', '開発担当' => '開発者 問い合わせ先', '開発者は' => '開発者 問い合わせ先', '他の人' => '他課 情報',
+    '誰が答え' => 'チャットに入れた質問は記録されるか', 'だれが答え' => 'チャットに入れた質問は記録されるか', '要望はどこ' => 'システムへの要望 伝えたい', '締め日はいつ' => '締切 期限', '使えなくな' => '止まった 障害', '出力でき' => '出力の画面 pc から行ってください と出る', 'データ出力' => '出力', '会話' => 'チャット 合っていない ちぐはぐ', '開発担当' => '開発者 問い合わせ先', '開発者は' => '開発者 問い合わせ先', '他の人' => '他課 情報',
     'ホウコク' => '報告', 'totp' => '2段階認証 コード', 'otp' => '2段階認証 コード', 'submit' => '提出', 'report' => '報告', 'deadline' => '締め日',
     '通知' => 'メール 通知 お知らせ', '通知を' => 'メールや通知は来るか お知らせの届き方', 'プッシュ' => 'メールや通知は来るか お知らせの届き方', 'メール' => 'メール 通知', '休みだった' => '出張 研修 締め日までに報告を出せない', '休んで' => '出張 研修 締め日までに報告を出せない', 'あなた' => 'チャット 何に答える 返答', 'きみは' => 'チャット 何に答える 返答', '君は' => 'チャット 何に答える 返答',
 ];

@@ -70,18 +70,26 @@ $askErrorTextList = [];
  * 心の不調らしい文は、心配な言葉の段階なら近い質問も探して一緒に返す（「助けて、ログインできない」など）。
  *
  * @param array<int, array<string, mixed>> $faqList
- * @return array{result: string, ignored: bool, distress_level: string, matches: array<int, array<string, mixed>>, log_id: int}
+ * @return array{result: string, ignored: bool, distress_level: string, matches: array<int, array<string, mixed>>, log_id: int, context: string}
+ *   context: 前の話題を補って答えたときの話題（G-25 §2.14。補っていなければ空）
  */
 function faq_answer_chat(array $user, array $faqList, string $searchQueryText, ?string $selectedCategory, string $screenCode): array
 {
+    // 会話（G-25 §2.14）: 同じ人が続けて入れた発言を 1 つの会話として記録し、中身のない発言には前の話題を補う
+    $conversation = faq_conversation_current();
+    $contextTopic = '';
     if ($selectedCategory !== null) {
         $resultCode = 'category';
         $matchedFaqList = faq_in_category($faqList, $selectedCategory);
         $distressLevel = '';
         $notifyLevel = '';
+        faq_conversation_set_topic('');
     } else {
-        // 入れた文の判定（判定の順は faq_classify_question()。自動入力検証 tools/test/faq_input_check.php も同じ関数を使う）
-        $classification = faq_classify_question($searchQueryText, $faqList);
+        // 入れた文の判定（判定の順は faq_classify_question()。会話の補いは faq_classify_in_conversation()。自動入力検証も同じ関数を使う）
+        $conversationJudgement = faq_classify_in_conversation($searchQueryText, $conversation['topic'], $faqList);
+        faq_conversation_set_topic($conversationJudgement['nextTopic']);
+        $contextTopic = $conversationJudgement['contextTopic'];
+        $classification = $conversationJudgement['classification'];
         $resultCode = $classification['code'];
         $matchedFaqList = $classification['matches'];
         $distressLevel = $classification['distressLevel'];
@@ -95,8 +103,9 @@ function faq_answer_chat(array $user, array $faqList, string $searchQueryText, ?
     // 記録の表の結果の種類は変えない: 呼びかけだけの文は「あいまい」、人への暴力を書いた文は「不適切な表現」（知らせる理由 violence で見分ける）
     $loggedResultCode = ['opener' => 'vague', 'violence' => 'abusive'][$resultCode] ?? $resultCode;
     $logId = faq_chat_log_add($user, $screenCode, $loggedQuestionText, $selectedCategory, $loggedResultCode,
-        array_map('intval', array_column($matchedFaqList, 'id')), $isIgnored, $notifyLevel);
-    return ['result' => $resultCode, 'ignored' => $isIgnored, 'distress_level' => $distressLevel, 'matches' => $matchedFaqList, 'log_id' => $logId];
+        array_map('intval', array_column($matchedFaqList, 'id')), $isIgnored, $notifyLevel, $conversation['id']);
+    return ['result' => $resultCode, 'ignored' => $isIgnored, 'distress_level' => $distressLevel, 'matches' => $matchedFaqList, 'log_id' => $logId,
+            'context' => $contextTopic];
 }
 
 // ---- チャットの答え（JavaScript が ?format=json&q= または ?format=json&category= で聞く。G-25 §2.1・§2.3・§2.6） ----
@@ -113,6 +122,7 @@ if (($_GET['format'] ?? '') === 'json') {
         'vague'     => $chatAnswer['result'] === 'vague',
         'opener'    => $chatAnswer['result'] === 'opener',
         'violence'  => $chatAnswer['result'] === 'violence',
+        'context'   => $chatAnswer['context'],
         'unrelated' => $chatAnswer['result'] === 'unrelated',
         'abusive'   => $chatAnswer['result'] === 'abusive',
         'distress'  => $chatAnswer['distress_level'],
@@ -308,6 +318,7 @@ render('faq', [
     'screenCategory'    => FAQ_CATEGORY_BY_SCREEN[$linkedScreenCode] ?? null,
     'searchQueryText'   => $selectedCategory !== null ? '' : $searchQueryText,
     'chatResultCode'    => $chatResultCode,
+    'chatContextTopic'  => $selectedCategory !== null ? '' : (string) ($chatAnswer['context'] ?? ''),
     'distressLevel'     => $chatAnswer['distress_level'],
     'isIgnored'         => $chatAnswer['ignored'],
     'chatLogId'         => $chatAnswer['log_id'],

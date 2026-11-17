@@ -67,6 +67,7 @@ SQLite 3。テーブルは `app/lib/schema.php` の `schema_ensure()` で作る�
 | 便利機能 | `update_notices` | 更新のお知らせ（G-24） |
 | | `faq_entries` | よくある質問（G-25） |
 | | `faq_chat_logs` | よくある質問のチャットの記録（G-25 §2.7。質問の文は暗号化。1 年で消す） |
+（`faq_chat_logs.conversation_id`: 会話の番号。同じ人が 10 分以内に続けて入れた発言で同じ値。前の記録は空。G-25 §2.14）
 | | `org_schedules` | 組織の改訂の予約（G-14 §6.10。取り込んだ CSV を持つ） |
 | 移行 | `legacy_reports`・`legacy_comments` | 移行前の `reports`・`comments` の名前を変えて残したもの（§6。`schema_ensure()` では作らない） |
 

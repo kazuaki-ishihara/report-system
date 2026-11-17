@@ -13,6 +13,7 @@ declare(strict_types=1);
 //   寄る  : システムにはっきり寄る質問。答えること（決めた答えであること）
 //   グレー: グレーゾーン。決めた範囲（答える・聞き返す・見つからない・断る）に入っていること
 //   アウト: 明確にアウト。関係のない質問・不適切な表現・緊急・心の不調・退職・要配慮として扱い、ふつうの答えを出さないこと
+//   会話  : 続けて入れた発言（「／」で区切る）。最後の発言の判定を確かめる。中身のない発言に前の話題を補う（faq_classify_in_conversation()。G-25 §2.14）
 // 判定に使うよくある質問は、標準のよくある質問（faq_standard.php）を、ふつうの利用者に見える範囲にしたもの。
 // DB・サーバーは使わない（チャットの記録・数えるセッションに触れない）。
 // ====================================================================
@@ -40,7 +41,7 @@ foreach (FAQ_STANDARD_ENTRIES as $entryIndex => [$standardCategory, $standardQue
     $visibleFaqList[] = ['id' => $entryIndex + 1, 'category' => $standardCategory, 'question' => $standardQuestion, 'answer' => $standardAnswer];
 }
 
-const FAQ_INPUT_GROUP_NAMES = ['寄る', 'グレー', 'アウト'];
+const FAQ_INPUT_GROUP_NAMES = ['寄る', 'グレー', 'アウト', '会話'];
 const FAQ_INPUT_RESULT_CODES = ['matched', 'no_match', 'opener', 'vague', 'unrelated', 'abusive', 'emergency', 'distress', 'retirement', 'sensitive', 'violence'];
 
 /**
@@ -97,7 +98,16 @@ $countByGroup = [];
 $mismatchList = [];
 $grayCountByCode = [];
 foreach ($caseList as $case) {
-    $classification = faq_classify_question($case['question'], $visibleFaqList);
+    // 会話は「／」で区切った発言を順に入れ、最後の発言の判定を見る（前の話題の補いを含む）。ほかは 1 つの発言として、前の話題なしで判定する
+    $utteranceList = $case['group'] === '会話' ? array_values(array_filter(array_map('trim', explode('／', $case['question'])), 'strlen')) : [$case['question']];
+    $conversationTopic = '';
+    $conversationJudgement = null;
+    foreach ($utteranceList as $utteranceText) {
+        $conversationJudgement = faq_classify_in_conversation($utteranceText, $conversationTopic, $visibleFaqList);
+        $conversationTopic = $conversationJudgement['nextTopic'];
+    }
+    $classification = $conversationJudgement['classification'];
+    $contextTopicText = $conversationJudgement['contextTopic'];
     $resultCode = $classification['code'];
     $topQuestion = $classification['matches'] ? (string) $classification['matches'][0]['question'] : '';
     $expectation = $case['expectation'];
@@ -118,7 +128,7 @@ foreach ($caseList as $case) {
     if ($case['group'] === 'グレー') {
         $grayCountByCode[$resultCode] = ($grayCountByCode[$resultCode] ?? 0) + 1;
     }
-    $resultText = $resultLabelByCode[$resultCode] . ($topQuestion !== '' ? '（' . $topQuestion . '）' : '')
+    $resultText = ($contextTopicText !== '' ? '［前の話題「' . $contextTopicText . '」を補った］' : '') . $resultLabelByCode[$resultCode] . ($topQuestion !== '' ? '（' . $topQuestion . '）' : '')
         . ($classification['noticeLevel'] !== '' ? ' [知らせ: ' . $classification['noticeLevel'] . ']' : '');
     // 緊急・要配慮の文は、記録と同じく画面には出さない決まりだが、この入力は作り物の例文なのでそのまま出す
     if ($reasonList) {

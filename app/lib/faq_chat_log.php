@@ -79,6 +79,11 @@ function faq_chat_log_ensure_table(): void
         });
     }
     db()->exec(FAQ_CHAT_LOG_CREATE_SQL);
+    // 会話の番号（G-25 §2.14）の列が無い表には足す（前の記録は会話の番号なし）
+    $columnNameList = array_column(db()->query('PRAGMA table_info(faq_chat_logs)')->fetchAll(), 'name');
+    if (!in_array('conversation_id', $columnNameList, true)) {
+        db()->exec("ALTER TABLE faq_chat_logs ADD COLUMN conversation_id TEXT NOT NULL DEFAULT ''");
+    }
     db()->exec(FAQ_CHAT_LOG_INDEX_SQL);
 }
 
@@ -99,7 +104,8 @@ const FAQ_CHAT_LOG_CREATE_SQL = "CREATE TABLE IF NOT EXISTS faq_chat_logs (
     feedback TEXT NOT NULL DEFAULT '' CHECK (feedback IN ('', 'solved', 'unsolved', 'asked')),
     feedback_faq_id INTEGER,
     request_id INTEGER REFERENCES support_requests(id),
-    feedback_at TEXT
+    feedback_at TEXT,
+    conversation_id TEXT NOT NULL DEFAULT ''
 )";
 /** 今の表の形の印（結果の決まりに、いちばん新しく足した種類）。無い表は作り直す */
 const FAQ_CHAT_LOG_SCHEMA_MARK = "'credential', 'violence'";
@@ -157,15 +163,15 @@ function faq_chat_log_question_aad(int $logId): string
  * @param bool $isIgnored 返事をしなかったか（関係のない質問・不適切な表現が続いた）
  * @return int 記録の番号
  */
-function faq_chat_log_add(array $user, string $screenCode, string $questionText, ?string $categoryCode, string $resultCode, array $shownFaqIdList, bool $isIgnored = false, string $distressLevel = ''): int
+function faq_chat_log_add(array $user, string $screenCode, string $questionText, ?string $categoryCode, string $resultCode, array $shownFaqIdList, bool $isIgnored = false, string $distressLevel = '', string $conversationId = ''): int
 {
     faq_chat_log_ensure_table();
-    $logId = tx(function () use ($user, $screenCode, $questionText, $categoryCode, $resultCode, $shownFaqIdList, $isIgnored, $distressLevel): int {
+    $logId = tx(function () use ($user, $screenCode, $questionText, $categoryCode, $resultCode, $shownFaqIdList, $isIgnored, $distressLevel, $conversationId): int {
         db_exec('DELETE FROM faq_chat_logs WHERE asked_at < ?', [date('Y-m-d H:i:s', time() - FAQ_CHAT_LOG_KEEP_DAYS * 86400)]);
         db_exec(
-            'INSERT INTO faq_chat_logs (asked_at, user_id, role, screen_code, category, result, is_ignored, distress_level, shown_faq_ids) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            'INSERT INTO faq_chat_logs (asked_at, user_id, role, screen_code, category, result, is_ignored, distress_level, shown_faq_ids, conversation_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
             [now(), (int) $user['id'], faq_chat_log_role($user), $screenCode, $categoryCode, $resultCode, $isIgnored ? 1 : 0,
-             $distressLevel === '' ? null : $distressLevel, implode(',', array_map('intval', $shownFaqIdList))]
+             $distressLevel === '' ? null : $distressLevel, implode(',', array_map('intval', $shownFaqIdList)), $conversationId]
         );
         $newLogId = (int) db()->lastInsertId();
         if ($questionText !== '') {

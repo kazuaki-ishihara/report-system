@@ -145,6 +145,14 @@ $listedLogRowList = array_values(array_filter($logRowList, static function (arra
     }
     return $resultFilter === '' || $logRow['result'] === $resultFilter;
 }));
+// 会話（G-25 §2.14）: 会話ごとの発言の数。?conversation=<番号> で、その会話の発言だけを古い順に出す（見られない理由の記録は、ここでも出さない）
+$conversationCountById = array_count_values(array_filter(array_map('strval', array_column($logRowList, 'conversation_id')), 'strlen'));
+$conversationFilter = is_string($_GET['conversation'] ?? null) && preg_match('/^[0-9a-f]{16}$/', (string) $_GET['conversation']) === 1 ? (string) $_GET['conversation'] : '';
+if ($conversationFilter !== '') {
+    $listedLogRowList = array_reverse(array_values(array_filter($logRowList, static function (array $logRow) use ($conversationFilter): bool {
+        return (string) $logRow['conversation_id'] === $conversationFilter;
+    })));
+}
 
 audit_log('admin', 'faq_chat_logs:view;days=' . $periodDays);
 render('admin_faq_logs', [
@@ -165,5 +173,7 @@ render('admin_faq_logs', [
     'distressLogRowList'   => $distressLogRowList,
     'canReceiveNotice'     => $canReceiveNotice,
     'listedLogRowList'     => array_slice($listedLogRowList, 0, 300),
+    'conversationCountById' => $conversationCountById,
+    'conversationFilter'   => $conversationFilter,
     'faqQuestionById'      => $faqQuestionById,
 ]);
