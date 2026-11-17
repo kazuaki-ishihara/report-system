@@ -21,6 +21,13 @@ function db(): PDO
         $pdo = new PDO('sqlite:' . $path);
     } catch (PDOException $e) {
         app_log('DB connect failed: ' . $e->getMessage());
+        // コマンドから動かしているとき（テストデータの作成など）は、理由を出して止める。
+        // （画面のエラーの表示は、ここで DB につなぎ直そうとして同じ失敗をくり返し、メモリーを使い切るため使わない）
+        if (PHP_SAPI === 'cli') {
+            $isSqliteMissing = !extension_loaded('pdo_sqlite');
+            fwrite(STDERR, ($isSqliteMissing ? 'PHP の SQLite の拡張（pdo_sqlite）が読み込まれていません。' : 'DB を開けません: ' . $path) . "\n" . $e->getMessage() . "\n");
+            exit(1);
+        }
         error_page(503);
     }
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);

@@ -4,8 +4,11 @@
     python tools/deploy/build_local_kit.py              # コミット済みの HEAD から作る
     python tools/deploy/build_local_kit.py --worktree   # 作業中の変更（コミット前）も入れて作る
     python tools/deploy/build_local_kit.py --no-php     # PHP を同梱しない（Linux・macOS の人に渡すとき）
+    python tools/deploy/build_local_kit.py --x86        # 32 ビットの Windows 用（32 ビット版の PHP を同梱。64 ビットの Windows でも動く）
+                                                        #   PHP は php.net の 32 ビット版（x86・TS）を展開したフォルダー（既定: リポジトリの隣の php-*-x86）。
+                                                        #   php.ini は 64 ビット版と同じ拡張（mbstring・openssl・pdo_sqlite・sqlite3）を有効にしておく
 
-出力: tools/deploy/output/local_<日時>_<コミット>/
+出力: tools/deploy/output/local_<日時>_<コミット>/（--x86 のときは末尾に _x86）
     report-system-local/      ← これを渡す（同じ中身の .zip も作る。フォルダー名は英字）
         はじめにお読みください.txt
         1_起動.bat  2_テストデータを作り直す.bat  3_記録を書き出す.bat  （Windows）
@@ -29,6 +32,7 @@ import tarfile
 import zipfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+REPOSITORY_ROOT = os.path.dirname(os.path.dirname(HERE))
 ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
 KIT_NAME = "report-system-local"   # 英字にする（Windows で置き場所に日本語があると、PHP から別の PHP を呼ぶときに開けないことがあるため）
 
@@ -59,17 +63,34 @@ START_BAT = r"""@echo off
 setlocal
 rem 月次報告システム ローカル検証環境を起動する（この PC の中だけで動く。止めるときは Ctrl + C）
 cd /d "%~dp0"
-set "MR_PHP_DIR=%~dp0php"
+if not exist "app\lib" (
+  echo 「app」フォルダーが見つかりません。zip のままでは動きません。
+  echo zip を展開し、できた「report-system-local」フォルダーの中の 1_起動.bat を動かしてください。
+  pause & exit /b 1
+)
+{x64_only_check}set "MR_PHP_DIR=%~dp0php"
 set "PHP_EXE=%~dp0php\php.exe"
 if not exist "%PHP_EXE%" (
   where php >nul 2>nul || (echo PHP が見つかりません。はじめにお読みください.txt を見てください。 & pause & exit /b 1)
   set "PHP_EXE=php"
 )
+"%PHP_EXE%" -v >nul 2>nul
+if errorlevel 1 (
+  echo PHP を起動できません。
+  echo はじめにお読みください.txt の「7. 注意」の「PHP を起動できません」を見てください。
+  pause & exit /b 1
+)
+"%PHP_EXE%" -m 2>nul | findstr /i /c:"pdo_sqlite" >nul
+if errorlevel 1 (
+  echo PHP の SQLite の拡張を読み込めません。
+  echo フォルダーの名前を変えたり、中のファイルを動かしたりしていないか確かめてください。
+  pause & exit /b 1
+)
 if not exist "app\data\dev.sqlite" (
   echo はじめての起動なので、テストデータを作ります...
   chcp 65001 >nul
   "%PHP_EXE%" tools\test\dev_seed.php --yes --with-faq
-  if errorlevel 1 (chcp 932 >nul & echo テストデータを作れませんでした。 & pause & exit /b 1)
+  if errorlevel 1 (chcp 932 >nul & echo テストデータを作れませんでした。上に出ているメッセージを、開発担当に送ってください。 & pause & exit /b 1)
   chcp 932 >nul
 )
 echo.
@@ -84,6 +105,20 @@ start "" cmd /c "timeout /t 2 /nobreak >nul & start http://127.0.0.1:8000/login.
 echo.
 echo 止まりました。「Failed to listen」と出たときは、ほかのソフトが 8000 番を使っています（はじめにお読みください.txt）。
 pause
+"""
+
+# 説明書きの、同梱の PHP の版の注意
+PHP_ARCH_NOTE_X64 = """  - この一式の PHP は 64 ビットの Windows 用です。32 ビットの Windows では動きません
+    （1_起動.bat が「この PC の Windows は 32 ビットです」と出します）。32 ビット用の一式（フォルダー名の最後が _x86）を使ってください。"""
+PHP_ARCH_NOTE_X86 = """  - この一式の PHP は 32 ビット版です。32 ビットの Windows でも、64 ビットの Windows でも動きます。"""
+
+# 64 ビット用の一式だけに入れる、32 ビットの Windows なら止める部分（32 ビット用の一式は、どちらの Windows でも動くので入れない）
+X64_ONLY_CHECK = r"""rem 同梱の PHP は 64 ビットの Windows 用（32 ビットの Windows では動かない。32 ビット用の一式を使う）
+if /i "%PROCESSOR_ARCHITECTURE%"=="x86" if not defined PROCESSOR_ARCHITEW6432 (
+  echo この PC の Windows は 32 ビットです。この一式の PHP は 64 ビットの Windows 用のため、動きません。
+  echo 32 ビット用の一式（フォルダー名の最後が _x86）を使うか、開発担当に連絡してください。
+  pause & exit /b 1
+)
 """
 
 RESET_BAT = r"""@echo off
@@ -248,6 +283,9 @@ README = """月次報告システム ローカル検証環境
   - メールは送りません。
   - 「Failed to listen on 127.0.0.1:8000」と出て止まるときは、ほかのソフトが 8000 番を使っています。
     そのソフトを閉じるか、開発担当に連絡してください。
+{php_arch_note}
+  - 「PHP を起動できません」と出るときは、Windows の更新が止まっているなどで、PHP が使う部品が足りないおそれがあります。
+    出たメッセージを開発担当に送ってください。
   - 使い終わったら、チャットの記録を書き出して送ってから（6.）、フォルダーごと消してかまいません（パソコンに何も残りません）。
   - 同梱の PHP は PHP License のもとで配られているものです（php\\license.txt）。
 """
@@ -298,7 +336,21 @@ def find_php_directory(given_directory):
     return os.path.dirname(php_path) if php_path and php_path.lower().endswith(".exe") else ""
 
 
-def copy_php(php_directory, kit_directory):
+# 同梱の PHP が使う Visual C++ ランタイム（vcruntime140_1.dll は 64 ビット用だけにある。無いものは写さない）
+VC_RUNTIME_FILE_NAMES = ["vcruntime140.dll", "vcruntime140_1.dll", "msvcp140.dll"]
+
+
+def find_x86_php_directory():
+    """32 ビット版の PHP（php.net の x86 版を展開したもの）を、リポジトリの隣の php-*-x86 から探す"""
+    parent_directory = os.path.dirname(REPOSITORY_ROOT)
+    for name in sorted(os.listdir(parent_directory), reverse=True):
+        candidate = os.path.join(parent_directory, name)
+        if name.startswith("php-") and name.endswith("-x86") and os.path.isfile(os.path.join(candidate, "php.exe")):
+            return candidate
+    return ""
+
+
+def copy_php(php_directory, kit_directory, is_x86=False):
     """PHP を写し、php.ini の拡張の場所を一式の中（環境変数 MR_PHP_DIR）に向ける"""
     target_directory = os.path.join(kit_directory, "php")
     shutil.copytree(php_directory, target_directory, ignore=lambda _directory, names: [
@@ -315,6 +367,14 @@ def copy_php(php_directory, kit_directory):
     if not any(line.startswith("extension_dir") for line in rewritten_lines):
         rewritten_lines.append('extension_dir = "${MR_PHP_DIR}\\ext"')
     open(ini_path, "w", encoding="utf-8", newline="\r\n").write("\n".join(rewritten_lines) + "\n")
+    # Visual C++ ランタイム（同梱の PHP が使う）。入っていない PC でも起動できるよう、PHP と同じフォルダーに置く
+    # 64 ビットの Windows では、32 ビット用のランタイムは SysWOW64 にある
+    system_directory = os.path.join(os.environ.get("SystemRoot", r"C:\Windows"), "SysWOW64" if is_x86 else "System32")
+    for runtime_file_name in VC_RUNTIME_FILE_NAMES:
+        runtime_source_path = os.path.join(system_directory, runtime_file_name)
+        runtime_target_path = os.path.join(target_directory, runtime_file_name)
+        if os.path.isfile(runtime_source_path) and not os.path.isfile(runtime_target_path):
+            shutil.copy2(runtime_source_path, runtime_target_path)
 
 
 def write_text(path, text, encoding="utf-8", newline="\n"):
@@ -332,12 +392,13 @@ def main():
     argument_parser.add_argument("--worktree", action="store_true", help="作業中の変更（コミット前）も入れる")
     argument_parser.add_argument("--php-dir", default="", help="同梱する PHP のフォルダー（既定: この端末の WinGet の PHP）")
     argument_parser.add_argument("--no-php", action="store_true", help="PHP を同梱しない")
+    argument_parser.add_argument("--x86", action="store_true", help="32 ビットの Windows 用を作る（32 ビット版の PHP を同梱。64 ビットの Windows でも動く）")
     arguments = argument_parser.parse_args()
 
     commit = run_git("rev-parse", "--short", arguments.ref).decode().strip()
     is_dirty = arguments.worktree and run_git("status", "--porcelain").strip() != b""
     stamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    output_directory = os.path.join(HERE, "output", "local_%s_%s%s" % (stamp, commit, "_worktree" if is_dirty else ""))
+    output_directory = os.path.join(HERE, "output", "local_%s_%s%s%s" % (stamp, commit, "_worktree" if is_dirty else "", "_x86" if arguments.x86 else ""))
     kit_directory = os.path.join(output_directory, KIT_NAME)
 
     content_by_path = collect_files(arguments.worktree, arguments.ref)
@@ -363,13 +424,16 @@ def main():
         os.makedirs(os.path.join(kit_directory, "app", runtime_directory), exist_ok=True)
 
     if not arguments.no_php:
-        php_directory = find_php_directory(arguments.php_dir)
+        php_directory = arguments.php_dir or (find_x86_php_directory() if arguments.x86 else find_php_directory(""))
         if not php_directory:
-            raise SystemExit("同梱する PHP が見つかりません（--php-dir で指定するか、--no-php を付けてください）")
-        copy_php(php_directory, kit_directory)
+            raise SystemExit("同梱する PHP が見つかりません（--php-dir で指定するか、--no-php を付けてください）"
+                             + ("。32 ビット用は php.net の x86 版を、リポジトリの隣の php-<版>-x86 に展開しておく" if arguments.x86 else ""))
+        copy_php(php_directory, kit_directory, is_x86=arguments.x86)
 
     # 起動の道具（.bat は日本語の Windows のコマンドプロンプトで読めるよう Shift_JIS・CRLF）
-    write_text(os.path.join(kit_directory, "1_起動.bat"), START_BAT, encoding="cp932", newline="\r\n")
+    # 64 ビット用の一式だけに、32 ビットの Windows なら止める部分を入れる
+    start_bat_text = START_BAT.replace("{x64_only_check}", "" if arguments.x86 else X64_ONLY_CHECK)
+    write_text(os.path.join(kit_directory, "1_起動.bat"), start_bat_text, encoding="cp932", newline="\r\n")
     write_text(os.path.join(kit_directory, "2_テストデータを作り直す.bat"), RESET_BAT, encoding="cp932", newline="\r\n")
     write_text(os.path.join(kit_directory, "3_記録を書き出す.bat"), EXPORT_BAT, encoding="cp932", newline="\r\n")
     write_text(os.path.join(kit_directory, "export_log.sh"), EXPORT_SH)
@@ -380,7 +444,8 @@ def main():
                            for login_id, display_name, role_text, ability_text in TEST_USERS)
     write_text(os.path.join(kit_directory, "はじめにお読みください.txt"), README.format(
         stamp=datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), ref=arguments.ref, commit=commit,
-        dirty_note="（コミット前の変更を含む）" if is_dirty else "", faq_count=faq_count, user_table=user_table), newline="\r\n")
+        dirty_note="（コミット前の変更を含む）" if is_dirty else "", faq_count=faq_count, user_table=user_table,
+        php_arch_note=PHP_ARCH_NOTE_X86 if arguments.x86 else PHP_ARCH_NOTE_X64), newline="\r\n")
 
     zip_path = os.path.join(output_directory, KIT_NAME + ".zip")
     with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as kit_zip:
