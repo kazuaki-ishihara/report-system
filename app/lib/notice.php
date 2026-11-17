@@ -156,7 +156,7 @@ const FAQ_VAGUE_WORDS = [
  * 呼びかけだけの文（用件の無い「大変です」など）。faq_normalize_text() でそろえ、記号と空白を除いた形がこれと同じときだけ（用件があれば、ふつうに探す）。
  * 返事は「どういったご用件でしょうか。」（G-25 §2.6。2026-11-17 指示）
  */
-const FAQ_OPENER_PHRASES = ['大変です', '大変', 'たいへんです', 'たいへん', '大変なんです', 'たいへんなんです', '大変です大変です', '大変だ'];
+const FAQ_OPENER_PHRASES = ['大変です', '大変', 'たいへんです', 'たいへん', '大変なんです', 'たいへんなんです', '大変です大変です', '大変だ', 'もしもし', 'もしもーし'];
 /** 「大変」のあとに付いても用件にならない言い方（「大変なのです」「大変でした」「大変困惑」） */
 const FAQ_OPENER_TRAILING_WORDS = ['なのです', 'なんです', 'なんですが', 'でした', 'です', 'だった', 'だ', 'な', 'なこと', 'なことに', 'なった', 'になった', '困惑', '困って', '困った', '困ってます', '困っています', 'すぎる', '過ぎる'];
 
@@ -164,9 +164,12 @@ const FAQ_OPENER_TRAILING_WORDS = ['なのです', 'なんです', 'なんです
 function faq_is_opener(string $queryText): bool
 {
     $compactText = str_replace(' ', '', faq_normalize_text($queryText));
-    // 「課長が大変です」「部下が大変なのです」: 人の主語を外して確かめる
+    // 「課長が大変です」「部下が大変なのです」: 人の主語を外して確かめる。「課長が。。。」のように主語だけで言いかけた文も呼びかけ
     foreach (array_merge(FAQ_SUPERIOR_WORDS, ['部下', '同僚', '管理者', '補佐', '私', '自分', 'わたし']) as $personWord) {
         foreach (['が', 'は'] as $particleText) {
+            if ($compactText === $personWord . $particleText) {
+                return true;
+            }
             if (strpos($compactText, $personWord . $particleText . '大変') === 0 || strpos($compactText, $personWord . $particleText . 'たいへん') === 0) {
                 $compactText = substr($compactText, strlen($personWord . $particleText));
                 break 2;
@@ -1073,6 +1076,10 @@ function faq_search_terms(string $queryText): array
     $normalizedQuery = (string) preg_replace('/(?<![a-z0-9])[0-9]+(?![a-z0-9])(時間|時|分|秒|日|か月|ヶ月|カ月|月|年|回|件|歳|人)?/u', ' ', $normalizedQuery);
     // 言い換えの表は、数字を除く前の文で見る（「404」「500」も言い換えられるように）
     $synonymSourceQuery = faq_normalize_text($queryText);
+    // 課長・上司がいない（休職・入院・不在・逃げた・辞めた など）は、間に言葉が入っても（「課長が急に休職中になった」）課長を変える答えを探す
+    if (preg_match('/(課長|上司)(が|は).{0,12}(休職|入院|不在|いな|逃|失踪|辞め|退職|連絡がつかな|連絡が取れな)/u', str_replace(' ', '', $synonymSourceQuery)) === 1) {
+        $normalizedQuery .= ' 課長を変えたい 課を追加';
+    }
     // 入力の全体が「ワード」などのときは、その言葉の代わりに言い換えで探す（「パスワード」の答えに当たらないように）
     $wholeInputKey = str_replace(' ', '', $synonymSourceQuery);
     if (isset(FAQ_WHOLE_INPUT_SYNONYMS[$wholeInputKey])) {
