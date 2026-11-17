@@ -204,8 +204,11 @@ def main():
     # J 人への暴力を書いた文は、断って、システム管理者と補佐の両方に知らせる（2026-11-17 指示）
     violence_result = ask_chat_for_notice(member_client, "管理者を殴りたい")
     violence_row = database.execute("SELECT result, distress_level FROM faq_chat_logs WHERE id = ?", (violence_result["log_id"],)).fetchone()
-    check("J: 人への暴力を書いた文は断り（不適切な表現）、答えを出さない", violence_result["abusive"] is True and violence_result["matches"] == [], json.dumps(violence_result, ensure_ascii=False)[:160])
-    check("J: 人への暴力を書いた文に、知らせる印（violence）を付ける", tuple(violence_row) == ("abusive", "violence"), violence_row)
+    check("J: 人への暴力を書いた文には答えを出さず、カウンセリングをすすめる返事にする（断らない）",
+          violence_result["violence"] is True and violence_result["abusive"] is False and violence_result["ignored"] is False and violence_result["matches"] == [],
+          json.dumps(violence_result, ensure_ascii=False)[:160])
+    check("J: 人への暴力を書いた文に、知らせる印（violence）を付ける（記録の結果は不適切な表現）", tuple(violence_row) == ("abusive", "violence"), violence_row)
+    check("J: カウンセリングをすすめる文は、画面の補助（app.js）にある", "カウンセリングを受けることをおすすめします" in open(os.path.join(test_dir, "..", "..", "public", "js", "app.js"), encoding="utf-8").read())
     check("J: 管理者のホームに、人への暴力を書いた文を知らせる", "人への暴力を書いた文があります" in admin_client.get("/index.php")[2])
     check("J: 補佐のホームにも、人への暴力を書いた文を知らせる", "人への暴力を書いた文があります" in deputy_notice_client.get("/index.php")[2])
     check("J: 部下のホームには、人への暴力の知らせを出さない", "人への暴力を書いた文があります" not in member_client.get("/index.php")[2])

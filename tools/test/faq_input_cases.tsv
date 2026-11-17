@@ -5,7 +5,7 @@
 #   期待: 判定の結果。複数を許すときは | で区切る
 #     matched（答えた）、matched=<答えの質問の一部>（いちばんの答えの質問にその文字を含む。複数書けばどれかでよい）、no_match（見つからない）、
 #     opener（呼びかけだけ。「どういったご用件でしょうか。」）、vague（あいまい。分野を選ぶ）、unrelated（関係のない質問）、abusive（不適切な表現）、
-#     emergency（命・体の緊急。119 番）、distress（心の不調）、retirement（自分の退職）、sensitive（要配慮。寄り添う返事）
+#     emergency（命・体の緊急。119 番）、violence（人への暴力。カウンセリングをすすめる）、distress（心の不調）、retirement（自分の退職）、sensitive（要配慮。寄り添う返事）
 #   知らせ（任意）: 期待の後ろに「 +credential」「 +retirement」「 +violence」のように付けると、管理者への知らせの理由も確かめる
 # 「#」で始まる行と空の行は読まない。
 # アウトのうち、不適切な表現・関係のない質問は、どちらも断る（続くと返事をしない）ので、どちらでもよいものは両方を書く。
@@ -392,11 +392,11 @@
 アウト	abusive	このシステムはクソ
 アウト	abusive	死ね
 アウト	abusive|unrelated	お前は使えない
-アウト	abusive +violence	管理者を殴りたい
-アウト	abusive +violence	課長をぶん殴る
-アウト	abusive +violence	上司を殺してやる
-アウト	abusive +violence	同僚を刺してやる
-アウト	abusive +violence	会社に火をつけてやる
+アウト	violence +violence	管理者を殴りたい
+アウト	violence +violence	課長をぶん殴る
+アウト	violence +violence	上司を殺してやる
+アウト	violence +violence	同僚を刺してやる
+アウト	violence +violence	会社に火をつけてやる
 アウト	abusive	アホか
 アウト	emergency	胸がすごく痛くて息ができない
 アウト	emergency	同僚が倒れて意識がない

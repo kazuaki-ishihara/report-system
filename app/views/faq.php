@@ -12,7 +12,7 @@
 /** @var array<string, string> $typedValueByName */
 /** @var string[] $errorTextList */
 /** @var string $searchQueryText 探す文（空なら探していない） */
-/** @var string $chatResultCode 入れた文への答えの種類（faq_answer_chat()。matched・no_match・opener・vague・unrelated・abusive。空は入れていない） */
+/** @var string $chatResultCode 入れた文への答えの種類（faq_answer_chat()。matched・no_match・violence・opener・vague・unrelated・abusive。空は入れていない） */
 /** @var bool $isIgnored 関係のない質問・不適切な表現が続いたので、返事をしないか */
 /** @var string $distressLevel 心の不調らしい文の段階（urgent・concern。空はちがう） */
 /** @var int $chatLogId チャットの記録の番号（質問として送ったときに、記録に残す） */
@@ -101,6 +101,8 @@ $renderCategoryChoices = static function () use ($categoryCountList, $categoryUr
           <div class="chat-bubble chat-bot" role="status"><?= h(msg('不適切な表現が含まれているため、返答できません。')) ?></div>
         <?php elseif ($chatResultCode === 'unrelated'): ?>
           <div class="chat-bubble chat-bot" role="status"><?= h(msg('その質問には返答できません。')) ?></div>
+        <?php elseif ($chatResultCode === 'violence'): ?>
+          <div class="chat-bubble chat-bot chat-care" role="status"><?= h_lines(msg('強い怒りや、人を傷つけたい気持ちを一人で抱えていませんか。カウンセラーや、会社の相談窓口・産業医など、話を聞いてもらえるところで、カウンセリングを受けることをおすすめします。気持ちを言葉にするだけでも、楽になることがあります。今すぐ自分や人を傷つけてしまいそうなときは、ためらわずに周りの人に助けを求めてください。')) ?></div>
         <?php elseif ($chatResultCode === 'opener'): ?>
           <div class="chat-bubble chat-bot" role="status"><?= h(msg('どういったご用件でしょうか。')) ?></div>
         <?php elseif ($chatResultCode === 'vague'): ?>
@@ -125,7 +127,7 @@ $renderCategoryChoices = static function () use ($categoryCountList, $categoryUr
         <?php endif; ?>
       <?php endif; ?>
 
-      <div class="chat-bubble chat-bot faq-ask" id="faq-ask" <?= $askErrorTextList ? 'data-has-error="1"' : '' ?> <?= ($searchQueryText === '' && $selectedCategory === null && !$askErrorTextList) || in_array($chatResultCode, ['opener', 'vague', 'unrelated', 'abusive', 'distress', 'sensitive', 'emergency', 'retirement'], true) ? 'hidden' : '' ?>>
+      <div class="chat-bubble chat-bot faq-ask" id="faq-ask" <?= $askErrorTextList ? 'data-has-error="1"' : '' ?> <?= ($searchQueryText === '' && $selectedCategory === null && !$askErrorTextList) || in_array($chatResultCode, ['violence', 'opener', 'vague', 'unrelated', 'abusive', 'distress', 'sensitive', 'emergency', 'retirement'], true) ? 'hidden' : '' ?>>
         <?php if ($canAsk): ?>
           <p>答えが見つからないときは、この質問を要望・依頼の「質問」としてシステム管理者に送れます。補足があれば書き足してください。返信はホームと「要望・依頼」に出ます。</p>
           <?php foreach ($askErrorTextList as $askErrorText): ?><div class="flash flash-error" role="alert"><?= h_lines($askErrorText) ?></div><?php endforeach; ?>

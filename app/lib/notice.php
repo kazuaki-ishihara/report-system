@@ -405,7 +405,7 @@ const FAQ_ABUSIVE_WORDS = [
 ];
 
 /**
- * 人への暴力を書いた言葉（「管理者を殴りたい」）。不適切な表現として断り、システム管理者・補佐に知らせる（職場の安全のため。2026-11-17 指示）。
+ * 人への暴力を書いた言葉（「管理者を殴りたい」）。答えは出さずにカウンセリングを受けることをすすめ、システム管理者・補佐に知らせる（職場の安全のため。2026-11-17 指示）。
  * faq_normalize_text() でそろえた形で書く。「ハチに刺された」などの緊急の文は、先に緊急として扱う
  */
 const FAQ_VIOLENCE_WORDS = [
@@ -576,12 +576,12 @@ function faq_visible_entries(array $faqList, array $user): array
 /**
  * チャットに入れた文の判定（G-25 §2.6。チャット（faq_answer_chat()）と自動入力検証（tools/test/faq_input_check.php）が使う。記録・数えることはしない）。
  * 判定の順: 命・体の緊急の状態（§2.12。119 番を案内） → 心の不調らしい文（§2.8） → 自分の退職（§2.10。寄り添って上司への相談を促す）
- *   → 要配慮個人情報に触れる文（§2.9） → 不適切な表現 → 呼びかけだけの文 → 曖昧な質問 → 関係のない質問 → 近い質問を探す。
+ *   → 要配慮個人情報に触れる文（§2.9） → 人への暴力を書いた文 → 不適切な表現 → 呼びかけだけの文 → 曖昧な質問 → 関係のない質問 → 近い質問を探す。
  * 心の不調らしい文は、心配な言葉の段階なら近い質問も探して一緒に返す（「助けて、ログインできない」など）。
  *
  * @param array<int, array<string, mixed>> $faqList 聞いた人に見えるよくある質問
  * @return array{code: string, matches: array<int, array<string, mixed>>, distressLevel: string, noticeLevel: string}
- *   code: emergency・distress・retirement・sensitive・abusive・opener（呼びかけだけ）・vague・unrelated・matched・no_match。
+ *   code: emergency・distress・retirement・sensitive・violence（人への暴力）・abusive・opener（呼びかけだけ）・vague・unrelated・matched・no_match。
  *   noticeLevel: 管理者に知らせる理由（心の不調の段階 → violence（人への暴力） → credential（K-057） → retirement（K-054）。なければ空）
  */
 function faq_classify_question(string $questionText, array $faqList): array
@@ -602,8 +602,10 @@ function faq_classify_question(string $questionText, array $faqList): array
         // 要配慮個人情報に触れる文: 寄り添う返事。ほかにはっきり知りたいことがあれば、その答えも出す（「入院するので報告が出せない」）
         $resultCode = 'sensitive';
         $matchedFaqList = faq_companion_matches(faq_strip_sensitive_words($questionText), $faqList);
-    } elseif (faq_is_abusive($questionText) || faq_is_violent($questionText)) {
-        // 不適切な表現・人への暴力を書いた文: 断る（暴力の文は、下でシステム管理者・補佐に知らせる）
+    } elseif (faq_is_violent($questionText)) {
+        // 人への暴力を書いた文: 答えは出さず、カウンセリングを受けることをすすめる（断らない。下でシステム管理者・補佐に知らせる。2026-11-17 指示）
+        $resultCode = 'violence';
+    } elseif (faq_is_abusive($questionText)) {
         $resultCode = 'abusive';
     } elseif (faq_is_opener($questionText)) {
         // 呼びかけだけ（「大変です」）: 用件を聞き返す。断らない（断った回数に数えない）
@@ -626,7 +628,7 @@ function faq_classify_question(string $questionText, array $faqList): array
         $noticeLevel = 'violence';
     } elseif ($noticeLevel === '' && faq_is_credential_request($questionText)) {
         $noticeLevel = 'credential';
-    } elseif ($noticeLevel === '' && $resultCode !== 'abusive' && faq_is_retirement($questionText)) {
+    } elseif ($noticeLevel === '' && !in_array($resultCode, ['abusive', 'violence'], true) && faq_is_retirement($questionText)) {
         $noticeLevel = 'retirement';
     }
     return ['code' => $resultCode, 'matches' => $matchedFaqList, 'distressLevel' => $distressLevel, 'noticeLevel' => $noticeLevel];

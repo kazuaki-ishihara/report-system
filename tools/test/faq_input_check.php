@@ -41,7 +41,7 @@ foreach (FAQ_STANDARD_ENTRIES as $entryIndex => [$standardCategory, $standardQue
 }
 
 const FAQ_INPUT_GROUP_NAMES = ['寄る', 'グレー', 'アウト'];
-const FAQ_INPUT_RESULT_CODES = ['matched', 'no_match', 'opener', 'vague', 'unrelated', 'abusive', 'emergency', 'distress', 'retirement', 'sensitive'];
+const FAQ_INPUT_RESULT_CODES = ['matched', 'no_match', 'opener', 'vague', 'unrelated', 'abusive', 'emergency', 'distress', 'retirement', 'sensitive', 'violence'];
 
 /**
  * 期待の欄を読む。「matched=ログインできない|no_match +credential」→ 許す結果・答えの質問の一部・知らせの理由
@@ -91,7 +91,7 @@ foreach (file($casesPath, FILE_IGNORE_NEW_LINES) ?: [] as $lineIndex => $lineTex
 
 $resultLabelByCode = [
     'matched' => '答えた', 'no_match' => '見つからない', 'opener' => '呼びかけ（ご用件を聞く）', 'vague' => 'あいまい（分野を選ぶ）', 'unrelated' => '関係のない質問',
-    'abusive' => '不適切な表現', 'emergency' => '緊急（119 番）', 'distress' => '心の不調', 'retirement' => '自分の退職', 'sensitive' => '要配慮（寄り添う返事）',
+    'abusive' => '不適切な表現', 'emergency' => '緊急（119 番）', 'distress' => '心の不調', 'retirement' => '自分の退職', 'sensitive' => '要配慮（寄り添う返事）', 'violence' => '人への暴力（カウンセリングをすすめる）',
 ];
 $countByGroup = [];
 $mismatchList = [];

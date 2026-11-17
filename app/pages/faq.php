@@ -92,8 +92,9 @@ function faq_answer_chat(array $user, array $faqList, string $searchQueryText, ?
     $isIgnored = $isRefused && $refusedCount >= FAQ_UNRELATED_IGNORE_COUNT;
     // 要配慮個人情報に触れる文・命や体の緊急の状態も、文は記録する（暗号化）。画面には出さない（faq_chat_log_display_text()。K-053・K-055。2026-11-16 指示）
     $loggedQuestionText = $selectedCategory !== null ? '' : $searchQueryText;
-    // 呼びかけだけの文は、記録では「あいまい」として残す（記録の表の結果の種類は変えない）
-    $logId = faq_chat_log_add($user, $screenCode, $loggedQuestionText, $selectedCategory, $resultCode === 'opener' ? 'vague' : $resultCode,
+    // 記録の表の結果の種類は変えない: 呼びかけだけの文は「あいまい」、人への暴力を書いた文は「不適切な表現」（知らせる理由 violence で見分ける）
+    $loggedResultCode = ['opener' => 'vague', 'violence' => 'abusive'][$resultCode] ?? $resultCode;
+    $logId = faq_chat_log_add($user, $screenCode, $loggedQuestionText, $selectedCategory, $loggedResultCode,
         array_map('intval', array_column($matchedFaqList, 'id')), $isIgnored, $notifyLevel);
     return ['result' => $resultCode, 'ignored' => $isIgnored, 'distress_level' => $distressLevel, 'matches' => $matchedFaqList, 'log_id' => $logId];
 }
@@ -111,6 +112,7 @@ if (($_GET['format'] ?? '') === 'json') {
         'result'    => $chatAnswer['result'],
         'vague'     => $chatAnswer['result'] === 'vague',
         'opener'    => $chatAnswer['result'] === 'opener',
+        'violence'  => $chatAnswer['result'] === 'violence',
         'unrelated' => $chatAnswer['result'] === 'unrelated',
         'abusive'   => $chatAnswer['result'] === 'abusive',
         'distress'  => $chatAnswer['distress_level'],
