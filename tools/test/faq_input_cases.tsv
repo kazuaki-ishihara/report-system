@@ -479,3 +479,46 @@
 アウト	distress +harassment	課長に毎日怒鳴られる
 アウト	distress +harassment	部長から嫌がらせを受けている
 
+# ---- 他端末検証（202611171340。補佐が 1 語ずつ試した入力） ----
+グレー	matched=不正アクセス|matched=安全か	脆弱性
+グレー	matched=不正アクセス	身代金要求型マルウェア
+グレー	matched=不正アクセス	サイバー恐喝
+グレー	matched=不正アクセス	マルウェアによる身代金要求
+グレー	matched=不正アクセス	身代金型サイバー攻撃
+グレー	matched=不正アクセス|matched=安全か	ファイル暗号化型ウイルス
+グレー	matched=不正アクセス	改ざん
+グレー	matched=不正アクセス	改竄
+グレー	matched=システムが止まった	フリーズ
+グレー	matched=システムが止まった	クラッシュ
+グレー	matched=システムが止まった	ハングアップ
+グレー	matched=更新のお知らせ|matched=更新あり|matched=お知らせの届き方	アップデート	（ふつうの利用者には管理者の「更新のお知らせを出したい」が見えない。ホームに出る、の答えでよい）
+グレー	matched=システムへの要望	要求
+グレー	matched=システムへの要望	要請
+グレー	matched=システムへの要望	リクエスト
+グレー	matched=システムへの要望	具申
+グレー	matched=システムへの要望	希望
+グレー	vague	申請	（記録では忌引の答えに「解決しない」が押されていた）
+グレー	matched=スマホ	モバイル端末
+グレー	matched=スマホ	ケータイ
+グレー	matched=スマホ	移動通信端末
+グレー	matched=スマホ	情報通信デバイス
+グレー	vague	従業員
+グレー	vague	職員
+グレー	vague	社員
+グレー	vague	構成員
+グレー	vague	幹部
+グレー	vague	チームメイト
+グレー	vague	業務
+グレー	vague	だれ
+グレー	matched=出力	ワード	（「パスワード」の答えに当たらない）
+グレー	matched=出力	xls
+グレー	matched=CSV	カンマ
+グレー	matched=組織	事業再編
+グレー	unrelated	人員削減	（会社の手続きの話。このシステムの質問ではない）
+グレー	unrelated	雇用調整
+グレー	unrelated	求職
+グレー	retirement +retirement	退職代行モームリ	（自分の退職として上司への相談を促し、管理者に知らせる作り）
+グレー	unrelated	日昌晶𣊭 火炎焱燚 水沝淼㵘 金鍂鑫𨰻 又双叒叕 牛牪犇𤛭
+寄る	matched=パスワードを忘れた	パスワードを忘れた
+寄る	matched=ログインできない	ログインできない（パスワードが違うと出る）
+
