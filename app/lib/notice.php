@@ -1243,6 +1243,10 @@ function faq_search_terms(string $queryText): array
     if (preg_match('/マニュアル|まにゅある|手順書|説明書/u', $compactSynonymSource) === 1) {
         $normalizedQuery = str_replace(['システム', '運用'], ' ', $normalizedQuery);
     }
+    // 2 段階認証をやめたい（無効化・外す・解除・オフ）: 認証の話のときだけ（「確認者を外したい」に当てない）
+    if (preg_match('/(2段階|二段階|認証)/u', $compactSynonymSource) === 1 && preg_match('/無効|外し|外す|解除|やめ|止め|オフ|off|不要|いらない/u', $compactSynonymSource) === 1) {
+        $normalizedQuery .= ' 2段階認証をやめたい 無効にしたい 外す 解除';
+    }
     // 課長・上司がいない（休職・入院・不在・逃げた・辞めた など）は、間に言葉が入っても（「課長が急に休職中になった」）課長を変える答えを探す
     if (preg_match('/(課長|上司)(が|は).{0,12}(休職|入院|不在|いな|逃|失踪|辞め|退職|連絡がつかな|連絡が取れな)/u', str_replace(' ', '', $synonymSourceQuery)) === 1) {
         $normalizedQuery .= ' 課長を変えたい 課を追加';

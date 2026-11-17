@@ -822,7 +822,7 @@
     }
     /**
      * 解決しないとき: そこで終えず、関係がありそうな質問を出す（G-25 §2.15）。
-     * 無いとき・「この中にない」を押したときは、くわしく聞き直す（offerNextSteps）
+     * 無いとき・「この中にない」を押したときは、詳しく聞き直す（offerNextSteps）
      */
     function offerRelated(logId, faqId) {
       var waitingBubble = addBubble('bot', M('探しています…'));
@@ -842,10 +842,10 @@
         })
         .catch(function () { waitingBubble.remove(); offerNextSteps(logId); });
     }
-    /** 関係がありそうな質問でも解決しないとき: くわしく聞き直し、言葉を変える・分野から選ぶ・質問として送る（課長・確認者）の道を出す */
+    /** 関係がありそうな質問でも解決しないとき: 詳しく聞き直し、言葉を変える・分野から選ぶ・質問として送る（課長・確認者）の道を出す */
     function offerNextSteps(logId) {
-      addBubble('bot', M('困っていることを、もう少しくわしく教えてください。「どの画面で」「何をしようとして」「どうなったか（出た文など）」を入れると、近い答えを探しやすくなります。'));
-      var retryChoice = { label: M('くわしく入れ直す'), onChoose: function () { questionInput.value = lastQuestionText; questionInput.focus(); } };
+      addBubble('bot', M('困っていることを、もう少し詳しく教えてください。「どの画面で」「何をしようとして」「どうなったか（出た文など）」を入れると、近い答えを探しやすくなります。'));
+      var retryChoice = { label: M('詳しく入れ直す'), onChoose: function () { questionInput.value = lastQuestionText; questionInput.focus(); } };
       var categoryChoice = { label: M('分野から選ぶ'), onChoose: addCategoryChoices };
       if (askRole === 'ask') {
         addChoices([retryChoice, categoryChoice, { label: M('質問として送る'), onChoose: function () { offerAsk(logId); } }]);
