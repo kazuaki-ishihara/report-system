@@ -933,6 +933,10 @@ function faq_is_vague(string $queryText): bool
     if (isset(FAQ_WHOLE_INPUT_SYNONYMS[str_replace(' ', '', $normalizedQuery)])) {
         return false;
     }
+    // 「システム系システム」のように、システムという言葉と つなぎの字 だけの文は、知りたいことが分からないので分野を選んでもらう
+    if (preg_match('/^((この|その|あの)?(システム|しすてむ|system)|系|の|が|は|と|で|って|[?？!！。、 ])+$/u', $normalizedQuery) === 1) {
+        return true;
+    }
     // 「誰が誰なの」「だれがだれ」は、曖昧ではなく関係のない質問として扱う（faq_is_unrelated()）
     if (preg_match('/^(誰|だれ)(が|は|と|も)(誰|だれ)/u', str_replace(' ', '', $normalizedQuery)) === 1) {
         return false;
