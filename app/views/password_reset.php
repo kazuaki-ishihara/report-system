@@ -5,7 +5,7 @@
 <section class="card narrow">
   <h1>パスワードの再設定</h1>
   <?php foreach ($errors as $e): ?>
-    <div class="flash flash-error" role="alert"><?= h($e) ?></div>
+    <div class="flash flash-error" role="alert"><?= h_lines($e) ?></div>
   <?php endforeach; ?>
   <form method="post" action="<?= h(url('/password_reset.php')) ?>" class="form">
     <?= form_hidden(false) ?>

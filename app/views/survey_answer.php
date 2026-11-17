@@ -19,7 +19,7 @@
     <p class="note">回答済み（<?= h(display_datetime($response['submitted_at'])) ?>）。<?= $open ? '期限までは直せます。' : '' ?></p>
   <?php endif; ?>
   <?php if ($errors): ?><div class="flash flash-error" role="alert">入力が必要な質問があります。</div><?php endif; ?>
-  <?php if (!$open): ?><div class="flash flash-info"><?= h(msg('この調査は締め切られました。')) ?></div><?php endif; ?>
+  <?php if (!$open): ?><div class="flash flash-info"><?= h_lines(msg('この調査は締め切られました。')) ?></div><?php endif; ?>
 
   <form method="post" action="<?= h(url('/surveys/answer.php?id=' . (int) $req['id'])) ?>" class="form" data-leave-warn="1">
     <?= form_hidden() ?>

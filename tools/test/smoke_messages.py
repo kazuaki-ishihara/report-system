@@ -132,6 +132,15 @@ def main():
     javascript_source = open(os.path.join(test_dir, "..", "..", "public", "js", "app.js"), encoding="utf-8").read()
     javascript_call_count = len(set(re.findall(r"\bM\('((?:[^'\\]|\\.)*)'", javascript_source)))
     check("app.js の M() の文言がすべて一覧で印付き（%d / %d）" % (js_marked_count, javascript_call_count), js_marked_count == javascript_call_count)
+    # ---- 改行を入れた文言は、画面で改行して出す（本文は <br>。報告のあった不具合） ----
+    newline_default_text = "その質問には返答できません。"
+    newline_body_text = "1行目の文（検証）\n2行目の文（検証）"
+    post_message(kacho_client, "save", newline_default_text, newline_body_text)
+    saved_newline_text = override_text_of(newline_default_text) or ""
+    check("改行を入れた文言を DB に残す", saved_newline_text.replace("\r\n", "\n") == newline_body_text, saved_newline_text)
+    _status_code, _location, newline_faq_html = kacho_client.get("/faq.php?q=" + urllib.parse.quote("今日の天気は？"))
+    check("改行を入れた文言は、画面で改行して出す（<br>）", "1行目の文（検証）<br>" in newline_faq_html and "2行目の文（検証）" in newline_faq_html)
+    post_message(kacho_client, "reset", newline_default_text)
     # 臨時の調査の締め切りの知らせも、文言の仕組みを通す
     survey_view_source = open(os.path.join(test_dir, "..", "..", "app", "views", "survey_answer.php"), encoding="utf-8").read()
     check("締め切りの知らせが msg() を通る", "msg('この調査は締め切られました。')" in survey_view_source)

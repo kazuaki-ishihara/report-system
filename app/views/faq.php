@@ -102,21 +102,21 @@ $renderCategoryChoices = static function () use ($categoryCountList, $categoryUr
             </div>
           <?php endif; ?>
         <?php elseif ($chatResultCode === 'abusive'): ?>
-          <div class="chat-bubble chat-bot" role="status"><?= h(msg('不適切な表現が含まれているため、返答できません。')) ?></div>
+          <div class="chat-bubble chat-bot" role="status"><?= h_lines(msg('不適切な表現が含まれているため、返答できません。')) ?></div>
         <?php elseif ($chatResultCode === 'unrelated'): ?>
-          <div class="chat-bubble chat-bot" role="status"><?= h(msg('その質問には返答できません。')) ?></div>
+          <div class="chat-bubble chat-bot" role="status"><?= h_lines(msg('その質問には返答できません。')) ?></div>
         <?php elseif ($chatResultCode === 'violence'): ?>
           <div class="chat-bubble chat-bot chat-care" role="status"><?= h_lines(msg('強い怒りや、人を傷つけたい気持ちを一人で抱えていませんか。カウンセラーや、会社の相談窓口・産業医など、話を聞いてもらえるところで、カウンセリングを受けることをおすすめします。気持ちを言葉にするだけでも、楽になることがあります。今すぐ自分や人を傷つけてしまいそうなときは、ためらわずに周りの人に助けを求めてください。')) ?></div>
         <?php elseif ($chatResultCode === 'closing'): ?>
-          <div class="chat-bubble chat-bot" role="status"><?= h(msg('わかりました。知りたいことがあるときは、いつでも入れてください。')) ?></div>
+          <div class="chat-bubble chat-bot" role="status"><?= h_lines(msg('わかりました。知りたいことがあるときは、いつでも入れてください。')) ?></div>
         <?php elseif ($chatResultCode === 'opener'): ?>
-          <div class="chat-bubble chat-bot" role="status"><?= h(msg('どういったご用件でしょうか。')) ?></div>
+          <div class="chat-bubble chat-bot" role="status"><?= h_lines(msg('どういったご用件でしょうか。')) ?></div>
         <?php elseif ($chatResultCode === 'vague'): ?>
           <div class="chat-bubble chat-bot" role="status">どのことについて知りたいですか？　分野を選ぶか、「パスワード」「提出」「コメント」のように、知りたいことの言葉を入れてください。</div>
           <?php $renderCategoryChoices(); ?>
         <?php elseif ($matchedFaqList): ?>
           <?php if ($chatContextTopic !== ''): ?>
-            <div class="chat-bubble chat-bot" role="status"><?= h(msg('「{topic}」についての答えです。', ['topic' => $chatContextTopic])) ?></div>
+            <div class="chat-bubble chat-bot" role="status"><?= h_lines(msg('「{topic}」についての答えです。', ['topic' => $chatContextTopic])) ?></div>
           <?php endif; ?>
           <div class="chat-bubble chat-bot">
             <p class="chat-question">Q. <?= h((string) $matchedFaqList[0]['question']) ?></p>

@@ -18,7 +18,7 @@ $qs = http_build_query($q);
   </nav>
   <?php if ($unknownLoginCount > 0): ?>
     <div class="flash flash-error" role="alert">
-      <?= h(msg('無い ID でログインしようとした記録があります（未確認 {count} 件）。ID の打ち間違いか、なりすまし・総当たりのおそれがないか、ID と IP アドレスを確かめてください', ['count' => $unknownLoginCount])) ?>
+      <?= h_lines(msg('無い ID でログインしようとした記録があります（未確認 {count} 件）。ID の打ち間違いか、なりすまし・総当たりのおそれがないか、ID と IP アドレスを確かめてください', ['count' => $unknownLoginCount])) ?>
       <form method="post" action="<?= h(url('/admin/logs.php')) ?>" class="inline" data-confirm="<?= h(msg('今ある記録を、すべて確かめたことにします。よろしいですか？')) ?>">
         <?= form_hidden() ?><button type="submit" name="action" value="unknown_login_checked" class="small">確かめた</button>
       </form>

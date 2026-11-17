@@ -97,7 +97,7 @@
           <span class="tag"><?= (int) $r['is_final'] === 1 ? '課長 ' : '' ?><?= h($r['display_name']) ?></span>
         <?php endforeach; ?>
           <?php $hasFinalReviewer = (bool) array_filter($reviewers[(int) $d['id']] ?? [], function (array $reviewerRow): bool { return (int) $reviewerRow['is_final'] === 1; }); ?>
-          <?php if ((int) $d['is_active'] === 1 && !$hasFinalReviewer): ?><span class="tag tag-open"><?= h(msg('課長がいません（確認を完了にできません）')) ?></span><?php endif; ?>
+          <?php if ((int) $d['is_active'] === 1 && !$hasFinalReviewer): ?><span class="tag tag-open"><?= h_lines(msg('課長がいません（確認を完了にできません）')) ?></span><?php endif; ?>
           <?php if (!empty($predecessorNameListByDepartmentId[(int) $d['id']])): ?><br><span class="note">引き継ぎ: <?= h(implode('、', $predecessorNameListByDepartmentId[(int) $d['id']])) ?></span><?php endif; ?></td>
         <td><?= (int) $d['is_active'] === 1 ? '有効' : '無効' ?></td>
         <td><a href="<?= h(url('/admin/org.php?tab=departments&edit=' . (int) $d['id'])) ?>">編集</a></td>
@@ -162,7 +162,7 @@
       <p>新しく作る班: <?php foreach ($bulkPlan['newTeamList'] as $newTeam): ?><span class="tag"><?= h($newTeam['departmentName']) ?> / <?= h($newTeam['teamName']) ?></span><?php endforeach; ?></p>
     <?php endif; ?>
     <?php if (!$bulkPlan['changeList']): ?>
-      <p><?= h(msg('変わる人はいません。')) ?></p>
+      <p><?= h_lines(msg('変わる人はいません。')) ?></p>
     <?php else: ?>
       <table class="table">
         <thead><tr><th>ログイン ID</th><th>表示名</th><th>変わる内容</th></tr></thead>
@@ -190,7 +190,7 @@
       </form>
       <p class="note">年度内の組織改訂は、すぐに発令される場合と、事前に予告がある場合があります。予告があるときは予約しておくと、その日に反映されます（その日の最初の画面の表示で、その時点の組織に対してもう一度確かめてから反映します）。</p>
     <?php elseif ($bulkPlan['errorTextList']): ?>
-      <p class="note"><?= h(msg('誤りを直してから、もう一度取り込んでください（反映はしていません）。')) ?></p>
+      <p class="note"><?= h_lines(msg('誤りを直してから、もう一度取り込んでください（反映はしていません）。')) ?></p>
     <?php endif; ?>
   <?php endif; ?>
 

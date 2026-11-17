@@ -8,6 +8,15 @@
     displayTextByDefaultText = JSON.parse(document.body.getAttribute('data-msgs') || '{}');
   } catch (parseError) { displayTextByDefaultText = {}; }
   /** 既定の文言から画面に出す文言を返す。placeholderValues の {name} に値を入れる */
+  /**
+   * 文（メッセージ）を要素に入れる。改行を含むときは改行して表示する（課長がメッセージの管理で文に改行を入れたとき。
+   * 改行を含まないときは、その要素の今までの表示のまま）
+   */
+  function setMessageText(element, text) {
+    element.textContent = text;
+    element.style.whiteSpace = String(text).indexOf('\n') >= 0 ? 'pre-line' : '';
+  }
+
   function M(defaultText, placeholderValues) {
     var displayText = displayTextByDefaultText[defaultText] || defaultText;
     Object.keys(placeholderValues || {}).forEach(function (placeholderName) {
@@ -75,7 +84,7 @@
       if (contrastRatio(accentColor, baseColors.card) < 3) { problemTextList.push(M('強調の色と面の色が近く、見出しやリンクが見えにくくなります')); }
       if (contrastRatio(accentColor, textOn(accentColor)) < 4.5) { problemTextList.push(M('ボタンの文字が読みにくくなります')); }
       var checkLabel = customColorFieldset.querySelector('.custom-color-check');
-      checkLabel.textContent = problemTextList.length ? problemTextList.join('。') + M('（保存はできますが、読みにくくなります）') : M('読みやすい組み合わせです');
+      setMessageText(checkLabel, problemTextList.length ? problemTextList.join('。') + M('（保存はできますが、読みにくくなります）') : M('読みやすい組み合わせです'));
       checkLabel.classList.toggle('warn', problemTextList.length > 0);
     };
     customColorFieldset.addEventListener('input', applyCustomColorPreview);
@@ -120,7 +129,7 @@
   }
   function showCopyResult(button, resultText) {
     var resultLabel = button.parentNode.querySelector('.copy-result');
-    if (resultLabel) { resultLabel.textContent = resultText; }
+    if (resultLabel) { setMessageText(resultLabel, resultText); }
   }
   document.addEventListener('click', function (e) {
     var generateButton = e.target.closest('.generate-password');
@@ -306,7 +315,7 @@
         duplicateNote.setAttribute('role', 'status');
         newProjectSelect.insertAdjacentElement('afterend', duplicateNote);
       }
-      duplicateNote.textContent = M('「{code}」の内容を写しました。追加する案件を選んでください（保存するまで反映されません）', { code: sourceProjectCode });
+      setMessageText(duplicateNote, M('「{code}」の内容を写しました。追加する案件を選んでください（保存するまで反映されません）', { code: sourceProjectCode }));
       newBlockFieldset.scrollIntoView({ block: 'start' });
       newProjectSelect.focus();
     });
@@ -495,7 +504,7 @@
       .then(function (r) { return r.json(); })
       .then(function (j) {
         var span = btn.nextElementSibling;
-        span.textContent = j.ok ? j.text : M('表示できません');
+        setMessageText(span, j.ok ? j.text : M('表示できません'));
         btn.hidden = true;
       })
       .catch(function () { btn.textContent = M('通信エラー'); });
@@ -557,7 +566,7 @@
       if (isReviewStep || !stepList.length) {
         wizardForm.classList.remove('wizard-active');
         wizardForm.classList.add('wizard-review');
-        wizardProgress.textContent = M('答えの一覧です。確かめてから、保存・提出してください。');
+        setMessageText(wizardProgress, M('答えの一覧です。確かめてから、保存・提出してください。'));
         wizardPrevButton.hidden = false;
         wizardNextButton.hidden = true;
         return;
@@ -568,10 +577,10 @@
       var currentStep = stepList[wizardStepIndex];
       currentStep.block.classList.add('wizard-current-block');
       currentStep.elements.forEach(function (stepElement) { stepElement.classList.add('wizard-current'); });
-      wizardProgress.textContent = M('{current} / {total} 問', {current: wizardStepIndex + 1, total: stepList.length});
+      setMessageText(wizardProgress, M('{current} / {total} 問', {current: wizardStepIndex + 1, total: stepList.length}));
       wizardPrevButton.hidden = wizardStepIndex === 0;
       wizardNextButton.hidden = false;
-      wizardNextButton.textContent = wizardStepIndex === stepList.length - 1 ? M('答えを確かめる') : M('次へ');
+      setMessageText(wizardNextButton, wizardStepIndex === stepList.length - 1 ? M('答えを確かめる') : M('次へ'));
       var focusTarget = currentStep.elements[0].querySelector('input:not([type=hidden]), select, textarea');
       if (focusTarget && document.activeElement !== focusTarget) { try { focusTarget.focus({preventScroll: true}); } catch (focusError) { focusTarget.focus(); } }
       wizardForm.scrollIntoView({block: 'start'});
@@ -580,7 +589,7 @@
       var isStepMode = narrowScreenQuery.matches && readWizardMode() === 'step' && !wizardForm.querySelector('.field .field-error');   // 入力の誤りで戻ったときは一覧
       wizardNav.hidden = !isStepMode;
       wizardModeSwitch.hidden = !narrowScreenQuery.matches;
-      wizardToggleButton.textContent = isStepMode ? M('一覧で表示する') : M('1 問ずつ表示する');
+      setMessageText(wizardToggleButton, isStepMode ? M('一覧で表示する') : M('1 問ずつ表示する'));
       if (isStepMode) {
         showWizardStep();
       } else {
@@ -591,7 +600,7 @@
     wizardNextButton.addEventListener('click', function () {
       var stepList = wizardSteps();
       if (stepList[wizardStepIndex] && isStepEmptyRequired(stepList[wizardStepIndex])) {
-        wizardMessage.textContent = M('必須の項目です。入力してから次へ進んでください。');
+        setMessageText(wizardMessage, M('必須の項目です。入力してから次へ進んでください。'));
         wizardMessage.hidden = false;
         return;
       }
@@ -643,7 +652,7 @@
         var valueInput = requiredField.querySelector('input:not([type=hidden]):not([type=checkbox]), select, textarea');
         if (valueInput && String(valueInput.value).trim() === '') { remainingCount++; }
       });
-      requiredRemainingLabel.textContent = remainingCount > 0 ? M('必須の未入力: {count}', {count: remainingCount}) : '';
+      setMessageText(requiredRemainingLabel, remainingCount > 0 ? M('必須の未入力: {count}', {count: remainingCount}) : '');
       requiredRemainingLabel.hidden = remainingCount === 0;
     };
     requiredForm.addEventListener('input', countRequiredRemaining);
@@ -672,17 +681,17 @@
         .then(function (r) { return r.json(); })
         .then(function (j) {
           if (j.reason === 'conflict') {
-            if (status) { status.textContent = M('同じ月の報告が別の画面で作られたため、自動保存を止めました。「下書き保存」を押してください'); }
+            if (status) { setMessageText(status, M('同じ月の報告が別の画面で作られたため、自動保存を止めました。「下書き保存」を押してください')); }
             stopped = true;
             return;
           }
-          if (status) { status.textContent = j.ok ? M('自動保存しました {time}', { time: j.saved_at }) : M('自動保存できませんでした（入力を確かめてください）'); }
+          if (status) { setMessageText(status, j.ok ? M('自動保存しました {time}', { time: j.saved_at }) : M('自動保存できませんでした（入力を確かめてください）')); }
           if (!j.ok) { dirty = true; }
           if (j.ok && seq === editSeq) { unsaved = false; } // 送ったあとに入力がなければ、保存済み
         })
         .catch(function () {
           dirty = true;
-          if (status) { status.textContent = M('通信が切れたため自動保存できませんでした。入力は残っています'); }
+          if (status) { setMessageText(status, M('通信が切れたため自動保存できませんでした。入力は残っています')); }
         })
         .then(function () { window.clearTimeout(timer); });
     }, 60000);
@@ -709,7 +718,7 @@
     function addBubble(speaker, text) {
       var bubble = document.createElement('div');
       bubble.className = 'chat-bubble ' + (speaker === 'user' ? 'chat-user' : 'chat-bot');
-      if (text) { bubble.textContent = text; }
+      if (text) { setMessageText(bubble, text); }
       chatLog.appendChild(bubble);
       scrollToEnd();
       return bubble;

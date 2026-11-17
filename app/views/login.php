@@ -7,7 +7,7 @@
 <section class="card narrow">
   <h1>ログイン</h1>
   <?php foreach ($errors as $e): ?>
-    <div class="flash flash-error" role="alert"><?= h($e) ?></div>
+    <div class="flash flash-error" role="alert"><?= h_lines($e) ?></div>
   <?php endforeach; ?>
 
   <?php if ($step === 1): ?>

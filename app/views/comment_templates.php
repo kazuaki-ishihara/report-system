@@ -35,7 +35,7 @@ $lastTemplateIndex = count($templateList) - 1;
   <?php endif; ?>
 
   <?php if (!$templateList): ?>
-    <p><?= h(msg('定型文はまだありません。')) ?></p>
+    <p><?= h_lines(msg('定型文はまだありません。')) ?></p>
   <?php endif; ?>
   <ul class="message-list">
     <?php foreach ($templateList as $templateIndex => $template): ?>

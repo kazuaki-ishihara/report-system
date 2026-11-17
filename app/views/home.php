@@ -14,35 +14,35 @@ $editUrl = url('/reports/edit.php?period=' . rawurlencode($period));
 <?php /** @var array<int, array{id: int|string, name: string}> $departmentsWithoutFinal 課長がいない課（管理者だけ） */ ?>
 <?php if ($departmentsWithoutFinal): ?>
   <div class="flash flash-error" role="alert">
-    <?= h(msg('課長がいない課があります（確認を完了にできません）: {departments}', ['departments' => implode('、', array_column($departmentsWithoutFinal, 'name'))])) ?>
+    <?= h_lines(msg('課長がいない課があります（確認を完了にできません）: {departments}', ['departments' => implode('、', array_column($departmentsWithoutFinal, 'name'))])) ?>
     <a href="<?= h(url('/admin/org.php?tab=departments')) ?>">組織・ユーザーで設定する</a>
   </div>
 <?php endif; ?>
 <?php /** @var bool $hasNoBackupCode 2 段階認証を設定していて、使える予備のコードが 1 つもない */ ?>
 <?php if ($hasNoBackupCode): ?>
-  <div class="flash flash-error" role="alert"><a href="<?= h(url('/account.php?tab=codes')) ?>"><?= h(msg('予備のコードがありません。認証アプリが使えなくなったときに備えて、アカウント設定の「予備のコード」で作り直してください')) ?></a></div>
+  <div class="flash flash-error" role="alert"><a href="<?= h(url('/account.php?tab=codes')) ?>"><?= h_lines(msg('予備のコードがありません。認証アプリが使えなくなったときに備えて、アカウント設定の「予備のコード」で作り直してください')) ?></a></div>
 <?php endif; ?>
 <?php /** @var int $supportRequestAnsweredCount 管理者側から返信があった自分の要望・依頼の数 */ ?>
 <?php /** @var array{open: int, waiting_reply: int}|null $supportRequestStaffCounts 管理者・補佐に知らせる要望・依頼の数 */ ?>
 <?php if ($supportRequestAnsweredCount > 0): ?>
-  <div class="flash flash-info"><a href="<?= h(url('/requests/index.php?status=all')) ?>"><?= h(msg('要望・依頼にシステム管理者から回答があります（{count} 件）', ['count' => $supportRequestAnsweredCount])) ?></a></div>
+  <div class="flash flash-info"><a href="<?= h(url('/requests/index.php?status=all')) ?>"><?= h_lines(msg('要望・依頼にシステム管理者から回答があります（{count} 件）', ['count' => $supportRequestAnsweredCount])) ?></a></div>
 <?php endif; ?>
 <?php if ($supportRequestStaffCounts !== null && ($supportRequestStaffCounts['open'] + $supportRequestStaffCounts['waiting_reply']) > 0): ?>
-  <div class="flash flash-info"><a href="<?= h(url('/requests/index.php')) ?>"><?= h(msg('要望・依頼: 未受付 {open} 件、返信待ち {waiting} 件', ['open' => $supportRequestStaffCounts['open'], 'waiting' => $supportRequestStaffCounts['waiting_reply']])) ?></a></div>
+  <div class="flash flash-info"><a href="<?= h(url('/requests/index.php')) ?>"><?= h_lines(msg('要望・依頼: 未受付 {open} 件、返信待ち {waiting} 件', ['open' => $supportRequestStaffCounts['open'], 'waiting' => $supportRequestStaffCounts['waiting_reply']])) ?></a></div>
 <?php endif; ?>
 <?php /** @var array{urgent: int, concern: int, retirement: int, credential: int}|null $faqDistressCounts まだ対応していない、知らせる質問の数（管理者はすべて、補佐は ID・パスワードだけ） */ ?>
 <?php if ($faqDistressCounts !== null && $faqDistressCounts['urgent'] + $faqDistressCounts['concern'] + $faqDistressCounts['retirement'] > 0): ?>
-  <div class="flash flash-error" role="alert"><a href="<?= h(url('/admin/faq_logs.php#distress')) ?>"><?= h(msg('よくある質問のチャットに、心の不調らしい文や退職に関わる質問があります（未対応 {count} 件。うち命に関わる言葉 {urgent} 件）。確かめて、対応してください', ['count' => $faqDistressCounts['urgent'] + $faqDistressCounts['concern'] + $faqDistressCounts['retirement'], 'urgent' => $faqDistressCounts['urgent']])) ?></a></div>
+  <div class="flash flash-error" role="alert"><a href="<?= h(url('/admin/faq_logs.php#distress')) ?>"><?= h_lines(msg('よくある質問のチャットに、心の不調らしい文や退職に関わる質問があります（未対応 {count} 件。うち命に関わる言葉 {urgent} 件）。確かめて、対応してください', ['count' => $faqDistressCounts['urgent'] + $faqDistressCounts['concern'] + $faqDistressCounts['retirement'], 'urgent' => $faqDistressCounts['urgent']])) ?></a></div>
 <?php endif; ?>
 <?php /** @var int $unknownLoginCount まだ確かめていない、無い ID でのログインの数（システム管理者・補佐だけ） */ ?>
 <?php if ($unknownLoginCount > 0): ?>
-  <div class="flash flash-error" role="alert"><a href="<?= h(url('/admin/logs.php?kind=auth_unknown')) ?>"><?= h(msg('無い ID でログインしようとした記録があります（未確認 {count} 件）。なりすましのおそれがないか確かめてください', ['count' => $unknownLoginCount])) ?></a></div>
+  <div class="flash flash-error" role="alert"><a href="<?= h(url('/admin/logs.php?kind=auth_unknown')) ?>"><?= h_lines(msg('無い ID でログインしようとした記録があります（未確認 {count} 件）。なりすましのおそれがないか確かめてください', ['count' => $unknownLoginCount])) ?></a></div>
 <?php endif; ?>
 <?php if ($faqDistressCounts !== null && $faqDistressCounts['violence'] > 0): ?>
-  <div class="flash flash-error" role="alert"><a href="<?= h(url('/admin/faq_logs.php#distress')) ?>"><?= h(msg('よくある質問のチャットに、人への暴力を書いた文があります（未対応 {count} 件）。確かめて、対応してください', ['count' => $faqDistressCounts['violence']])) ?></a></div>
+  <div class="flash flash-error" role="alert"><a href="<?= h(url('/admin/faq_logs.php#distress')) ?>"><?= h_lines(msg('よくある質問のチャットに、人への暴力を書いた文があります（未対応 {count} 件）。確かめて、対応してください', ['count' => $faqDistressCounts['violence']])) ?></a></div>
 <?php endif; ?>
 <?php if ($faqDistressCounts !== null && $faqDistressCounts['credential'] > 0): ?>
-  <div class="flash flash-error" role="alert"><a href="<?= h(url('/admin/faq_logs.php#distress')) ?>"><?= h(msg('よくある質問のチャットに、ID・パスワードを求める質問があります（未対応 {count} 件）。なりすましのおそれがないか確かめてください', ['count' => $faqDistressCounts['credential']])) ?></a></div>
+  <div class="flash flash-error" role="alert"><a href="<?= h(url('/admin/faq_logs.php#distress')) ?>"><?= h_lines(msg('よくある質問のチャットに、ID・パスワードを求める質問があります（未対応 {count} 件）。なりすましのおそれがないか確かめてください', ['count' => $faqDistressCounts['credential']])) ?></a></div>
 <?php endif; ?>
 <p class="greeting"><?= h($user['display_name'] !== '' ? $user['display_name'] : $user['login_id']) ?> さん</p>
 <?php /** @var array<int, array<string, mixed>> $activeNoticeList 出している更新のお知らせ */ ?>

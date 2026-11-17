@@ -69,7 +69,7 @@ $err = function (string $k) use ($errors): ?string { return $errors[$k] ?? null;
     <?php foreach ($blocks as $i => $b): $isNew = !empty($b['new']); ?>
       <fieldset class="block<?= $isNew ? ' block-new' : '' ?>" data-scope="block">
         <legend><?= $isNew ? '案件を追加するとき' : '案件 ' . ($i + 1) ?>
-          <?php if (!$isNew && $previousComparison['previousReport'] !== null && !isset($previousComparison['previousProjectCodeById'][(int) $b['project_id']])): ?><span class="tag tag-changed"><?= h(msg('前月にない案件')) ?></span><?php endif; ?></legend>
+          <?php if (!$isNew && $previousComparison['previousReport'] !== null && !isset($previousComparison['previousProjectCodeById'][(int) $b['project_id']])): ?><span class="tag tag-changed"><?= h_lines(msg('前月にない案件')) ?></span><?php endif; ?></legend>
         <label for="b<?= $i ?>_project"><?= $isNew ? '' : '<span class="badge badge-required">必須</span>' ?><span class="field-label-text">案件</span></label>
         <select id="b<?= $i ?>_project" name="b[<?= $i ?>][project]">
           <option value=""><?= $isNew ? '（追加しない）' : '選んでください' ?></option>

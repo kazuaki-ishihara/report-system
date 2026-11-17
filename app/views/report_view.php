@@ -190,9 +190,9 @@ $droppedPreviousProjectCodeList = $previousComparison['previousReport'] === null
 ?>
 <?php if ($previousComparison['previousReport'] !== null): ?>
 <section class="card previous-summary">
-  <p class="note"><?= h(msg('{period}の報告と比べて、変わった項目に「前月から変更」と前月の値を出しています。', ['period' => $previousComparison['previousPeriodLabel']])) ?></p>
+  <p class="note"><?= h_lines(msg('{period}の報告と比べて、変わった項目に「前月から変更」と前月の値を出しています。', ['period' => $previousComparison['previousPeriodLabel']])) ?></p>
   <?php if ($droppedPreviousProjectCodeList): ?>
-    <p><?= h(msg('{period}にあって今回ない案件: {codes}', ['period' => $previousComparison['previousPeriodLabel'], 'codes' => implode('、', $droppedPreviousProjectCodeList)])) ?></p>
+    <p><?= h_lines(msg('{period}にあって今回ない案件: {codes}', ['period' => $previousComparison['previousPeriodLabel'], 'codes' => implode('、', $droppedPreviousProjectCodeList)])) ?></p>
   <?php endif; ?>
 </section>
 <?php endif; ?>
@@ -200,7 +200,7 @@ $droppedPreviousProjectCodeList = $previousComparison['previousReport'] === null
 <?php foreach ($blocks as $i => $b): ?>
 <section class="card">
   <h2>案件 <?= $i + 1 ?>: <?= h($b['code']) ?><?= $b['alias'] !== '' ? ' <span class="note">' . h($b['alias']) . '</span>' : '' ?>
-    <?php if ($previousComparison['previousReport'] !== null && !isset($previousComparison['previousProjectCodeById'][(int) $b['project_id']])): ?><span class="tag tag-changed"><?= h(msg('前月にない案件')) ?></span><?php endif; ?></h2>
+    <?php if ($previousComparison['previousReport'] !== null && !isset($previousComparison['previousProjectCodeById'][(int) $b['project_id']])): ?><span class="tag tag-changed"><?= h_lines(msg('前月にない案件')) ?></span><?php endif; ?></h2>
   <?php foreach ($blockFields as $f): ?><?= $renderField($f, (int) $b['id']) ?><?php endforeach; ?>
 </section>
 <?php endforeach; ?>
