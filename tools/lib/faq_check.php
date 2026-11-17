@@ -56,6 +56,8 @@ function faq_check_judge(string $questionText, array $visibleFaqList, string $co
             return '不適切な表現';
         case 'opener':
             return '呼びかけ（ご用件を聞く）';
+        case 'closing':
+            return '用件なし（受け止める）';
         case 'vague':
             return 'あいまい（分野を選ぶ）';
         case 'unrelated':

@@ -934,6 +934,11 @@
           addBubble('bot', M('その質問には返答できません。'));
           return;
         }
+        if (result.closing) {
+          // 用件がない（「用件なし」「大丈夫です」）: 聞き返さずに受け止める
+          addBubble('bot', M('わかりました。知りたいことがあるときは、いつでも入れてください。'));
+          return;
+        }
         if (result.opener) {
           // 呼びかけだけ（「大変です」）: 用件を聞き返す
           addBubble('bot', M('どういったご用件でしょうか。'));
