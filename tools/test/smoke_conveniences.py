@@ -269,6 +269,14 @@ def main():
     check("J: いなくなっただけの質問には、お悔やみを添えない", gone_matches[:1] and "お悔やみ" not in gone_matches[0]["answer"], gone_matches[:1])
     check("J: 標準の答えに、亡くなったと決めつけたお悔やみを書かない", "亡くなられたときは" not in standard_source)
     # J 他の端末の確かめで見つかった、緊急の見落とし・取り違え（2026-11-16）
+    def ask_alone(client, question_text):
+        """1 文だけで聞いたときの答え（聞いたあとに「解決した」を送って会話を終え、次の文に会話の文脈を持ち越さない）"""
+        _status_code, _location, alone_json_text = client.get("/faq.php?format=json&q=" + urllib.parse.quote(question_text))
+        alone_result = json.loads(alone_json_text)
+        _status_code, _location, alone_faq_html = client.get("/faq.php")
+        client.post("/faq.php", {"csrf_token": csrf(alone_faq_html), "action": "chat_feedback", "log_id": str(alone_result.get("log_id", 0)), "feedback": "solved", "faq_id": ""})
+        return alone_result
+
     for emergency_text, expected_result in [
         ("30分くらい前から胸がすごく痛いんですが、少し横になって様子を見たほうがいいですか？", "emergency"),
         ("2歳の子供がミニトマトを喉に詰まらせたようです。顔色が真っ青で声も出せません", "emergency"),
@@ -278,11 +286,18 @@ def main():
         ("対象社員は業務負荷により限界を迎えており、毎日倒れそうになりながら出社している", "distress"),
         ("昨日、辛いラーメンを食べたら口の中が火事になりました。", "unrelated"),
     ]:
-        _status_code, _location, json_text = kacho_client.get("/faq.php?format=json&q=" + urllib.parse.quote(emergency_text))
-        check("J: 「%s」は %s" % (emergency_text[:14], expected_result), json.loads(json_text)["result"] == expected_result, json.loads(json_text)["result"])
+        alone_result = ask_alone(kacho_client, emergency_text)
+        check("J: 「%s」は %s" % (emergency_text[:14], expected_result), alone_result["result"] == expected_result, alone_result["result"])
+    # 心の不調の会話（G-25 §2.14）: 命に関わる文のあとは、1 文では見分けにくい文にも気づかいの返事を続ける。3 回の発言で印は終わる
+    first_turn = json.loads(kacho_client.get("/faq.php?format=json&q=" + urllib.parse.quote("もう死にたい"))[2])
+    second_turn = json.loads(kacho_client.get("/faq.php?format=json&q=" + urllib.parse.quote("もう実行するって決めた"))[2])
+    check("J: 心の不調の会話: 命に関わる文のあとの「もう実行するって決めた」にも気づかいの返事", first_turn["result"] == "distress" and second_turn["result"] == "distress", (first_turn["result"], second_turn["result"]))
+    later_result_list = [json.loads(kacho_client.get("/faq.php?format=json&q=" + urllib.parse.quote(later_text))[2])["result"] for later_text in ("あ", "あ", "あ", "あ")]
+    check("J: 心の不調の会話: 印は 3 回の発言で終わり、そのあとはふつうに判定する", later_result_list[:2] == ["distress", "distress"] and later_result_list[-1] == "vague", later_result_list)
+    ask_alone(kacho_client, "こんにちは")
+
     for incident_text, expected_question in [("サーバーが死亡しました", "システムが止まった"), ("不正アクセスによってシステムの管理者がロックアウトされました", "不正アクセス")]:
-        _status_code, _location, json_text = kacho_client.get("/faq.php?format=json&q=" + urllib.parse.quote(incident_text))
-        incident_matches = json.loads(json_text)["matches"]
+        incident_matches = ask_alone(kacho_client, incident_text)["matches"]
         check("J: 「%s」に、障害・事故の答えを出す" % incident_text[:10], incident_matches[:1] and incident_matches[0]["question"].startswith(expected_question), incident_matches[:1])
     check("J: 緊急の返事に、迷うときの相談先（#7119・#8000）を書く", "#8000" in kacho_client.get("/faq.php")[2] or "#8000" in open(os.path.join(test_dir, "..", "..", "public", "js", "app.js"), encoding="utf-8").read())
     _status_code, _location, json_text = admin_client.get("/faq.php?format=json&category=admin")
@@ -438,7 +453,11 @@ def main():
     check("J: JavaScript が無くても、気づかいの言葉を出す（知らせたことは返事に出さない）", "上司やシステム管理者に相談してください" in care_html and "システム管理者・補佐に知らせています" not in care_html)
     check("J: チャットの画面に、管理者・補佐に知らせることは書かない", "システム管理者・補佐に知らせます" not in care_html)
     _status_code, _location, admin_home_page_html = admin_client.get("/index.php")
-    check("J: 管理者のホームに、未対応の心の不調らしい文を知らせる", "心の不調らしい文や退職に関わる質問があります" in admin_home_page_html and "うち命に関わる言葉 1 件" in admin_home_page_html)
+    # 命に関わる言葉の件数は、ここまでの確かめで入れた分（課長の心の不調の会話の確かめも含む）を DB で数えて突き合わせる
+    unhandled_urgent_count = database.execute("SELECT COUNT(*) FROM faq_chat_logs WHERE distress_level = 'urgent' AND handled_at IS NULL").fetchone()[0]
+    check("J: 管理者のホームに、未対応の心の不調らしい文を知らせる",
+          unhandled_urgent_count >= 1 and "心の不調らしい文や退職に関わる質問があります" in admin_home_page_html
+          and "うち命に関わる言葉 %d 件" % unhandled_urgent_count in admin_home_page_html, unhandled_urgent_count)
     check("J: 補佐のホームには知らせない（K-054）", "心の不調らしい文や退職に関わる質問があります" not in deputy_client.get("/index.php")[2])
     check("J: 補佐の管理のトップのカードにも出さない", "心の不調・退職に関わる質問（未対応）" not in deputy_client.get("/admin/index.php")[2])
     _status_code, _location, deputy_distress_html = deputy_client.get("/admin/faq_logs.php")
