@@ -388,6 +388,25 @@ def main():
             answer_shown = b.wait_until("Array.prototype.some.call(document.querySelectorAll('#faq-chat .chat-choices button'), function (choiceButton) { return choiceButton.textContent === '解決した' && !choiceButton.disabled; })")
             check("「もう一度送る」で、入れ直さずに答えが出る（%s）" % failure_mode, answer_shown, b.eval(last_bot_text_js))
 
+        # ---- 分野を聞き返したあと「解決した」で戻しても、分野のボタンの並びが重ならない（他の端末の指摘。2026-11-18） ----
+        section("G-25", "「解決した」で戻しても、分野のボタンの並びが重ならない")
+        b.goto(a.base + "/faq.php")
+        category_row_count_js = "document.querySelectorAll('#faq-chat .faq-chat-log > .chat-choices:not([hidden])').length"
+        for vague_text in ("使い方がわからない", "どうすればいい"):
+            b.fill("#faq_search_query", vague_text)
+            b.click("#faq-chat form.faq-chat-input button[type=submit]")
+            b.wait_until("!document.querySelector('#faq-chat .chat-waiting')")
+        rows_after_vague = b.eval(category_row_count_js)
+        b.fill("#faq_search_query", "パスワードを忘れた")
+        b.click("#faq-chat form.faq-chat-input button[type=submit]")
+        b.wait_until("Array.prototype.some.call(document.querySelectorAll('#faq-chat .chat-choices button'), function (choiceButton) { return choiceButton.textContent === '解決した' && !choiceButton.disabled; })")
+        b.eval(click_choice_js + "('解決した')")
+        b.wait_until("document.querySelectorAll('#faq-chat .faq-chat-log > :not([hidden]):not(.chat-initial)').length === 0")
+        rows_after_reset = b.eval(category_row_count_js)
+        shot("faq_reset_no_duplicate_categories")
+        check("前提: 分野を聞き返すと、分野のボタンの並びが増える", (rows_after_vague or 0) >= 3, rows_after_vague)
+        check("「解決した」で戻すと、分野のボタンの並びは最初の 1 つだけになる", rows_after_reset == 1, rows_after_reset)
+
         # ---- 「質問として送る」の入力の誤りで、チャットのやり取りが消えない（G-25 §2.2。他の端末の指摘。2026-11-18） ----
         section("G-25", "「質問として送る」の入力の誤りで、チャットのやり取りが消えない")
         check("確認者がログインできる（質問として送る）", login("leader_a"))

@@ -1,7 +1,0 @@
-# app/ は Web に公開しない。本番では ~/www/report-system/app/ に置く（さくらは www の外に置けないため）。
-# 公開側の .htaccess でも app/ を拒否しているが、こちらでも必ず拒否する（二重の守り）。
-Require all denied
-<IfModule !mod_authz_core.c>
-    Order allow,deny
-    Deny from all
-</IfModule>

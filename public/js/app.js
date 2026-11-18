@@ -796,6 +796,8 @@
     function addCategoryChoices() {
       if (!categoryRowTemplate) { return; }
       var categoryRow = categoryRowTemplate.cloneNode(true);
+      // 写した並びは「開いたときからあるもの」ではない（印を外さないと、「解決した」で戻すときに消えずに重なって残る。2026-11-18。他の端末の指摘）
+      categoryRow.classList.remove('chat-initial');
       categoryRow.classList.remove('chat-choices-done');
       Array.prototype.forEach.call(categoryRow.querySelectorAll('.chosen'), function (choiceLink) { choiceLink.classList.remove('chosen'); choiceLink.removeAttribute('aria-current'); });
       chatLog.appendChild(categoryRow);
@@ -833,7 +835,8 @@
     function resetChat() {
       Array.prototype.slice.call(chatLog.children).forEach(function (childElement) {
         if (childElement === askBlock) { return; }
-        if (!childElement.classList.contains('chat-initial')) { childElement.remove(); }
+        // 開いたときからあるもの（最初の吹き出しと、最初の分野のボタンの並び）だけを残す
+        if (!childElement.classList.contains('chat-initial') || (childElement.classList.contains('chat-choices') && childElement !== categoryRowTemplate)) { childElement.remove(); }
       });
       if (categoryRowTemplate) {
         categoryRowTemplate.classList.remove('chat-choices-done');
