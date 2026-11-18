@@ -20,6 +20,7 @@
 /faq_chat_log_*.csv
 /app_log_errors_*.txt
 
-# 反映用の一式（tools/deploy/build_package.py の出力）
-/tools/deploy/output/
+# 反映用の一式（tools/deploy/build_package.py の出力）。本番に渡すいちばん新しい一式だけを Git で管理する（課長に渡すものを含む）
+/tools/deploy/output/*
+!/tools/deploy/output/20261118_161011_5a78ecc/
 __pycache__/

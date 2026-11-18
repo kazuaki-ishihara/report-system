@@ -1,0 +1,74 @@
+<?php
+
+declare(strict_types=1);
+
+// ====================================================================
+// 設定（詳細設計書 共通編 §12）
+// 環境ごとの違いは config.local.php（リポジトリに入れない）で上書きする。
+// ====================================================================
+
+$appDir = dirname(__DIR__);
+
+$config = [
+    // 場所
+    'db_path'   => $appDir . '/data/reports.sqlite',
+    'key_dir'   => $appDir . '/keys',
+    'log_dir'   => $appDir . '/logs',
+    // 公開側の URL の先頭（例: /report-system）。ローカル検証環境では ''
+    'base_path' => '/report-system',
+    // HTTPS で動いているか（Cookie の Secure）。ローカル検証環境では false
+    'https'     => true,
+
+    // ログイン
+    'session_idle_minutes'  => 30,
+    'session_max_hours'     => 12,
+    'login_max_failures'    => 10,
+    'login_lock_minutes'    => 15,
+    'remember_device_days'  => 90,
+    'backup_code_count'     => 8,
+    'password_min_length'   => 10,
+    'pw_stage_minutes'      => 5,
+
+    // 仕組み
+    'request_key_hours'     => 24,
+    'trash_days'            => 30,
+    'free_text_retention_months' => 12,
+    'report_retention_years'     => 3,
+    'search_decrypt_limit'  => 2000,
+
+    // バックアップ（便利機能 H）: 置き場所（公開ディレクトリの外）、残す数、古いと知らせる日数
+    'backup_dir'            => $appDir . '/backups',
+    'backup_keep'           => 14,
+    'backup_warn_days'      => 7,
+    // 更新のお知らせ（便利機能 A）: 表示する日数の既定
+    'notice_default_days'   => 14,
+
+    // 報告の対象月の決め方: previous = 締め日まで前月
+    'report_period_rule'    => 'previous',
+
+    // 開発用: true で 2 段階認証を飛ばす（https => false のときだけ効く）。
+    // 自動検証（verify_all.py）は、下の MR_VERIFY_DB で自分用の DB を使い、このとき自動で false にする
+    'dev_skip_2fa'          => false,
+
+    // 自動検証の印（下の MR_VERIFY_DB のときだけ true になる。本番・ふだんのローカル検証環境では常に false）。
+    // true のときだけ、検証が送る見出し X-Verify-Pause で、同時の操作を再現するための待ちを入れられる
+    'verify_mode'           => false,
+];
+
+$local = __DIR__ . '/config.local.php';
+if (is_file($local)) {
+    $override = require $local;
+    if (is_array($override)) {
+        $config = array_merge($config, $override);
+    }
+    // 自動検証（tools/test/verify_all.py）: ローカル検証環境（allow_dev_seed が有効）だけ、環境変数 MR_VERIFY_DB があれば
+    // 検証用の DB を使い、2 段階認証を飛ばさない。画面を見ている DB（テーマ・ログイン）と設定には触れない。本番では効かない
+    $verifyDatabasePath = getenv('MR_VERIFY_DB');
+    if (is_string($verifyDatabasePath) && $verifyDatabasePath !== '' && ($config['allow_dev_seed'] ?? false) === true && ($config['https'] ?? true) === false) {
+        $config['db_path'] = $verifyDatabasePath;
+        $config['dev_skip_2fa'] = false;
+        $config['verify_mode'] = true;
+    }
+}
+
+return $config;

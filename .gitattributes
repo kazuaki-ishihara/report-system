@@ -1,3 +1,6 @@
 # Windows のバッチは CRLF のまま扱う
 *.bat text eol=crlf
 *.sh text eol=lf
+
+# 本番に渡す一式は、作ったときの改行（LF）のまま扱う（取り出す端末で CRLF に変えない）
+tools/deploy/output/** -text
