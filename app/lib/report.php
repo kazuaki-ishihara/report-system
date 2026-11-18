@@ -62,6 +62,24 @@ function report_period_editable(string $period): bool
     return $period <= $current && $period >= period_shift($current, -3);
 }
 
+/**
+ * report_field_comments に「直した日時」の列が無ければ足す（本番で migrate.php を流さなくても、コメントを直せるように）
+ */
+function report_comment_ensure_edited_column(): void
+{
+    static $isChecked = false;
+    if ($isChecked) {
+        return;
+    }
+    $isChecked = true;
+    foreach (db()->query('PRAGMA table_info(report_field_comments)')->fetchAll() as $columnInfo) {
+        if ($columnInfo['name'] === 'edited_at') {
+            return;
+        }
+    }
+    db()->exec('ALTER TABLE report_field_comments ADD COLUMN edited_at TEXT');
+}
+
 function report_find(int $id): ?array
 {
     return db_one('SELECT * FROM report_records WHERE id = ?', [$id]);

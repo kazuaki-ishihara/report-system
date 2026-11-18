@@ -27,7 +27,29 @@ foreach ($fields as $f) {
 /** 1 つの対象（項目または報告全体）のコメント欄 */
 /** @var array<int, array{id: int|string, body: string}> $commentTemplateList 報告の課のコメントの定型文（G-19） */
 /** @var array<int, array{id: int|string, body: string}> $personalCommentTemplateList 自分の定型文（G-19） */
-$renderThreads = function (int $rpId, int $fid) use ($threads, $typeLabels, $stateLabels, $rid, $uid, $user, $isOwner, $isFinal, $canComment, $report, $commentTemplateList, $personalCommentTemplateList): string {
+/** コメントの「直しました」の印と、書いた人が直す欄（G-05 §6） */
+$renderCommentEdit = function (array $commentRow) use ($rid, $uid): string {
+    ob_start();
+    if ($commentRow['text'] !== null && ($commentRow['edited_at'] ?? null) !== null) {
+        ?><span class="note comment-edited"><?= h(msg('（{time} に直しました）', ['time' => display_datetime((string) $commentRow['edited_at'])])) ?></span><?php
+    }
+    if ($commentRow['text'] !== null && (int) $commentRow['user_id'] === $uid) {
+        ?>
+        <details class="comment-edit-form">
+          <summary>直す</summary>
+          <form method="post" action="<?= h(url('/reports/act.php')) ?>" class="form">
+            <?= form_hidden() ?><input type="hidden" name="report_id" value="<?= $rid ?>">
+            <input type="hidden" name="comment_id" value="<?= (int) $commentRow['id'] ?>">
+            <textarea name="comment" maxlength="1000" required data-free-text="1" aria-label="コメントを直す"><?= h((string) $commentRow['text']) ?></textarea>
+            <p class="field-warning" hidden>客先名や個人名が含まれていませんか</p>
+            <button type="submit" name="action" value="comment_edit">直したものを保存する</button>
+          </form>
+        </details>
+        <?php
+    }
+    return (string) ob_get_clean();
+};
+$renderThreads = function (int $rpId, int $fid) use ($threads, $typeLabels, $stateLabels, $rid, $uid, $user, $isOwner, $isFinal, $canComment, $report, $commentTemplateList, $personalCommentTemplateList, $renderCommentEdit): string {
     $key = $rpId . ':' . $fid;
     ob_start();
     foreach ($threads[$key] ?? [] as $t) {
@@ -40,11 +62,13 @@ $renderThreads = function (int $rpId, int $fid) use ($threads, $typeLabels, $sta
             <?php if ($hd['thread_status'] !== null): ?><span class="tag tag-<?= h($hd['thread_status']) ?>"><?= h($stateLabels[$hd['thread_status']]) ?></span><?php endif; ?>
             <strong><?= h($hd['author']) ?></strong> <span class="note"><?= h(display_datetime($hd['created_at'])) ?></span>
             <div class="comment-text"><?= $hd['text'] === null ? '<span class="muted">（削除されました）</span>' : nl2br(h($hd['text'])) ?></div>
+            <?= $renderCommentEdit($hd) ?>
           </div>
           <?php foreach ($t['replies'] as $r): ?>
             <div class="comment reply" id="comment-<?= (int) $r['id'] ?>">
               <strong><?= h($r['author']) ?></strong> <span class="note"><?= h(display_datetime($r['created_at'])) ?></span>
               <div class="comment-text"><?= $r['text'] === null ? '<span class="muted">（削除されました）</span>' : nl2br(h($r['text'])) ?></div>
+              <?= $renderCommentEdit($r) ?>
               <?php if ($r['text'] !== null && (int) $r['user_id'] === $uid): ?>
                 <form method="post" action="<?= h(url('/reports/act.php')) ?>" class="inline" data-confirm="<?= h(msg('このコメントを削除します。よろしいですか？')) ?>">
                   <?= form_hidden() ?><input type="hidden" name="report_id" value="<?= $rid ?>">

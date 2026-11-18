@@ -97,6 +97,8 @@ button.danger { color: var(--danger); border-color: var(--danger); background: v
 .sub-link { margin-top: 16px; }
 .list { list-style: none; padding: 0; margin: 0; }
 .list li { padding: 10px 0; border-bottom: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; }
+/* 一覧の下に続くボタン（ホームの「コメントの一覧」、自分の報告の「もっと見る」）は、一覧の下の線から離す */
+.list + .button { margin-top: 12px; }
 .tabs { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 12px; }
 .tabs a { padding: 8px 12px; border: 1px solid var(--line); border-radius: var(--radius); text-decoration: none; color: var(--text); }
 .tabs a.active { background: var(--primary); color: var(--primary-text); border-color: var(--primary); }
@@ -198,6 +200,7 @@ details summary { cursor: pointer; color: var(--primary); }
 .message-item.is-changed { background: var(--ok-bg); }
 .message-default { color: var(--muted, #555); margin: 4px 0; }
 .message-form input[type=text] { width: 100%; }
+.remind-box { background: var(--tag-warn-bg); color: var(--tag-warn-text); border: 1px solid var(--tag-warn-line); border-radius: var(--radius); padding: 12px; margin: 12px 0; }
 .bulk-check-box { background: var(--ok-bg); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px; margin: 12px 0; }
 .previous-value { font-size: 0.9em; margin: 2px 0 8px; padding: 4px 8px; border-left: 3px solid var(--line); }
 .comment-snippet { color: var(--muted, #555); font-size: 0.9em; margin-top: 2px; }
@@ -467,6 +470,8 @@ fieldset.sub legend { font-weight: 700; padding: 0 6px; }
 .flash-info { background: var(--tag-info-bg); color: var(--tag-info-text); border-color: var(--tag-info-line); }
 .flash-success { background: var(--tag-ok-bg); color: var(--tag-ok-text); border-color: var(--tag-ok-line); }
 .flash-error { background: var(--tag-danger-bg); color: var(--tag-danger-text); border-color: var(--tag-danger-line); }
+/* 提出のお知らせ（締め日が近い・促された。reminder.php） */
+.flash-warning { background: var(--tag-warn-bg); color: var(--tag-warn-text); border-color: var(--tag-warn-line); border-left-width: 6px; }
 .flash a { color: inherit; font-weight: 700; }
 
 /* 提出状況の進み具合（APP-017） */

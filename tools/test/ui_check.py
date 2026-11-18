@@ -352,6 +352,68 @@ def main():
         check("「この中にない」を押すと、詳しく入れ直す・分野から選ぶ・質問として送る を出す",
               "詳しく入れ直す" in next_step_labels and "分野から選ぶ" in next_step_labels and ("質問として送る" in next_step_labels or "だれに聞けばよいか" in next_step_labels), next_step_labels)
 
+        # ---- 通信の失敗（G-25 §2.11）: つながらない・サーバーのエラー・時間切れで文を分け、「もう一度送る」で入れ直さずに送り直せる ----
+        # 画面の fetch を差し替えて失敗を起こす（質問の問い合わせ ?format=json の GET だけ。記録を送る POST はそのまま）
+        section("G-25", "チャットの通信の失敗（文を分ける・もう一度送る）")
+        install_failing_fetch_js = """(function (failureMode) {
+            if (!window.__originalFetch) { window.__originalFetch = window.fetch; }
+            window.__faqFailureMode = failureMode;
+            window.fetch = function (requestUrl, requestOptions) {
+              var isChatQuestion = String(requestUrl).indexOf('format=json') >= 0 && !(requestOptions && requestOptions.method === 'POST');
+              if (!isChatQuestion || !window.__faqFailureMode) { return window.__originalFetch.apply(window, arguments); }
+              if (window.__faqFailureMode === 'network') { return Promise.reject(new TypeError('Failed to fetch')); }
+              if (window.__faqFailureMode === 'server') { return Promise.resolve(new Response('<html>500</html>', { status: 500, headers: { 'Content-Type': 'text/html' } })); }
+              return new Promise(function (resolveNever, rejectOnAbort) {   // hang: 答えが返らない（待つのをやめると中断になる）
+                var abortSignal = requestOptions && requestOptions.signal;
+                if (abortSignal) { abortSignal.addEventListener('abort', function () { rejectOnAbort(new DOMException('aborted', 'AbortError')); }); }
+              });
+            };
+            return true;
+          })"""
+        last_bot_text_js = "(function () { var bubbles = document.querySelectorAll('#faq-chat .chat-bot'); return bubbles.length ? bubbles[bubbles.length - 1].textContent : ''; })()"
+        retry_shown_js = "Array.prototype.some.call(document.querySelectorAll('#faq-chat .chat-choices button'), function (choiceButton) { return choiceButton.textContent === 'もう一度送る' && !choiceButton.disabled; })"
+        for failure_mode, expected_text, wait_seconds in (("network", "つながりませんでした", 10), ("server", "サーバーでエラーが起きました", 10), ("hang", "時間がかかりすぎたため", 40)):
+            b.goto(a.base + "/faq.php")
+            b.eval(install_failing_fetch_js + "('%s')" % failure_mode)
+            b.fill("#faq_search_query", "パスワードを忘れた")
+            b.click("#faq-chat form.faq-chat-input button[type=submit]")
+            b.wait_until(retry_shown_js, timeout=wait_seconds)
+            failure_text = b.eval(last_bot_text_js) or ""
+            waiting_left = b.eval("!!document.querySelector('#faq-chat .chat-waiting')")
+            shot("faq_fetch_failure_" + failure_mode)
+            check("失敗（%s）で、何が起きたかと「もう一度送る」が出る（「探しています…」は消える）" % failure_mode,
+                  expected_text in failure_text and not waiting_left, (failure_text, waiting_left))
+            b.eval("window.__faqFailureMode = ''; true")   # 通信が戻った
+            b.eval(click_choice_js + "('もう一度送る')")
+            answer_shown = b.wait_until("Array.prototype.some.call(document.querySelectorAll('#faq-chat .chat-choices button'), function (choiceButton) { return choiceButton.textContent === '解決した' && !choiceButton.disabled; })")
+            check("「もう一度送る」で、入れ直さずに答えが出る（%s）" % failure_mode, answer_shown, b.eval(last_bot_text_js))
+
+        # ---- 「質問として送る」の入力の誤りで、チャットのやり取りが消えない（G-25 §2.2。他の端末の指摘。2026-11-18） ----
+        section("G-25", "「質問として送る」の入力の誤りで、チャットのやり取りが消えない")
+        check("確認者がログインできる（質問として送る）", login("leader_a"))
+        b.goto(a.base + "/faq.php")
+        b.fill("#faq_search_query", "勤務時間は何時から")   # 会社の決まり: 見つからない → 質問として送る を出す
+        b.click("#faq-chat form.faq-chat-input button[type=submit]")
+        b.wait_until("Array.prototype.some.call(document.querySelectorAll('#faq-chat .chat-choices button'), function (choiceButton) { return choiceButton.textContent === '質問として送る' && !choiceButton.disabled; })")
+        b.eval(click_choice_js + "('質問として送る')")
+        b.wait_until("!document.getElementById('faq-ask').hidden")
+        bubble_count_before = b.eval("document.querySelectorAll('#faq-chat .chat-bubble').length")
+        # 空白だけの文は、ブラウザーの入力必須の確かめを通り、サーバーで「質問を入れてください」になる
+        b.eval("document.getElementById('faq_ask_question').value = '   '; true")
+        b.click("#faq-ask form button[type=submit]")
+        b.wait_until("!!document.querySelector('#faq-ask .flash-error')")
+        ask_error_text = b.eval("(document.querySelector('#faq-ask .flash-error') || {}).textContent || ''")
+        bubble_count_after = b.eval("document.querySelectorAll('#faq-chat .chat-bubble').length")
+        still_on_faq = "/faq.php" in (b.eval("location.pathname") or "")
+        shot("faq_ask_error_keeps_chat")
+        check("入力の誤りは送る欄の上に出て、画面は移らない", "質問を入れてください" in ask_error_text and still_on_faq, (ask_error_text, still_on_faq))
+        check("入力の誤りのあとも、チャットのやり取りが残る", bubble_count_after >= bubble_count_before and bubble_count_before >= 3, (bubble_count_before, bubble_count_after))
+        b.eval("document.getElementById('faq_ask_question').value = '勤務時間は何時からか知りたい（画面の自動操作の確かめ）'; true")
+        b.click("#faq-ask form button[type=submit]")
+        moved_to_request = b.wait_until("location.pathname.indexOf('/requests/view.php') >= 0")
+        check("直して送ると、送った要望・依頼の画面へ移る", moved_to_request, b.eval("location.pathname"))
+        check("管理者に戻る（チャットの確かめのあと）", login("admin01"))
+
         # ---- 予備のコード（G-16）: スマートフォンの幅で「コピー」を押すと、1 つ 1 行でクリップボードに入る ----
         section("G-16", "予備のコード（G-16）: スマートフォンの幅で「コピー」を押すと、1 つ 1 行でクリップボードに入る")
         b.call("Browser.grantPermissions", {"origin": a.base, "permissions": ["clipboardReadWrite", "clipboardSanitizedWrite"]})

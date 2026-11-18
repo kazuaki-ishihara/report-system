@@ -44,11 +44,17 @@ function rk_begin(string $action, int $userId): void
 
 function rk_done(string $resultUrl): void
 {
+    rk_mark_done($resultUrl);
+    redirect($resultUrl);
+}
+
+/** 完了の印だけを付ける（画面を移らずに JSON で行き先を返すとき。同じ番号で送り直されたら、その行き先へ移す） */
+function rk_mark_done(string $resultUrl): void
+{
     $key = $GLOBALS['RK_CURRENT'] ?? null;
     if ($key !== null) {
         db_exec("UPDATE request_keys SET status = 'done', result_url = ? WHERE request_key = ?", [$resultUrl, $key]);
     }
-    redirect($resultUrl);
 }
 
 /** JSON で返す処理（自動保存など）の完了 */

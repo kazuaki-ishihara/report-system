@@ -49,6 +49,7 @@ SQLite 3。テーブルは `app/lib/schema.php` の `schema_ensure()` で作る�
 | | `report_status_history` | 状態の履歴 |
 | 確認 | `report_reviews` | 確認者ごとのチェック |
 | | `report_field_comments` | コメント |
+| | `report_reminders` | 提出を促した記録（G-08 §6.3） |
 | 臨時の調査 | `adhoc_requests` | 依頼 |
 | | `adhoc_request_fields` | 質問 |
 | | `adhoc_request_targets` | 対象 |
@@ -385,10 +386,22 @@ CREATE TABLE IF NOT EXISTS report_field_comments (
     comment_enc       TEXT NOT NULL,     -- 本文（暗号化）
     deleted_at        TEXT,
     created_at        TEXT NOT NULL,
-    updated_at        TEXT NOT NULL
+    updated_at        TEXT NOT NULL,
+    edited_at         TEXT               -- 書いた人が直した日時（G-05 §6。あとから足した列。画面を開いたときにも足す）
 );
 CREATE INDEX IF NOT EXISTS ix_comments_report ON report_field_comments (report_id, field_id, report_project_id, created_at);
 CREATE INDEX IF NOT EXISTS ix_comments_open ON report_field_comments (thread_status) WHERE parent_id IS NULL;
+
+-- 提出を促した記録（G-08 §6.3。画面の中で知らせる。メールは使わない。画面を開いたときにも作る）
+CREATE TABLE IF NOT EXISTS report_reminders (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    period        TEXT NOT NULL,                              -- 促した月
+    department_id INTEGER NOT NULL REFERENCES departments(id),
+    user_id       INTEGER NOT NULL REFERENCES users(id),      -- 促された人
+    sent_by       INTEGER NOT NULL REFERENCES users(id),      -- 促した課長・確認者
+    created_at    TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS ix_report_reminders_user ON report_reminders (user_id, period);
 ```
 
 ### 3.7 臨時の調査
@@ -508,7 +521,8 @@ CREATE TABLE IF NOT EXISTS faq_entries (id INTEGER PRIMARY KEY AUTOINCREMENT, qu
 CREATE TABLE IF NOT EXISTS faq_chat_logs (id INTEGER PRIMARY KEY AUTOINCREMENT, asked_at TEXT NOT NULL, user_id INTEGER REFERENCES users(id),
     role TEXT NOT NULL CHECK (role IN ('member', 'reviewer', 'final', 'staff')), screen_code TEXT NOT NULL DEFAULT '', question_enc TEXT NOT NULL DEFAULT '', category TEXT,
     result TEXT NOT NULL CHECK (result IN ('matched', 'no_match', 'vague', 'unrelated', 'abusive', 'distress', 'sensitive', 'emergency', 'retirement', 'category')), is_ignored INTEGER NOT NULL DEFAULT 0 CHECK (is_ignored IN (0, 1)),
-    distress_level TEXT CHECK (distress_level IN ('urgent', 'concern', 'retirement')), handled_at TEXT, handled_by INTEGER REFERENCES users(id),
+    distress_level TEXT CHECK (distress_level IN ('urgent', 'concern', 'retirement', 'credential', 'violence', 'sabotage')),  -- 知らせる理由（G-25 §2.8・§2.10・§2.13・§2.6・§2.18）
+    handled_at TEXT, handled_by INTEGER REFERENCES users(id),
     shown_faq_ids TEXT NOT NULL DEFAULT '', feedback TEXT NOT NULL DEFAULT '' CHECK (feedback IN ('', 'solved', 'unsolved', 'asked')), feedback_faq_id INTEGER,
     request_id INTEGER REFERENCES support_requests(id), feedback_at TEXT);   -- G-25 §2.7 チャットの記録（question_enc は「faq_chat:<ID>」で暗号化）
 CREATE INDEX IF NOT EXISTS ix_faq_chat_logs_asked_at ON faq_chat_logs (asked_at);
@@ -633,6 +647,7 @@ CREATE TABLE IF NOT EXISTS app_state (
 | 送信の番号 | `request_key_hours` を過ぎた | 削除 |
 | 端末の記憶 | `expires_at` を過ぎた | 削除 |
 | `login_throttle` | ロック中でなく、最後の更新から `request_key_hours` を過ぎた | 削除 |
+| 提出を促した記録（`report_reminders`） | 作ってから 1 年を過ぎた | 削除（`retention_run()`） |
 | 記録 | 会社が決める期間（未決） | 削除はまだ作っていない |
 
 ---

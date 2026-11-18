@@ -103,7 +103,8 @@ function faq_answer_chat(array $user, array $faqList, string $searchQueryText, ?
     // 要配慮個人情報に触れる文・命や体の緊急の状態も、文は記録する（暗号化）。画面には出さない（faq_chat_log_display_text()。K-053・K-055。2026-11-16 指示）
     $loggedQuestionText = $selectedCategory !== null ? '' : $searchQueryText;
     // 記録の表の結果の種類は変えない: 呼びかけだけの文は「あいまい」、人への暴力を書いた文は「不適切な表現」（知らせる理由 violence で見分ける）
-    $loggedResultCode = ['opener' => 'vague', 'closing' => 'vague', 'violence' => 'abusive'][$resultCode] ?? $resultCode;
+    // システム・データを壊すと書いた文は「関係のない質問」（知らせる理由 sabotage で見分ける）
+    $loggedResultCode = ['opener' => 'vague', 'closing' => 'vague', 'violence' => 'abusive', 'sabotage' => 'unrelated'][$resultCode] ?? $resultCode;
     $logId = faq_chat_log_add($user, $screenCode, $loggedQuestionText, $selectedCategory, $loggedResultCode,
         array_map('intval', array_column($matchedFaqList, 'id')), $isIgnored, $notifyLevel, $conversation['id']);
     return ['result' => $resultCode, 'ignored' => $isIgnored, 'distress_level' => $distressLevel, 'matches' => $matchedFaqList, 'log_id' => $logId,
@@ -138,6 +139,7 @@ if (($_GET['format'] ?? '') === 'json') {
         'opener'    => $chatAnswer['result'] === 'opener',
         'closing'   => $chatAnswer['result'] === 'closing',
         'violence'  => $chatAnswer['result'] === 'violence',
+        'sabotage'  => $chatAnswer['result'] === 'sabotage',
         'context'   => $chatAnswer['context'],
         'harassment' => $chatAnswer['harassment'],
         'unrelated' => $chatAnswer['result'] === 'unrelated',
@@ -156,7 +158,7 @@ if (($_GET['format'] ?? '') === 'json') {
 // ---- チャットの問い合わせの失敗（答えが読めなかった）を記録に残す（JavaScript が送る。§2.11） ----
 if (is_post() && post_str('action') === 'chat_client_error') {
     $failureKind = post_str('kind');
-    if (!in_array($failureKind, ['not_json', 'not_ok', 'network'], true)) {
+    if (!in_array($failureKind, ['not_json', 'not_ok', 'network', 'timeout'], true)) {
         error_page(400);
     }
     $failureStatus = (int) post_str('status');
@@ -205,10 +207,19 @@ if (is_post() && post_str('action') === 'ask') {
                 faq_chat_log_set_feedback($askedLogId, 'asked', null, $createdRequestId);
             }
             flash('success', msg('質問をシステム管理者に送りました。返信があると、ホームに出ます'));
+            if (is_json_request()) {
+                // チャットの中から送ったとき: 行き先だけを返す（画面を移るのは JavaScript）
+                rk_mark_done('/requests/view.php?id=' . $createdRequestId);
+                json_response(['ok' => true, 'redirect' => url('/requests/view.php?id=' . $createdRequestId)]);
+            }
             rk_done('/requests/view.php?id=' . $createdRequestId);
         }
     }
     rk_cancel();
+    if (is_json_request()) {
+        // 入力の誤り: 画面を作り直さずに返す（作り直すと、チャットのやり取りが消える。2026-11-18。他の端末の指摘）
+        json_response(['ok' => false, 'reason' => 'invalid', 'errors' => array_values($askErrorTextList)]);
+    }
 }
 
 if (is_post() && !in_array(post_str('action'), ['ask', 'chat_feedback', 'chat_client_error'], true)) {
@@ -221,9 +232,16 @@ if (is_post() && !in_array(post_str('action'), ['ask', 'chat_feedback', 'chat_cl
     }
     rk_begin('faq.' . $action, $userId);
 
-    // ---- 標準のよくある質問を取り込む（まだ載っていない質問の文だけ足す。§2.4） ----
+    // ---- 標準のよくある質問を取り込む（まだ載っていない質問の文を足し、管理者が直していない答えは新しくする。§2.4） ----
     if ($action === 'import_standard') {
-        $addedCount = tx(function () use ($userId): int {
+        $updatedAnswerCount = 0;
+        $addedCount = tx(function () use ($userId, &$updatedAnswerCount): int {
+            foreach (faq_standard_updatable_rows(db_all('SELECT id, category, question, answer, created_at, updated_at FROM faq_entries')) as $updatableRow) {
+                // 作った日時と直した日時を同じにしておく（次の版でも、管理者が直していない答えとして新しくできる）
+                db_exec('UPDATE faq_entries SET category = ?, answer = ?, created_at = ?, updated_at = ? WHERE id = ?',
+                    [$updatableRow['category'], $updatableRow['answer'], now(), now(), $updatableRow['id']]);
+                $updatedAnswerCount++;
+            }
             $existingQuestionSet = array_fill_keys(array_column(db_all('SELECT question FROM faq_entries'), 'question'), true);
             $faqCount = (int) db_val('SELECT COUNT(*) FROM faq_entries');
             $nextSortOrder = (int) db_val('SELECT COALESCE(MAX(sort_order), 0) + 10 FROM faq_entries');
@@ -232,18 +250,21 @@ if (is_post() && !in_array(post_str('action'), ['ask', 'chat_feedback', 'chat_cl
                 if (isset($existingQuestionSet[$standardQuestion]) || $faqCount >= FAQ_MAX_COUNT) {
                     continue;
                 }
+                $importedAt = now();   // 作った日時と直した日時を同じにする（管理者が直していない印）
                 db_exec('INSERT INTO faq_entries (category, question, answer, sort_order, updated_by, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
-                    [$standardCategory, $standardQuestion, $standardAnswer, $nextSortOrder, $userId, now(), now()]);
+                    [$standardCategory, $standardQuestion, $standardAnswer, $nextSortOrder, $userId, $importedAt, $importedAt]);
                 $nextSortOrder += 10;
                 $faqCount++;
                 $insertedCount++;
             }
             return $insertedCount;
         });
-        audit_log('admin', 'faq:import_standard;added=' . $addedCount);
-        flash('success', $addedCount > 0
-            ? msg('標準のよくある質問を {count} 件取り込みました', ['count' => $addedCount])
-            : msg('取り込む質問はありませんでした（標準のよくある質問は、すべて載っています）'));
+        audit_log('admin', 'faq:import_standard;added=' . $addedCount . ';updated=' . $updatedAnswerCount);
+        if ($addedCount > 0 || $updatedAnswerCount > 0) {
+            flash('success', msg('標準のよくある質問を {count} 件取り込み、{updated} 件の答えを新しくしました（管理者が直した答えは変えていません）', ['count' => $addedCount, 'updated' => $updatedAnswerCount]));
+        } else {
+            flash('success', msg('取り込む質問はありませんでした（標準のよくある質問は、すべて載っています）'));
+        }
         rk_done('/faq.php');
     }
 
@@ -329,6 +350,8 @@ $existingQuestionSet = array_fill_keys(array_column($allFaqList, 'question'), tr
 $standardMissingCount = count(array_filter(FAQ_STANDARD_ENTRIES, static function (array $standardEntry) use ($existingQuestionSet): bool {
     return !isset($existingQuestionSet[$standardEntry[1]]);
 }));
+// 標準の答えが新しくなった行（管理者が直していないもの）の数（取り込みで新しくする）
+$standardUpdatableCount = $canEdit ? count(faq_standard_updatable_rows(db_all('SELECT id, category, question, answer, created_at, updated_at FROM faq_entries'))) : 0;
 render('faq', [
     'title'             => 'よくある質問',
     'user'              => $user,
@@ -353,6 +376,7 @@ render('faq', [
     'sourcePathText'    => $sourcePathText,
     'canEdit'           => $canEdit,
     'standardMissingCount' => $standardMissingCount,
+    'standardUpdatableCount' => $standardUpdatableCount,
     'editedFaqId'       => $editedFaqId,
     'sourceRequestId'   => $sourceRequestId,
     'isFormOpen'        => $errorTextList !== [] || $editedFaqId !== null || $sourceRequestId !== null || $draftLogId !== null,

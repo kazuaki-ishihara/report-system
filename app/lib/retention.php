@@ -69,6 +69,9 @@ function retention_run(): array
     db_exec('DELETE FROM report_field_comments WHERE deleted_at IS NOT NULL AND deleted_at < ? AND id NOT IN (SELECT parent_id FROM report_field_comments WHERE parent_id IS NOT NULL)', [$trash]);
     db_exec('DELETE FROM adhoc_requests WHERE deleted_at IS NOT NULL AND deleted_at < ?', [$trash]);
     $log[] = '完全に消した削除データ（報告）: ' . $n;
+    // 提出を促した記録（G-08 §6.3）: 1 年で消す（知らせを出すのは当月と過去 3 か月の分だけ）
+    reminder_ensure_table();
+    db_exec('DELETE FROM report_reminders WHERE created_at < ?', [date('Y-m-d H:i:s', strtotime('-1 year'))]);
 
     return $log;
 }

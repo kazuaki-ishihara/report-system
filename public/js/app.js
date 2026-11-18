@@ -711,6 +711,49 @@
     var askRole = chatPanel.getAttribute('data-ask-role');
     var askBlock = document.getElementById('faq-ask');
     if (askBlock && !askBlock.hasAttribute('data-has-error')) { askBlock.hidden = true; }
+    // 「質問として送る」は、画面を読み込み直さずに送る（入力の誤りで画面を作り直すと、チャットのやり取りが消えるため。2026-11-18）。
+    // 送れたら要望・依頼の画面へ移る。誤りは欄の上に出し、入れた文とやり取りは残す
+    var askForm = askBlock ? askBlock.querySelector('form') : null;
+    if (askForm) {
+      askForm.addEventListener('submit', function (submitEvent) {
+        submitEvent.preventDefault();
+        var askSubmitButton = askForm.querySelector('button[type="submit"]');
+        var showAskErrors = function (errorTextList) {
+          Array.prototype.forEach.call(askBlock.querySelectorAll('.flash-error'), function (oldError) { oldError.remove(); });
+          errorTextList.forEach(function (errorText) {
+            var errorElement = document.createElement('div');
+            errorElement.className = 'flash flash-error';
+            errorElement.setAttribute('role', 'alert');
+            setMessageText(errorElement, errorText);
+            askForm.parentNode.insertBefore(errorElement, askForm);
+          });
+          scrollToEnd();
+        };
+        if (askSubmitButton) { askSubmitButton.disabled = true; }
+        // 送り先はフォームの属性から読む（フォームに name="action" の欄があるため、askForm.action はその欄を指す）
+        fetch(askForm.getAttribute('action'), { method: 'POST', body: new FormData(askForm), credentials: 'same-origin', headers: { Accept: 'application/json' } })
+          .then(function (response) {
+            // 同じ番号で送り直したとき（前の送信で処理済み）は、サーバーが行き先の画面へ移している
+            if (response.redirected) { window.location.href = response.url; return null; }
+            return response.json().then(function (result) { result.httpStatus = response.status; return result; });
+          })
+          .then(function (result) {
+            if (!result) { return; }
+            if (result.ok && result.redirect) { window.location.href = result.redirect; return; }
+            if (askSubmitButton) { askSubmitButton.disabled = false; }
+            if (result.reason === 'login' || result.httpStatus === 401) {
+              showAskErrors([M('ログインの有効期限が切れました。画面を開き直して、もう一度ログインしてください。')]);
+              return;
+            }
+            // 送信の番号は変えない（誤りのときはサーバーが取り消している。届いていたときは、同じ番号なら二重に作らない）
+            showAskErrors(result.errors && result.errors.length ? result.errors : [M('サーバーでエラーが起きました。少し待ってから、もう一度「質問として送る」を押してください。続くときは、システム管理者に知らせてください。')]);
+          })
+          .catch(function () {
+            if (askSubmitButton) { askSubmitButton.disabled = false; }
+            showAskErrors([M('つながりませんでした。通信の状態を確かめて、もう一度「質問として送る」を押してください。')]);
+          });
+      });
+    }
     var categoryRowTemplate = chatLog.querySelector('.chat-choices');   // サーバーが出した分野のボタンの並び（聞き返すときに写す）
     var lastQuestionText = '';
     var shownFaqIdList = [];   // この会話で答えを出した質問の番号（「解決しない」のあと、同じ質問を出さない）
@@ -876,6 +919,21 @@
         return { label: faqEntry.question, onChoose: function () { addBubble('user', faqEntry.question); showAnswer(faqEntry); askSolved(logId, faqEntry.id); } };
       }).concat([{ label: M('この中にない'), onChoose: function () { sendFeedback(logId, 'unsolved', null); offerNextSteps(logId); } }]));
     }
+    /**
+     * 問い合わせに失敗したとき: 何が起きたかを出し、「もう一度送る」を出す（つながりにくい端末で、入れ直さずに送り直せるように。§2.11）
+     * failureKind: network（つながらない）・timeout（時間切れ）・server（サーバーのエラー・答えが読めない）
+     */
+    function showFetchFailure(failureKind, retryFetch) {
+      var failureTextByKind = {
+        network: M('つながりませんでした。通信の状態を確かめて、「もう一度送る」を押してください。'),
+        timeout: M('答えが返ってくるまでに時間がかかりすぎたため、待つのをやめました。少し待ってから「もう一度送る」を押してください。'),
+        server: M('サーバーでエラーが起きました。少し待ってから「もう一度送る」を押してください。続くときは、システム管理者に知らせてください。')
+      };
+      addBubble('bot', failureTextByKind[failureKind] || M('通信エラー'));
+      addChoices([{ label: M('もう一度送る'), onChoose: retryFetch }]);
+    }
+    /** 答えを待つ長さ（ミリ秒）。サーバーの時間切れ（30 秒）より前に、待つのをやめて知らせる */
+    var FAQ_FETCH_TIMEOUT_MS = 25000;
     /** サーバーに聞く（?format=json と、q か category。開いていた画面も付ける） */
     function fetchFaq(queryName, queryValue, onResult) {
       var waitingBubble = addBubble('bot', M('探しています…'));
@@ -884,13 +942,30 @@
       var screenInput = chatForm.querySelector('input[name="screen"]');
       requestUrl.search = '?format=json&' + queryName + '=' + encodeURIComponent(queryValue)
         + (screenInput ? '&screen=' + encodeURIComponent(screenInput.value) : '');
-      fetch(requestUrl.toString(), { credentials: 'same-origin', headers: { Accept: 'application/json' } })
+      var retryFetch = function () { fetchFaq(queryName, queryValue, onResult); };
+      var abortController = window.AbortController ? new AbortController() : null;
+      var isTimedOut = false;
+      var timeoutTimer = window.setTimeout(function () {
+        isTimedOut = true;
+        if (abortController) { abortController.abort(); }
+      }, FAQ_FETCH_TIMEOUT_MS);
+      fetch(requestUrl.toString(), { credentials: 'same-origin', headers: { Accept: 'application/json' }, signal: abortController ? abortController.signal : undefined })
         .then(function (response) {
           return response.json()
             .catch(function () { return { ok: false, clientFailure: 'not_json' }; })
             .then(function (result) { result.httpStatus = response.status; return result; });
         })
         .then(function (result) {
+          window.clearTimeout(timeoutTimer);
+          if (isTimedOut) {
+            // 待つのをやめたあとに届いた答えは捨てる（答えを読んでいる途中で時間切れになったときは、ここで知らせる）
+            if (waitingBubble.parentNode) {
+              waitingBubble.remove();
+              showFetchFailure('timeout', retryFetch);
+              reportClientError('timeout', 0);
+            }
+            return;
+          }
           waitingBubble.remove();
           if (result.ok) {
             onResult(result);
@@ -901,14 +976,25 @@
             addBubble('bot', M('ログインの有効期限が切れました。画面を開き直して、もう一度ログインしてください。'));
             return;
           }
-          addBubble('bot', M('通信エラー'));
+          showFetchFailure('server', retryFetch);
           if (result.clientFailure) { reportClientError(result.clientFailure, result.httpStatus); }   // サーバーのエラーは、サーバーが記録に残している
         })
         .catch(function () {
+          window.clearTimeout(timeoutTimer);
+          if (!waitingBubble.parentNode) { return; }
           waitingBubble.remove();
-          addBubble('bot', M('通信エラー'));
-          reportClientError('network', 0);
+          showFetchFailure(isTimedOut ? 'timeout' : 'network', retryFetch);
+          reportClientError(isTimedOut ? 'timeout' : 'network', 0);
         });
+      if (!abortController) {
+        // AbortController の無いブラウザー: 答えを待つのをやめたことだけを出す（届いた答えは上で捨てる）
+        window.setTimeout(function () {
+          if (!isTimedOut || !waitingBubble.parentNode) { return; }
+          waitingBubble.remove();
+          showFetchFailure('timeout', retryFetch);
+          reportClientError('timeout', 0);
+        }, FAQ_FETCH_TIMEOUT_MS + 10);
+      }
     }
 
     // 分野を選んだ: その分野の質問を出す
@@ -982,11 +1068,16 @@
         }
         if (result.sensitive) {
           // 要配慮個人情報に触れる文: 寄り添う返事（文は記録しない）。ほかにはっきり知りたいことがあれば、その答えも出す
-          addBubble('bot', M('大切なことを書いてくれて、ありがとうございます。体や家族のことなど、個人的な事情には、このチャットでは詳しくお答えできませんが、一人で抱えずに、上司や信頼できる人に相談してください。報告や締め日のことで困っているときは、課長に相談してください。')).classList.add('chat-care');
+          addBubble('bot', M('大切なことを書いてくれて、ありがとうございます。体や家族のことなど、個人的な事情には、このチャットでは詳しくお答えできませんが、一人で抱えずに、上司や信頼できる人に相談してください。体の具合や病気・薬のことは、医療機関（医師）に相談してください。報告や締め日のことで困っているときは、課長に相談してください。')).classList.add('chat-care');
           if (result.matches.length > 0) {
             showAnswer(result.matches[0]);
             askSolved(result.log_id, result.matches[0].id);
           }
+          return;
+        }
+        if (result.sabotage) {
+          // システムやデータを壊す・消す・持ち出すつもりの文: 答えずに、できないことを返す（システム管理者・補佐に知らせる）
+          addBubble('bot', M('システムやデータを壊す・消す・持ち出す操作は、できません。困っていることや不満があるときは、課長やシステム管理者に相談してください。'));
           return;
         }
         if (result.violence) {

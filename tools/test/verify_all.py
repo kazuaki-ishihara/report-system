@@ -294,6 +294,7 @@ STEP_TABLE = [
     {"key": "requests", "name": "要望・依頼（課長・確認者 → システム管理者の返信）", "script": "smoke_requests.py", "screen": "G-22", "secrets": True},
     {"key": "ledger", "name": "案件台帳の道具・案件の一覧の CSV 出力", "script": "smoke_project_ledger.py", "screen": "G-13"},
     {"key": "conveniences", "name": "便利機能 A〜J（お知らせ・定型文・予定・CSV・メンテナンス・予約・バックアップ・使い方・よくある質問）", "script": "smoke_conveniences.py", "screen": "G-25"},
+    {"key": "additions", "name": "あとから足した機能（コメントを直す・調査の見本・提出のお知らせ・チャットの通信の失敗）", "script": "smoke_additions.py", "screen": "G-08"},
 ]
 STEP_KEYS = [step["key"] for step in STEP_TABLE] + ["ui", "retention", "units", "office"]
 
@@ -406,6 +407,8 @@ def main():
         r.run("メッセージの一覧が最新", [sys.executable, "-I", os.path.join(ROOT, "tools", "lib", "msg_catalog.py"), "--check"], default_screen="コード")
         # よくある質問のチャットの判定（システムに寄る・グレーゾーン・明確にアウトの入力。tools/test/faq_input_cases.tsv）。サーバー・DB は使わない
         r.run("よくある質問の自動入力検証", [php, os.path.join("tools", "test", "faq_input_check.php")], default_screen="G-25")
+        # 部品（前置き・たとえ・中心の言葉・語尾）のすべての組み合わせ（tools/test/faq_combo_cases.txt）。言い方を変えても判定が崩れないか
+        r.run("よくある質問の組み合わせ入力検証", [php, os.path.join("tools", "test", "faq_combo_check.php")], default_screen="G-25")
         if "units" not in skip and (not only or only & {"units", "G-10", "G-03", "共通"}):
             # 画面を通さずに確かめる決まり（検証の印・対象月の切り替え・出力の数式・XML）。サーバー・検証の DB は使わない
             r.run("関数の確かめ（検証の印・対象月・出力の数式・XML）", [php, os.path.join("tools", "test", "check_units.php")], default_screen="G-10")

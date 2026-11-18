@@ -90,6 +90,9 @@ foreach ($adminMenuItemList as $adminMenuItem) {
         if ($faqDistressCounts['violence'] > 0) {
             $statusList[] = ['text' => '人への暴力を書いた文（未対応） ' . $faqDistressCounts['violence'] . ' 件', 'isAttention' => true];
         }
+        if ($faqDistressCounts['sabotage'] > 0) {
+            $statusList[] = ['text' => 'システム・データを壊すと書いた文（未対応） ' . $faqDistressCounts['sabotage'] . ' 件', 'isAttention' => true];
+        }
         if ($faqDistressCounts['credential'] > 0) {
             $statusList[] = ['text' => 'ID・パスワードを求める質問（未対応） ' . $faqDistressCounts['credential'] . ' 件', 'isAttention' => true];
         }

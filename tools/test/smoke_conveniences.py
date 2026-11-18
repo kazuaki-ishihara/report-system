@@ -299,6 +299,16 @@ def main():
     for incident_text, expected_question in [("サーバーが死亡しました", "システムが止まった"), ("不正アクセスによってシステムの管理者がロックアウトされました", "不正アクセス")]:
         incident_matches = ask_alone(kacho_client, incident_text)["matches"]
         check("J: 「%s」に、障害・事故の答えを出す" % incident_text[:10], incident_matches[:1] and incident_matches[0]["question"].startswith(expected_question), incident_matches[:1])
+    # 日本語以外の言葉（K-060）: 日本語以外で聞かれたときだけ「日本語で入れてください」を（英語も添えて）付ける。日本語で聞いた人には付けない
+    foreign_matches = ask_alone(kacho_client, "내 언어로 표시할 수 있나요?")["matches"]
+    japanese_matches = ask_alone(kacho_client, "言語切り替えをしたい。台湾語")["matches"]
+    check("J: 日本語以外の言葉の文には、日本語だけであることと日本語で聞いてほしいことを英語も添えて答える",
+          foreign_matches[:1] and "日本語だけ" in foreign_matches[0]["answer"] and "Please ask your question in Japanese" in foreign_matches[0]["answer"], foreign_matches[:1])
+    check("J: 日本語で言語の切り替えを聞いた人には、日本語で入れてくださいと書かない",
+          japanese_matches[:1] and "日本語だけ" in japanese_matches[0]["answer"] and "日本語で入れてください" not in japanese_matches[0]["answer"], japanese_matches[:1])
+    unreadable_matches = ask_alone(kacho_client, "言語切り替えをしたい。日本語はわからない。")["matches"]
+    check("J: 日本語が分からないと書いた人には、日本語で書かれていても英語の案内を付ける",
+          unreadable_matches[:1] and "available in Japanese only" in unreadable_matches[0]["answer"] and "日本語だけ" in unreadable_matches[0]["answer"], unreadable_matches[:1])
     check("J: 緊急の返事に、迷うときの相談先（#7119・#8000）を書く", "#8000" in kacho_client.get("/faq.php")[2] or "#8000" in open(os.path.join(test_dir, "..", "..", "public", "js", "app.js"), encoding="utf-8").read())
     _status_code, _location, json_text = admin_client.get("/faq.php?format=json&category=admin")
     check("J: 管理者には、分野「システムの管理」の質問を出す", len(json.loads(json_text)["matches"]) >= 10)

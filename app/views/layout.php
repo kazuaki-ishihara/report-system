@@ -67,6 +67,9 @@ $flashes = take_flashes();
   <?php if (($user ?? null) !== null && maintenance_state() !== null): ?>
     <div class="flash flash-error maintenance-notice" role="alert"><?= h_lines(can_manage_system($user) ? msg('メンテナンス中です（管理者・補佐の画面）。ほかの人は保存などの操作ができません。終わったら管理のトップで「メンテナンスを終える」を押してください。') : maintenance_notice_text()) ?></div>
   <?php endif; ?>
+  <?php foreach ($reminderBannerList ?? [] as $reminderBanner): ?>
+    <div class="flash flash-warning reminder-banner no-print" role="status"><a href="<?= h($reminderBanner['url']) ?>"><?= h_lines($reminderBanner['text']) ?></a></div>
+  <?php endforeach; ?>
   <?php foreach ($flashes as $f): ?>
     <div class="flash flash-<?= h($f['type']) ?>" role="status"><?= h_lines($f['message']) ?></div>
   <?php endforeach; ?>

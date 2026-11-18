@@ -480,6 +480,16 @@ function schema_ensure(PDO $pdo): array
             finished_at TEXT
         )",
         "CREATE INDEX IF NOT EXISTS ix_org_schedules_status ON org_schedules (status, apply_on)",
+        // 提出を促した記録（G-08 §6.3。課長・確認者が未提出の人に。画面の中で知らせる。1 年で消す）
+        "CREATE TABLE IF NOT EXISTS report_reminders (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            period TEXT NOT NULL,
+            department_id INTEGER NOT NULL REFERENCES departments(id),
+            user_id INTEGER NOT NULL REFERENCES users(id),
+            sent_by INTEGER NOT NULL REFERENCES users(id),
+            created_at TEXT NOT NULL
+        )",
+        "CREATE INDEX IF NOT EXISTS ix_report_reminders_user ON report_reminders (user_id, period)",
     ];
     foreach ($statements as $sql) {
         $pdo->exec($sql);
@@ -499,6 +509,7 @@ function schema_ensure(PDO $pdo): array
         ],
         'support_reply_templates' => ['kind' => "TEXT NOT NULL DEFAULT ''"],   // 要望の種類（便利機能 B。K-047。空はすべての種類）
         'faq_entries'         => ['category' => "TEXT NOT NULL DEFAULT ''"],   // 分野（G-25 §2.3。空は「そのほか」）
+        'report_field_comments' => ['edited_at' => 'TEXT'],   // 書いた人が直した日時（G-05 §6。直していなければ NULL）
     ];
     foreach ($addedColumnsByTable as $tableName => $columnDefinitionByName) {
         $existingColumnNameSet = [];

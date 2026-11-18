@@ -6,6 +6,7 @@
 /** @var string|null $screenCategory 「この画面の使い方」から来たときの、その画面の分野 */
 /** @var bool $canEdit 管理者・補佐か（書く・直す・消す・並べ替える・取り込む） */
 /** @var int $standardMissingCount 標準のよくある質問のうち、まだ載っていない数 */
+/** @var int $standardUpdatableCount 標準の答えが新しくなった質問（管理者が直していないもの）の数 */
 /** @var int|null $editedFaqId */
 /** @var int|null $sourceRequestId もとの要望・依頼（「質問」から載せるとき） */
 /** @var bool $isFormOpen */
@@ -94,7 +95,7 @@ $renderCategoryChoices = static function () use ($categoryCountList, $categoryUr
             </div>
           <?php endif; ?>
         <?php elseif ($chatResultCode === 'sensitive'): ?>
-          <div class="chat-bubble chat-bot chat-care" role="status"><?= h_lines(msg('大切なことを書いてくれて、ありがとうございます。体や家族のことなど、個人的な事情には、このチャットでは詳しくお答えできませんが、一人で抱えずに、上司や信頼できる人に相談してください。報告や締め日のことで困っているときは、課長に相談してください。')) ?></div>
+          <div class="chat-bubble chat-bot chat-care" role="status"><?= h_lines(msg('大切なことを書いてくれて、ありがとうございます。体や家族のことなど、個人的な事情には、このチャットでは詳しくお答えできませんが、一人で抱えずに、上司や信頼できる人に相談してください。体の具合や病気・薬のことは、医療機関（医師）に相談してください。報告や締め日のことで困っているときは、課長に相談してください。')) ?></div>
           <?php if ($matchedFaqList): ?>
             <div class="chat-bubble chat-bot">
               <p class="chat-question">Q. <?= h((string) $matchedFaqList[0]['question']) ?></p>
@@ -105,6 +106,8 @@ $renderCategoryChoices = static function () use ($categoryCountList, $categoryUr
           <div class="chat-bubble chat-bot" role="status"><?= h_lines(msg('不適切な表現が含まれているため、返答できません。')) ?></div>
         <?php elseif ($chatResultCode === 'unrelated'): ?>
           <div class="chat-bubble chat-bot" role="status"><?= h_lines(msg('その質問には返答できません。')) ?></div>
+        <?php elseif ($chatResultCode === 'sabotage'): ?>
+          <div class="chat-bubble chat-bot" role="status"><?= h_lines(msg('システムやデータを壊す・消す・持ち出す操作は、できません。困っていることや不満があるときは、課長やシステム管理者に相談してください。')) ?></div>
         <?php elseif ($chatResultCode === 'violence'): ?>
           <div class="chat-bubble chat-bot chat-care" role="status"><?= h_lines(msg('強い怒りや、人を傷つけたい気持ちを一人で抱えていませんか。カウンセラーや、会社の相談窓口・産業医など、話を聞いてもらえるところで、カウンセリングを受けることをおすすめします。気持ちを言葉にするだけでも、楽になることがあります。今すぐ自分や人を傷つけてしまいそうなときは、ためらわずに周りの人に助けを求めてください。')) ?></div>
         <?php elseif ($chatResultCode === 'closing'): ?>
@@ -136,7 +139,7 @@ $renderCategoryChoices = static function () use ($categoryCountList, $categoryUr
         <?php endif; ?>
       <?php endif; ?>
 
-      <div class="chat-bubble chat-bot faq-ask" id="faq-ask" <?= $askErrorTextList ? 'data-has-error="1"' : '' ?> <?= ($searchQueryText === '' && $selectedCategory === null && !$askErrorTextList) || in_array($chatResultCode, ['violence', 'opener', 'closing', 'vague', 'unrelated', 'abusive', 'distress', 'sensitive', 'emergency', 'retirement'], true) ? 'hidden' : '' ?>>
+      <div class="chat-bubble chat-bot faq-ask" id="faq-ask" <?= $askErrorTextList ? 'data-has-error="1"' : '' ?> <?= ($searchQueryText === '' && $selectedCategory === null && !$askErrorTextList) || in_array($chatResultCode, ['violence', 'sabotage', 'opener', 'closing', 'vague', 'unrelated', 'abusive', 'distress', 'sensitive', 'emergency', 'retirement'], true) ? 'hidden' : '' ?>>
         <?php if ($canAsk): ?>
           <p>答えが見つからないときは、この質問を要望・依頼の「質問」としてシステム管理者に送れます。補足があれば書き足してください。返信はホームと「要望・依頼」に出ます。</p>
           <?php foreach ($askErrorTextList as $askErrorText): ?><div class="flash flash-error" role="alert"><?= h_lines($askErrorText) ?></div><?php endforeach; ?>
@@ -170,12 +173,12 @@ $renderCategoryChoices = static function () use ($categoryCountList, $categoryUr
 
   <?php if ($canEdit): ?>
     <div class="faq-standard-import">
-      <?php if ($standardMissingCount > 0): ?>
-        <form method="post" action="<?= h(url('/faq.php')) ?>" class="inline" data-confirm="<?= h(msg('標準のよくある質問のうち、まだ載っていない質問を足します。よろしいですか？')) ?>">
+      <?php if ($standardMissingCount > 0 || $standardUpdatableCount > 0): ?>
+        <form method="post" action="<?= h(url('/faq.php')) ?>" class="inline" data-confirm="<?= h(msg('標準のよくある質問のうち、まだ載っていない質問を足し、管理者が直していない答えを新しくします。よろしいですか？')) ?>">
           <?= form_hidden() ?>
-          <button type="submit" name="action" value="import_standard">標準のよくある質問を取り込む（まだ載っていない <?= (int) $standardMissingCount ?> 件）</button>
+          <button type="submit" name="action" value="import_standard">標準のよくある質問を取り込む（まだ載っていない <?= (int) $standardMissingCount ?> 件・答えの直し <?= (int) $standardUpdatableCount ?> 件）</button>
         </form>
-        <p class="note">操作マニュアルの全章から想定される質問をまとめたものです。同じ質問の文がすでにあるものは足しません。取り込んだあとは、ここで直す・消すことができます。</p>
+        <p class="note">操作マニュアルの全章から想定される質問をまとめたものです。同じ質問の文がすでにあるものは足しません。答えが新しくなった質問は、ここで直していないものだけ答えを新しくします（ここで直した答えは変えません）。取り込んだあとは、ここで直す・消すことができます。</p>
       <?php else: ?>
         <p class="note">標準のよくある質問は、すべて載っています。</p>
       <?php endif; ?>

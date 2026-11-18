@@ -12,6 +12,19 @@ survey_close_expired();
 
 $id = input_id(is_post() ? 'id' : 'id', is_post() ? 'POST' : 'GET');
 $req = survey_find($id);
+
+// 見本（G-11）: 調査を管理する課長が、公開の前でも、回答する人の画面を見る。入力はできるが送れない（何も保存しない）
+if (!is_post() && ($_GET['preview'] ?? '') === '1') {
+    if ($req === null || !survey_can_manage($user, $req)) {
+        error_page(404);
+    }
+    render('survey_answer', [
+        'title' => '臨時の調査（見本）', 'user' => $user, 'req' => $req, 'questions' => survey_fields($id),
+        'current' => [], 'errors' => [], 'response' => null, 'open' => true, 'isPreview' => true,
+    ]);
+    exit;
+}
+
 $isTarget = $req !== null && db_val('SELECT 1 FROM adhoc_request_targets WHERE request_id = ? AND user_id = ?', [$id, $uid]) !== null;
 if ($req === null || !$isTarget || $req['status'] === 'draft' || (int) $req['is_template'] === 1) {
     error_page(404);
@@ -78,5 +91,5 @@ if (is_post()) {
 
 render('survey_answer', [
     'title' => '臨時の調査', 'user' => $user, 'req' => $req, 'questions' => $questions,
-    'current' => $current, 'errors' => $errors, 'response' => $response, 'open' => $open,
+    'current' => $current, 'errors' => $errors, 'response' => $response, 'open' => $open, 'isPreview' => false,
 ]);

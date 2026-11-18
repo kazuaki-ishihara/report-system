@@ -21,6 +21,7 @@ if ($report['status'] === 'draft') {
     error_page(404);
 }
 rk_begin('report.act.' . $action, $uid);
+report_comment_ensure_edited_column();
 
 $isOwner = (int) $report['user_id'] === $uid;
 $deptId = $report['department_id'] === null ? 0 : (int) $report['department_id'];
@@ -128,6 +129,33 @@ switch ($action) {
             flash('success', msg('回答待ちに戻しました'));
         }
         rk_done($back . '#comment-' . (int) $head['id']);
+
+    case 'comment_edit':
+        // 書いた人だけが、自分のコメント・返信を直せる（返信のあとでも直せる。「直しました」と日時を出す。G-05 §6）
+        $cid = input_id('comment_id', 'POST');
+        $c = db_one('SELECT * FROM report_field_comments WHERE id = ? AND report_id = ?', [$cid, $id]);
+        if ($c === null || $c['deleted_at'] !== null) {
+            error_page(404);
+        }
+        if ((int) $c['user_id'] !== $uid) {
+            error_page(403);
+        }
+        if ($c['field_id'] !== null) {
+            $f = db_one('SELECT confidentiality FROM report_record_fields WHERE report_id = ? AND field_id = ?', [$id, (int) $c['field_id']]);
+            if ($f !== null && $f['confidentiality'] === 'restricted' && !can_view_restricted($user, $report)) {
+                error_page(404);
+            }
+        }
+        $text = $readComment();
+        if ($text === dec((string) $c['comment_enc'], 'cmt:' . $id . ':' . $cid)) {
+            rk_cancel();
+            flash('success', msg('コメントは変わっていません'));
+            redirect($back . '#comment-' . $cid);
+        }
+        db_exec('UPDATE report_field_comments SET comment_enc = ?, edited_at = ?, updated_at = ? WHERE id = ?',
+            [enc($text, 'cmt:' . $id . ':' . $cid), now(), now(), $cid]);
+        flash('success', msg('コメントを直しました'));
+        rk_done($back . '#comment-' . $cid);
 
     case 'comment_delete':
         $cid = input_id('comment_id', 'POST');

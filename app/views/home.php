@@ -41,6 +41,9 @@ $editUrl = url('/reports/edit.php?period=' . rawurlencode($period));
 <?php if ($faqDistressCounts !== null && $faqDistressCounts['violence'] > 0): ?>
   <div class="flash flash-error" role="alert"><a href="<?= h(url('/admin/faq_logs.php#distress')) ?>"><?= h_lines(msg('よくある質問のチャットに、人への暴力を書いた文があります（未対応 {count} 件）。確かめて、対応してください', ['count' => $faqDistressCounts['violence']])) ?></a></div>
 <?php endif; ?>
+<?php if ($faqDistressCounts !== null && $faqDistressCounts['sabotage'] > 0): ?>
+  <div class="flash flash-error" role="alert"><a href="<?= h(url('/admin/faq_logs.php#distress')) ?>"><?= h_lines(msg('よくある質問のチャットに、システムやデータを壊す・消すと書いた文があります（未対応 {count} 件）。確かめて、対応してください', ['count' => $faqDistressCounts['sabotage']])) ?></a></div>
+<?php endif; ?>
 <?php if ($faqDistressCounts !== null && $faqDistressCounts['credential'] > 0): ?>
   <div class="flash flash-error" role="alert"><a href="<?= h(url('/admin/faq_logs.php#distress')) ?>"><?= h_lines(msg('よくある質問のチャットに、ID・パスワードを求める質問があります（未対応 {count} 件）。なりすましのおそれがないか確かめてください', ['count' => $faqDistressCounts['credential']])) ?></a></div>
 <?php endif; ?>

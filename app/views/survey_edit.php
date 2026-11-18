@@ -117,6 +117,7 @@ $statusLabel = $req === null ? '新規' : ((int) $req['is_template'] === 1 ? '�
 <section class="card">
   <h2>操作</h2>
   <div class="actions">
+    <a class="button" href="<?= h(url('/surveys/answer.php?id=' . (int) $req['id'] . '&preview=1')) ?>">回答する人の画面で見る</a>
     <?php if ($editable && (int) $req['is_template'] === 0): ?>
       <form method="post" action="<?= h(url($self)) ?>" class="inline" data-confirm="<?= h(msg('公開すると質問は変えられません。公開しますか？')) ?>"><?= form_hidden() ?>
         <button type="submit" name="action" value="publish" class="primary">公開する</button></form>

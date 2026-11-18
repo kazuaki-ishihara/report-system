@@ -66,6 +66,8 @@ function render(string $__template, array $__vars = [], bool $__withLayout = tru
         $adminSectionPath = ADMIN_SECTION_PATH_BY_TEMPLATE[$__template] ?? null;   // 管理画面なら道しるべを出す
         $supportRequestScreenCode = SUPPORT_REQUEST_SCREEN_CODE_BY_TEMPLATE[$__template] ?? null;   // 「この画面について要望・依頼」（G-22）
         $screenHelpText = $user !== null ? screen_help_text($__template) : '';   // 画面ごとの使い方（便利機能 I）
+        // 提出のお知らせ（締め日が近い・促された。報告の作成の画面では出さない。reminder.php）
+        $reminderBannerList = ($user !== null && ($_SESSION['stage'] ?? '') === 'full' && $__template !== 'report_edit') ? reminder_banner_list($user) : [];
         require APP_DIR . '/views/layout.php';
     } else {
         echo $__content;

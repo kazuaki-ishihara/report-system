@@ -62,6 +62,7 @@ foreach ($fields as $f) {
     }
 }
 $threads = [];
+report_comment_ensure_edited_column();
 $comments = db_all(
     'SELECT c.*, u.display_name AS author FROM report_field_comments c JOIN users u ON u.id = c.user_id
       WHERE c.report_id = ? ORDER BY c.created_at, c.id',

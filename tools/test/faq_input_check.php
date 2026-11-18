@@ -42,7 +42,7 @@ foreach (FAQ_STANDARD_ENTRIES as $entryIndex => [$standardCategory, $standardQue
 }
 
 const FAQ_INPUT_GROUP_NAMES = ['寄る', 'グレー', 'アウト', '会話'];
-const FAQ_INPUT_RESULT_CODES = ['matched', 'no_match', 'opener', 'closing', 'vague', 'unrelated', 'abusive', 'emergency', 'distress', 'retirement', 'sensitive', 'violence'];
+const FAQ_INPUT_RESULT_CODES = ['matched', 'no_match', 'opener', 'closing', 'vague', 'unrelated', 'abusive', 'emergency', 'distress', 'retirement', 'sensitive', 'violence', 'sabotage'];
 
 /**
  * 期待の欄を読む。「matched=ログインできない|no_match +credential」→ 許す結果・答えの質問の一部・知らせの理由
@@ -92,7 +92,7 @@ foreach (file($casesPath, FILE_IGNORE_NEW_LINES) ?: [] as $lineIndex => $lineTex
 
 $resultLabelByCode = [
     'matched' => '答えた', 'no_match' => '見つからない', 'opener' => '呼びかけ（ご用件を聞く）', 'closing' => '用件なし（受け止める）', 'vague' => 'あいまい（分野を選ぶ）', 'unrelated' => '関係のない質問',
-    'abusive' => '不適切な表現', 'emergency' => '緊急（119 番）', 'distress' => '心の不調', 'retirement' => '自分の退職', 'sensitive' => '要配慮（寄り添う返事）', 'violence' => '人への暴力（カウンセリングをすすめる）',
+    'abusive' => '不適切な表現', 'emergency' => '緊急（119 番）', 'distress' => '心の不調', 'retirement' => '自分の退職', 'sensitive' => '要配慮（寄り添う返事）', 'violence' => '人への暴力（カウンセリングをすすめる）', 'sabotage' => 'システム・データを壊す（断って知らせる）',
 ];
 $countByGroup = [];
 $mismatchList = [];

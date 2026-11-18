@@ -77,7 +77,7 @@ $faqQuestionText = static function (?int $faqId) use ($faqQuestionById): string 
         <tr>
           <td><?= h(display_datetime((string) $logRow['asked_at'])) ?></td>
           <td><?= h($askedUserText($logRow)) ?></td>
-          <td><span class="tag<?= in_array($logRow['distress_level'], ['urgent', 'credential', 'violence'], true) ? ' tag-open' : ($logRow['distress_level'] === 'concern' ? ' tag-changed' : '') ?>"><?= h(FAQ_CHAT_LOG_DISTRESS_LABELS[(string) $logRow['distress_level']] ?? '') ?></span></td>
+          <td><span class="tag<?= in_array($logRow['distress_level'], ['urgent', 'credential', 'violence', 'sabotage'], true) ? ' tag-open' : ($logRow['distress_level'] === 'concern' ? ' tag-changed' : '') ?>"><?= h(FAQ_CHAT_LOG_DISTRESS_LABELS[(string) $logRow['distress_level']] ?? '') ?></span></td>
           <td><?= h($logRow['question_text']) ?></td>
           <td>
             <?php if ($logRow['handled_at'] === null): ?>

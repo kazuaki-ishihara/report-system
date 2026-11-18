@@ -173,4 +173,14 @@ function app_init_error_handling(): void
         }
         error_page(500);
     });
+    // 時間切れ・メモリ不足などの致命的なエラーは上の受け口を通らないので、終わるときに拾って app.log に残す
+    // （他の端末で、記録の無い 500 エラーが出たため。2026-11-18）。質問の文などが入る問い合わせの部分（? のあと）は残さない
+    register_shutdown_function(static function (): void {
+        $lastError = error_get_last();
+        if ($lastError === null || !in_array($lastError['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR], true)) {
+            return;
+        }
+        $requestPath = PHP_SAPI === 'cli' ? 'cli' : (string) strtok((string) ($_SERVER['REQUEST_URI'] ?? ''), '?');
+        app_log('ERROR fatal: ' . $lastError['message'] . ' at ' . $lastError['file'] . ':' . $lastError['line'] . ' path=' . $requestPath);
+    });
 }

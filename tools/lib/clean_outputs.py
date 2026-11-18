@@ -8,7 +8,9 @@
 消すもの:
   - tools/test/output/検証記録/<日時>/ の古い実行（新しい --keep 回分を残す。一覧.csv も残した行だけにする）
   - tools/test/output/見学/<日時>/ の古い実行（ui_watch.py の画像。新しい --keep 回分を残す）
-  - tools/deploy/output/local_*（ローカル検証環境の一式）のうち、いちばん新しいもの以外
+  - tools/test/output/画面一覧/<日時>/ の古い実行（screen_gallery.py。新しい --keep 回分を残す）
+  - tools/test/output/faq_derived/<日時>/ の古い実行（faq_derived_check.php。新しい --keep 回分を残す）
+  - tools/deploy/output/local_*（ローカル検証環境の一式）のうち、x64・x86 それぞれのいちばん新しいもの以外
 消さないもの: 本番反映の一式（tools/deploy/output/<日時>_<コミット>/）、DB・鍵・他端末検証/。
 Python 3.8 以上の標準ライブラリだけで動く。
 """
@@ -19,6 +21,8 @@ import shutil
 REPOSITORY_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 RECORD_DIR = os.path.join(REPOSITORY_ROOT, "tools", "test", "output", "検証記録")
 WATCH_DIR = os.path.join(REPOSITORY_ROOT, "tools", "test", "output", "見学")
+GALLERY_DIR = os.path.join(REPOSITORY_ROOT, "tools", "test", "output", "画面一覧")
+FAQ_DERIVED_DIR = os.path.join(REPOSITORY_ROOT, "tools", "test", "output", "faq_derived")
 DEPLOY_OUTPUT_DIR = os.path.join(REPOSITORY_ROOT, "tools", "deploy", "output")
 
 
@@ -44,15 +48,21 @@ def main():
         keep_count = max(arguments.keep, 0)
         kept_run_set = set(run_name_list[-keep_count:]) if keep_count else set()
         removed_path_list += [os.path.join(RECORD_DIR, name) for name in run_name_list if name not in kept_run_set]
-    if os.path.isdir(WATCH_DIR):
-        watch_run_name_list = sorted(name for name in os.listdir(WATCH_DIR)
-                                     if os.path.isdir(os.path.join(WATCH_DIR, name)) and name[:8].isdigit())
+    for dated_output_dir in (WATCH_DIR, GALLERY_DIR, FAQ_DERIVED_DIR):
+        if not os.path.isdir(dated_output_dir):
+            continue
+        # 日時の名前のフォルダーだけ（画面一覧の「テーマの選択」など、名前を付けて残したものは消さない）
+        dated_run_name_list = sorted(name for name in os.listdir(dated_output_dir)
+                                     if os.path.isdir(os.path.join(dated_output_dir, name)) and name[:8].isdigit())
         keep_count = max(arguments.keep, 0)
-        removed_watch_name_list = watch_run_name_list[:-keep_count] if keep_count else watch_run_name_list
-        removed_path_list += [os.path.join(WATCH_DIR, name) for name in removed_watch_name_list]
+        removed_run_name_list = dated_run_name_list[:-keep_count] if keep_count else dated_run_name_list
+        removed_path_list += [os.path.join(dated_output_dir, name) for name in removed_run_name_list]
     if os.path.isdir(DEPLOY_OUTPUT_DIR):
+        # x64 と x86（名前が _x86 で終わる）は別の端末に渡すので、それぞれのいちばん新しいものを残す
         kit_name_list = sorted(name for name in os.listdir(DEPLOY_OUTPUT_DIR) if name.startswith("local_"))
-        removed_path_list += [os.path.join(DEPLOY_OUTPUT_DIR, name) for name in kit_name_list[:-1]]
+        for is_x86_kit in (False, True):
+            same_kind_kit_name_list = [name for name in kit_name_list if name.endswith("_x86") == is_x86_kit]
+            removed_path_list += [os.path.join(DEPLOY_OUTPUT_DIR, name) for name in same_kind_kit_name_list[:-1]]
 
     removed_bytes = sum(folder_size(path) for path in removed_path_list)
     for removed_path in removed_path_list:

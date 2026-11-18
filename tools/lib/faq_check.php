@@ -52,6 +52,8 @@ function faq_check_judge(string $questionText, array $visibleFaqList, string $co
             return '要配慮（寄り添う返事）';
         case 'violence':
             return '人への暴力（カウンセリングをすすめる）';
+        case 'sabotage':
+            return 'システム・データを壊す（断って知らせる）';
         case 'abusive':
             return '不適切な表現';
         case 'opener':

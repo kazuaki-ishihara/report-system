@@ -8,6 +8,8 @@
 /** @var int|null $firstUnchecked */
 /** @var int $bulkCandidateCount まとめてチェックできる報告の数 */
 /** @var bool $isPersonRowsShown 人ごとの行を出すか（補佐は確認者でない課では出さない） */
+/** @var bool $canRemind 未提出の人に提出を促せるか（この課の課長・確認者で、作成できる月） */
+/** @var int $remindCandidateCount 促せる人の数（自分以外の未提出の人） */
 $filters = ['all' => 'すべて', 'unchecked' => '自分が未チェック', 'not_submitted' => '未提出', 'open_comments' => '回答待ちあり', 'warning' => '注意の印あり'];
 $myLabels = ['unchecked' => '未チェック', 'updated' => '更新あり', 'checked' => '✓'];
 ?>
@@ -41,6 +43,14 @@ $myLabels = ['unchecked' => '未チェック', 'updated' => '更新あり', 'che
   <?php elseif (!$list): ?>
     <p class="note">該当する人はいません。</p>
   <?php else: ?>
+  <?php if ($canRemind && $remindCandidateCount > 0): ?>
+    <form method="post" action="<?= h(url('/status/index.php?period=' . rawurlencode($period) . '&dept=' . $deptId)) ?>" class="remind-box"
+          data-confirm="<?= h(msg('まだ提出していない {count} 人に、提出を促す知らせを出します。よろしいですか？', ['count' => $remindCandidateCount])) ?>">
+      <?= form_hidden() ?>
+      <p>まだ提出していない人が <strong><?= (int) $remindCandidateCount ?></strong> 人います。知らせは、その人がこのシステムを開いたときに、画面の上に出ます（メールは送りません）。</p>
+      <button type="submit" name="action" value="remind">未提出の人に提出を促す</button>
+    </form>
+  <?php endif; ?>
   <?php if ($bulkCandidateCount > 0): ?>
     <form method="post" action="<?= h(url('/status/index.php?period=' . rawurlencode($period) . '&dept=' . $deptId)) ?>" id="bulk-check-form" class="bulk-check-box"
           data-confirm="<?= h(msg('選んだ「変更なし」の報告をチェック済みにします。よろしいですか？')) ?>">
@@ -60,6 +70,7 @@ $myLabels = ['unchecked' => '未チェック', 'updated' => '更新あり', 'che
           <?php if ((int) $r['open_count'] > 0): ?><span class="tag tag-open">回答待ち <?= (int) $r['open_count'] ?></span><?php endif; ?>
           <?php if ($submitted && (int) $r['warnings'] > 0): ?><span class="tag tag-warning">注意</span><?php endif; ?>
           <?php if ((int) $r['unchanged'] === 1): ?><span class="tag">変更なし</span><?php endif; ?>
+          <?php if (!$submitted && $r['last_reminded_at'] !== null): ?><span class="note">促した <?= h(display_date(substr((string) $r['last_reminded_at'], 0, 10))) ?></span><?php endif; ?>
         </span>
       </li>
     <?php endforeach; ?>

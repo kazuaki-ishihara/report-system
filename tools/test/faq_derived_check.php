@@ -9,7 +9,8 @@ declare(strict_types=1);
 // 意味を変えない書き換え（派生）を作り、元の質問と同じ判定になるかを確かめる。
 //
 //   php tools/test/faq_derived_check.php                     他端末検証/ の CSV をすべて使う
-//   php tools/test/faq_derived_check.php <CSV か フォルダ> …  使う記録を指定する（例: 他端末検証/202611171700）
+//   php tools/test/faq_derived_check.php <CSV か フォルダ か zip> …  使う記録を指定する（例: 他端末検証/202611171700.zip）
+//   受け取った記録は <日時>.zip のまま置いてよい（zip の中の CSV を Phar で読む。PHP の zip 拡張は要らない）
 //   php tools/test/faq_derived_check.php --all               言い回しの派生の食い違い（参考）も 1 件ずつ出す
 //
 // 派生の種類:
@@ -37,6 +38,22 @@ if ($sourcePathList === []) {
 }
 
 // ---- 記録の CSV を集める ----
+/**
+ * zip の中のチャットの記録の CSV（phar:// のパス。fopen でそのまま読める）。DB・鍵だけの zip（app.zip）は 0 件
+ *
+ * @return string[]
+ */
+function faq_derived_csv_paths_in_zip(string $zipPath): array
+{
+    $csvPathList = [];
+    $zipIterator = new RecursiveIteratorIterator(new PharData(str_replace('\\', '/', $zipPath)));
+    foreach ($zipIterator as $zipEntry) {
+        if (preg_match('/^faq_chat_log_.*\.csv$/', $zipEntry->getFilename()) === 1) {
+            $csvPathList[] = $zipEntry->getPathname();
+        }
+    }
+    return $csvPathList;
+}
 $csvPathList = [];
 foreach ($sourcePathList as $sourcePath) {
     if (is_dir($sourcePath)) {
@@ -44,8 +61,12 @@ foreach ($sourcePathList as $sourcePath) {
         foreach ($directoryIterator as $fileInfo) {
             if (preg_match('/^faq_chat_log_.*\.csv$/', $fileInfo->getFilename()) === 1) {
                 $csvPathList[] = $fileInfo->getPathname();
+            } elseif (preg_match('/\.zip$/i', $fileInfo->getFilename()) === 1) {
+                array_push($csvPathList, ...faq_derived_csv_paths_in_zip($fileInfo->getPathname()));
             }
         }
+    } elseif (is_file($sourcePath) && preg_match('/\.zip$/i', $sourcePath) === 1) {
+        array_push($csvPathList, ...faq_derived_csv_paths_in_zip($sourcePath));
     } elseif (is_file($sourcePath)) {
         $csvPathList[] = $sourcePath;
     } else {
@@ -142,7 +163,7 @@ function faq_derived_case_columns(array $classification): array
     if ($resultCode === 'matched') {
         $expectationText = 'matched=' . $classification['matches'][0]['question'];
         $groupName = '寄る';
-    } elseif (in_array($resultCode, ['unrelated', 'abusive', 'emergency', 'distress', 'retirement', 'sensitive', 'violence'], true)) {
+    } elseif (in_array($resultCode, ['unrelated', 'abusive', 'emergency', 'distress', 'retirement', 'sensitive', 'violence', 'sabotage'], true)) {
         $expectationText = $resultCode;
         $groupName = 'アウト';
     } else {

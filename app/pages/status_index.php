@@ -28,6 +28,39 @@ $isPersonRowsShown = has_admin_authority($user) || !is_admin_deputy($user) || $i
 
 // ---- 「変更なし」の報告をまとめてチェック（G-08 §6.2） ----
 // 対象: この課・この月の、提出済み・確認完了で「前月から変更なし」のまま直していない（revision = 0）、自分以外の報告
+// ---- 未提出の人に提出を促す（G-08 §6.3。画面の中で知らせる。メールは使わない） ----
+// 促せる人: この課の課長・確認者（管理者・補佐でも、確認者でなければ不可）。対象: この課・この月に提出していない、自分以外の有効な所属者。
+// 同じ人に、同じ月の分を 1 日に 2 回は送らない
+if (is_post() && post_str('action') === 'remind') {
+    if (!$isReviewerOfDept) {
+        error_page(403);
+    }
+    if (!reminder_period_allowed($period)) {
+        error_page(400);
+    }
+    rk_begin('status.remind', $uid);
+    $alreadySentToday = reminder_last_sent_map($deptId, $period);
+    $remindedCount = 0;
+    tx(function () use ($deptId, $period, $uid, $alreadySentToday, &$remindedCount): void {
+        foreach (db_all('SELECT id FROM users WHERE department_id = ? AND is_active = 1 AND id <> ?', [$deptId, $uid]) as $memberRow) {
+            $memberUserId = (int) $memberRow['id'];
+            if (reminder_has_submitted($memberUserId, $period)) {
+                continue;
+            }
+            if (isset($alreadySentToday[$memberUserId]) && substr($alreadySentToday[$memberUserId], 0, 10) === date('Y-m-d')) {
+                continue;
+            }
+            db_exec('INSERT INTO report_reminders (period, department_id, user_id, sent_by, created_at) VALUES (?, ?, ?, ?, ?)', [$period, $deptId, $memberUserId, $uid, now()]);
+            $remindedCount++;
+        }
+    });
+    // だれがいつだれに促したかは report_reminders に残る（記録 access_logs の種類には入れない）
+    flash($remindedCount > 0 ? 'success' : 'info', $remindedCount > 0
+        ? msg('{count} 人に提出を促しました。その人の画面の上に知らせが出ます。', ['count' => $remindedCount])
+        : msg('促す人はいません（全員が提出済みか、今日すでに促しています）。'));
+    rk_done('/status/index.php?period=' . rawurlencode($period) . '&dept=' . $deptId . '&filter=not_submitted');
+}
+
 if (is_post()) {
     if (post_str('action') !== 'bulk_check') {
         error_page(400);
@@ -79,7 +112,7 @@ if (!in_array($filter, ['all', 'unchecked', 'not_submitted', 'open_comments', 'w
 
 // 課の所属者と、その月にこの課で報告を作った人
 $rows = db_all(
-    "SELECT u.id AS user_id, u.display_name, r.id AS report_id, r.user_id AS report_user_id, r.department_id AS report_department_id,
+    "SELECT u.id AS user_id, u.display_name, (u.department_id = ? AND u.is_active = 1) AS is_member, r.id AS report_id, r.user_id AS report_user_id, r.department_id AS report_department_id,
             r.status, r.revision, r.submitted_at, r.unchanged, r.deleted_at,
             v.checked_revision AS my_check,
             (SELECT COUNT(*) FROM report_field_comments c WHERE c.report_id = r.id AND c.parent_id IS NULL AND c.thread_status = 'open' AND c.deleted_at IS NULL) AS open_count,
@@ -89,10 +122,13 @@ $rows = db_all(
        LEFT JOIN report_reviews v ON v.report_id = r.id AND v.user_id = ?
       WHERE (u.department_id = ? AND u.is_active = 1) OR r.id IS NOT NULL
       ORDER BY u.display_name",
-    [$period, $deptId, $uid, $deptId]
+    [$deptId, $period, $deptId, $uid, $deptId]
 );
 
 $stats = ['members' => count($rows), 'submitted' => 0, 'confirmed' => 0, 'unchecked' => 0];
+$lastRemindedAtByUserId = $isReviewerOfDept ? reminder_last_sent_map($deptId, $period) : [];   // 提出を促した日時（課長・確認者にだけ出す）
+$canRemind = $isReviewerOfDept && reminder_period_allowed($period);
+$remindCandidateCount = 0;   // 促せる人の数（自分以外の、提出していない有効な所属者）
 $list = [];
 $firstUnchecked = null;
 $bulkCandidateCount = 0;   // まとめてチェックできる報告の数
@@ -114,6 +150,10 @@ foreach ($rows as $r) {
         && (int) $r['unchanged'] === 1 && (int) $r['revision'] === 0;
     if ($r['can_bulk_check']) {
         $bulkCandidateCount++;
+    }
+    $r['last_reminded_at'] = $lastRemindedAtByUserId[(int) $r['user_id']] ?? null;
+    if (!$submitted && !$mine && (int) $r['is_member'] === 1) {
+        $remindCandidateCount++;
     }
     if ($submitted) {
         $stats['submitted']++;
@@ -154,4 +194,5 @@ render('status_index', [
     'filter' => $filter, 'list' => $list, 'stats' => $stats, 'firstUnchecked' => $firstUnchecked,
     'bulkCandidateCount' => $bulkCandidateCount,
     'isPersonRowsShown' => $isPersonRowsShown,
+    'canRemind' => $canRemind && $isPersonRowsShown, 'remindCandidateCount' => $remindCandidateCount,
 ]);
