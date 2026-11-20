@@ -2,8 +2,8 @@
 
 | 項目 | 内容 |
 |---|---|
-| 最終更新 | 2026-11-18 |
-| ブランチ | `dev_ono_check`（`main` の `9ffe3e5` から派生） |
+| 最終更新 | 2026-11-20 |
+| ブランチ | `dev_ono_check`（`main` の `9ffe3e5` から派生。PHP 7.4 で動く書き方）と `dev_ono_check8_3`（`dev_ono_check` の `f583992` から派生。PHP 8.3 が前提） |
 | 内容 | 月次報告システムの見直し版（設計書・実装・検証） |
 
 > Claude Code で再開する場合は「dev_ono_check の docs/work_resume.md を読んで作業を再開して」と伝える。
@@ -13,7 +13,7 @@
 ## 1. 守るルール
 
 - **`main` は参照のみ。絶対に変更しない**（編集・コミット・マージ・push・main 向けのプルリクエストをしない）。
-- 作業・コミットは `dev_ono_check` だけ。**push は指示があったときだけ**行う。
+- 作業・コミットは `dev_ono_check`（`C:\ReportSystem\dev`）と `dev_ono_check8_3`（`C:\ReportSystem\dev8_3`）だけ。PHP 8.3 の書き方（match 式など）を使う直しは `dev_ono_check8_3` に入れる。PHP のバージョンに関係しない直しをどちらに入れるか迷ったら確かめる。**push は指示があったときだけ**行う。
 - コミットメッセージと文書に、会話の内容や経緯（「○日決定」など）を書かない。細かいコミットは push の前にまとめる。
 - パスワード・秘密情報・実データの DB・暗号化の鍵をリポジトリに入れない（`.gitignore` で除外済み）。
 - ソフトウェアのインストールは上長の了解を得てから。
@@ -23,7 +23,9 @@
 
 ```text
 C:\ReportSystem\
-├── dev\     リポジトリ本体（dev_ono_check）。作業はここ
+├── dev\     リポジトリ本体（dev_ono_check）
+├── dev8_3\  dev_ono_check8_3 の作業ツリー（git worktree。PHP 8.3 対応。DB・鍵・config.local.php は dev から写した）
+├── php-8.3.36-x86\  32 ビット版の PHP（ローカル検証環境の一式 --x86 が同梱する）
 ├── main\    origin/main の参照用（git worktree、読み取り専用）
 ├── check\   旧版のローカル検証環境（作り直し版では使わない）
 └── 依頼メモ・送り状（Git 管理外）
@@ -144,7 +146,21 @@ python tools\lib\ui_watch.py --keep-open      # 終わったあともブラウ�
 
 ## 8. 次の作業
 
-> **2026-11-18 の区切り（ここから再開）**
+> **2026-11-20 の区切り（ここから再開）**
+> - **状態**: すべてコミットして push 済み。`dev_ono_check` は `f583992`（PHPDoc の `mixed` を `int|float|string|null` にした）、`dev_ono_check8_3` は `beeae22`。コミット前の変更は無い（`dev` の直下の `画面の目視確認_2026111315.txt`・`_2026111318.txt` は自分が作ったものではないので入れていない）。
+> - **PHP 8.3 対応（`dev_ono_check8_3`。課題管理 APP-111〜113）**:
+>   - 設計書・公開操作指示書・ローカル検証環境の案内を PHP 8.3 にし、自動検証の書き方の確認を「PHP 8.3 で動く書き方」（8.4 以降の関数・書き方を見つける）にした。
+>   - 値を返すだけの switch 文を match 式にした（`screen_help_text`・`support_request_default_reply_text`・`export_text`・`form_display_html`・`faq_check.php`）。`form.php` の入力の確かめ・入力欄の HTML、`report_act.php` は枝ごとに複数の文があるので switch のまま。列挙型はまだ使っていない。
+>   - 道具: `tools/lib/php_version_check.py`（PHP の版を調べ、取ってくると答えたら適用まで。Windows・Linux）、`tools/test/php_compat_check.py`（新しい PHP で動くか）。見つかった fgetcsv の escape の省略（8.4 で非推奨）を直した。
+>   - 検証: 変えた所に関わる工程（OK 898・1140 / NG 0）、出力・表示の直す前との比べ（32 通り一致）、記録の CSV の読み取り（331 件一致）。全体検証は流していない。
+> - **本番の PHP**: さくらで選べる PHP は 8.3（8.3.36）が最新で、8.4 以降は選べない（さくらのお知らせ n-2701・n-2700）。この端末の PHP も 8.3.36。本番がどの版かは課長に確かめてもらっている（コントロールパネルの「言語のバージョン設定」と、サーバーで `php -v`。コマンドの PHP の場所も）。
+> - **次にすること**:
+>   1. 課長から本番の PHP の版が届いたら `python tools\lib\php_version_check.py --prod-web <版> --prod-cli <版>` で判定する。両方 8.3 なら `dev_ono_check8_3` を本番に出せる（出すかどうか・`dev_ono_check` との関係は相談する）。8.3 より古ければ、コントロールパネルで 8.3 を選んでもらう。
+>   2. `dev_ono_check8_3` で全体検証を流す（`python tools\test\verify_all.py`。11-17 の指示で当面は変更に関わる工程だけ）。
+>   3. 下の 11-18 の区切りの「次にすること」（本番への反映の確かめ・他の端末に渡す一式の作り直し）。
+> - **了解が要ること**: 新しい PHP を入れる（`php_version_check.py --download`）。8.6 は本番で使えないので急がない。
+
+> **2026-11-18 の区切り**
 > - **状態**: 今日の作業はすべてコミットして push 済み（`dev_ono_check`。コードの直しは `5a78ecc` と `4b40806`（APP-110）。本番に渡す一式は `4b40806` から作った）。コミット前の変更は無い（リポジトリの直下の `画面の目視確認_2026111315.txt`・`_2026111318.txt` は自分が作ったものではないので入れていない）。自動検証は全工程成功（OK 1910 / NG 0・未実施 1（LibreOffice））、データ検証（自動入力 1039・組み合わせ 20010・派生 16256・標準 170）は食い違い 0。
 > - **本番への反映を課長に依頼する**: 課長に渡すもの（一式 `report-system/`・`report-system.zip`・`反映手順.txt`・`本番更新の操作指示書_20261118.txt`・`連絡_本番更新のお願い_20261118.txt`）は、`tools/deploy/output/20261118_165641_4b40806/` にまとめてある（Git には入れない。一式は Git 管理外の `tools/deploy/output/` に置き、元のコミットにタグを付けて `git checkout <タグ>` と `build_package.py` で作り直せるようにする）。一式の元のコミットのタグは `deploy-20261118_165641`。本番に出していない 11-16 の一式（`20261116_170100_a8315dc`）のタグは消した（この端末のフォルダーは Git 管理外のまま残っている）。
 >   - 今回は、上げたあとに `php app/bin/migrate.php` を 1 回流してもらう（「案件なし」の案件と `users.is_admin_deputy_lead`・`report_field_comments.edited_at` は、画面を開いただけでは足されないため。流す前に `app/keys/field_v1.key` があることを確かめてもらう）。11-16 の版で作った DB に今の migrate.php を流し、列・案件なし・記録の表の作り直し・画面が開くことを確かめ済み。
