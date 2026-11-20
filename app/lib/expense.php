@@ -338,7 +338,8 @@ function zip_read_entries(string $zipBytes): array
         } else {
             throw new RuntimeException('zip: unsupported method: ' . $entryName);
         }
-        if ((crc32($entryBytes) & 0xFFFFFFFF) !== ((int) $centralHeader['crc'] & 0xFFFFFFFF)) {
+        // CRC は 16 進の文字で比べる（32 ビットの PHP では 0xFFFFFFFF が整数に収まらず、数で比べると止まるため）
+        if (hash('crc32b', $entryBytes) !== bin2hex(strrev(substr($zipBytes, $centralPosition + 16, 4)))) {
             throw new RuntimeException('zip: crc mismatch: ' . $entryName);
         }
         $entryByName[$entryName] = $entryBytes;
