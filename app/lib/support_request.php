@@ -123,13 +123,13 @@ function support_request_clean_source_path(string $sourcePathText): string
         return '';
     }
     $pathPart = (string) parse_url($sourcePathText, PHP_URL_PATH);
-    if ($pathPart === '' || preg_match('#^/[A-Za-z0-9_./-]*$#', $pathPart) !== 1 || strpos($pathPart, '..') !== false) {
+    if ($pathPart === '' || preg_match('#\A/[A-Za-z0-9_./-]*\z#', $pathPart) !== 1 || strpos($pathPart, '..') !== false) {
         return '';
     }
     parse_str((string) parse_url($sourcePathText, PHP_URL_QUERY), $queryValueByKey);
     $keptQueryValueByKey = [];
     foreach (SUPPORT_REQUEST_SOURCE_QUERY_KEYS as $queryKey) {
-        if (isset($queryValueByKey[$queryKey]) && is_string($queryValueByKey[$queryKey]) && preg_match('/^[A-Za-z0-9_-]{1,20}$/', $queryValueByKey[$queryKey]) === 1) {
+        if (isset($queryValueByKey[$queryKey]) && is_string($queryValueByKey[$queryKey]) && preg_match('/\A[A-Za-z0-9_-]{1,20}\z/', $queryValueByKey[$queryKey]) === 1) {
             $keptQueryValueByKey[$queryKey] = $queryValueByKey[$queryKey];
         }
     }

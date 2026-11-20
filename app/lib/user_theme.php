@@ -44,7 +44,7 @@ function user_theme_colors(array $user): array
 function user_theme_is_hex_color(string $colorText): bool
 {
     // 「#」と 16 進数 6 桁（# を \x23 と書くのは、PHP 7.4 の書き方の確かめで PHP 8 の属性と紛れないため）
-    return preg_match('/^\x23[0-9a-fA-F]{6}$/', $colorText) === 1;
+    return preg_match('/\A\x23[0-9a-fA-F]{6}\z/', $colorText) === 1;
 }
 
 /** 色の相対的な明るさ（WCAG 2.x の式） */

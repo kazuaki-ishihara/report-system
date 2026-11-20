@@ -42,6 +42,21 @@
     btn.textContent = show ? '隠す' : '表示';
   });
 
+  // ---- 2 段階認証のコードの欄: ふだんは数字のキーボード。予備のコード（英字を含む）を入れるときは、英字のキーボードにする ----
+  document.addEventListener('click', function (clickEvent) {
+    var backupButton = clickEvent.target.closest('.use-backup-code');
+    if (!backupButton) { return; }
+    var codeInput = document.getElementById(backupButton.getAttribute('data-target'));
+    if (!codeInput) { return; }
+    var isBackupMode = codeInput.getAttribute('inputmode') !== 'email';
+    codeInput.setAttribute('inputmode', isBackupMode ? 'email' : 'numeric');
+    codeInput.setAttribute('placeholder', isBackupMode ? 'xxxx-xxxxxx' : '');
+    backupButton.textContent = isBackupMode ? M('6 桁のコードを入れる（数字のキーボードにする）') : M('予備のコードを入れる（英字のキーボードにする）');
+    // キーボードを切り替えるため、いったん外してから選び直す
+    codeInput.blur();
+    codeInput.focus();
+  });
+
   // ---- 自分の色（G-16 §4.6）: 選んでいる色を見本と色見本にすぐ出し、読みにくい組み合わせを知らせる ----
   var customColorFieldset = document.getElementById('custom-colors');
   if (customColorFieldset) {

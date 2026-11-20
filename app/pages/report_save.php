@@ -195,7 +195,7 @@ foreach (array_values($rawBlocks) as $i => $rb) {
         }
         continue;
     }
-    if (preg_match('/^\d+$/', $pidRaw) !== 1) {
+    if (preg_match('/\A\d+\z/', $pidRaw) !== 1) {
         error_page(400);
     }
     $pid = (int) $pidRaw;

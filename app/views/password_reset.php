@@ -10,9 +10,10 @@
   <form method="post" action="<?= h(url('/password_reset.php')) ?>" class="form">
     <?= form_hidden(false) ?>
     <label for="login_id">ログイン ID</label>
-    <input id="login_id" name="login_id" type="text" value="<?= h($loginId) ?>" autocomplete="username" autocapitalize="none" maxlength="32" required>
+    <input id="login_id" name="login_id" type="text" value="<?= h($loginId) ?>" autocomplete="username" inputmode="email" autocapitalize="none" autocorrect="off" spellcheck="false" maxlength="32" required>
     <label for="code">認証アプリの 6 桁のコード（または予備のコード）</label>
-    <input id="code" name="code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="12" required>
+    <input id="code" name="code" type="text" inputmode="numeric" autocomplete="one-time-code" autocapitalize="none" autocorrect="off" spellcheck="false" maxlength="12" required>
+    <button type="button" class="small use-backup-code" data-target="code">予備のコードを入れる（英字のキーボードにする）</button>
     <label for="new_password">新しいパスワード（<?= (int) cfg('password_min_length') ?> 文字以上）</label>
     <div class="password-field">
       <input id="new_password" name="new_password" type="password" autocomplete="new-password" maxlength="200" required>

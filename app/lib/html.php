@@ -135,7 +135,7 @@ function user_theme_stylesheet_url(?array $user): string
 function display_datetime(?string $storedDateTimeText): string
 {
     $storedDateTimeText = (string) $storedDateTimeText;
-    if (preg_match('/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2}))?/', $storedDateTimeText, $dateParts) !== 1) {
+    if (preg_match('/\A(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2}))?/', $storedDateTimeText, $dateParts) !== 1) {
         return $storedDateTimeText;
     }
     return $dateParts[1] . '/' . $dateParts[2] . '/' . $dateParts[3] . (isset($dateParts[4]) ? ' ' . $dateParts[4] . ':' . $dateParts[5] : '');

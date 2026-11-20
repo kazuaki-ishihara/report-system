@@ -49,7 +49,7 @@ if (is_post()) {
         }
         $deptId = null;
         if ($deptRaw !== '') {
-            if (preg_match('/^\d+$/', $deptRaw) !== 1 || db_one('SELECT id FROM departments WHERE id = ? AND is_active = 1', [(int) $deptRaw]) === null) {
+            if (preg_match('/\A\d+\z/', $deptRaw) !== 1 || db_one('SELECT id FROM departments WHERE id = ? AND is_active = 1', [(int) $deptRaw]) === null) {
                 $errors[] = msg('課が正しくありません');
             } else {
                 $deptId = (int) $deptRaw;

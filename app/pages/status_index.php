@@ -78,7 +78,7 @@ if (is_post()) {
     // 先にすべて確かめる（1 件でも対象外なら何もしない）
     $bulkTargetReportList = [];   // [['id' => int, 'revision' => int], ...]
     foreach (array_unique($selectedReportIdList) as $selectedReportIdText) {
-        if (!is_string($selectedReportIdText) || preg_match('/^\d{1,10}$/', $selectedReportIdText) !== 1) {
+        if (!is_string($selectedReportIdText) || preg_match('/\A\d{1,10}\z/', $selectedReportIdText) !== 1) {
             error_page(400);
         }
         $bulkTargetReport = db_one(

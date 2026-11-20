@@ -22,7 +22,7 @@ if (is_post()) {
         validate_text($alias, '社内向けの呼び名', 40, false, $errors);
         $deptId = null;
         if ($deptRaw !== '') {
-            if (preg_match('/^\d+$/', $deptRaw) !== 1 || db_one('SELECT id FROM departments WHERE id = ?', [(int) $deptRaw]) === null) {
+            if (preg_match('/\A\d+\z/', $deptRaw) !== 1 || db_one('SELECT id FROM departments WHERE id = ?', [(int) $deptRaw]) === null) {
                 $errors[] = msg('課が正しくありません');
             } else {
                 $deptId = (int) $deptRaw;
@@ -34,7 +34,7 @@ if (is_post()) {
                     // コードは最大の番号 + 1。終了・削除したコードも再利用しない
                     $max = 0;
                     foreach (db_all("SELECT code FROM projects WHERE code LIKE 'P-%'") as $r) {
-                        if (preg_match('/^P-(\d+)$/', (string) $r['code'], $m) === 1) {
+                        if (preg_match('/\AP-(\d+)\z/', (string) $r['code'], $m) === 1) {
                             $max = max($max, (int) $m[1]);
                         }
                     }

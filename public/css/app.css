@@ -798,3 +798,4 @@ form.wizard-active .sticky-actions button[value="submit"] { display: none; }
 /* 押せるところの枠（キーボードで選んだとき）をはっきり */
 :root[data-theme="cud"] :focus-visible { outline: 3px solid #f6aa00; outline-offset: 2px; }
 :root[data-theme="cud"] .card { border-color: #b5b5b5; }
+.use-backup-code { margin: 4px 0 8px; }

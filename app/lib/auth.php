@@ -16,7 +16,7 @@ function auth_normalize_login_id(string $id): string
 
 function auth_is_valid_login_id(string $id): bool
 {
-    return preg_match('/^[a-z0-9][a-z0-9._-]{2,31}$/', $id) === 1;
+    return preg_match('/\A[a-z0-9][a-z0-9._-]{2,31}\z/', $id) === 1;
 }
 
 function auth_find_user(string $loginId): ?array
@@ -128,7 +128,7 @@ function auth_totp_secret(array $user): ?string
 function auth_verify_second_factor(array $user, string $code): bool
 {
     $code = preg_replace('/[\s-]/', '', $code);
-    if (preg_match('/^\d{6}$/', $code) === 1) {
+    if (preg_match('/\A\d{6}\z/', $code) === 1) {
         $secret = auth_totp_secret($user);
         if ($secret === null) {
             return false;
@@ -141,7 +141,7 @@ function auth_verify_second_factor(array $user, string $code): bool
         db_exec('UPDATE users SET totp_last_step = ? WHERE id = ?', [$step, (int) $user['id']]);
         return true;
     }
-    if (preg_match('/^[a-z0-9]{10}$/i', $code) === 1) {
+    if (preg_match('/\A[a-z0-9]{10}\z/i', $code) === 1) {
         $code = strtolower($code);
         $rows = db_all('SELECT id, code_hash FROM user_backup_codes WHERE user_id = ? AND used_at IS NULL', [(int) $user['id']]);
         foreach ($rows as $r) {
@@ -232,7 +232,7 @@ function auth_remember_device(int $userId): void
 function auth_remembered_device_id(int $userId): ?int
 {
     $token = $_COOKIE[REMEMBER_COOKIE] ?? '';
-    if (!is_string($token) || preg_match('/^[0-9a-f]{64}$/', $token) !== 1) {
+    if (!is_string($token) || preg_match('/\A[0-9a-f]{64}\z/', $token) !== 1) {
         return null;
     }
     $row = db_one(

@@ -84,7 +84,7 @@ function input_id(string $name, string $method = 'GET'): int
 {
     $src = $method === 'POST' ? $_POST : $_GET;
     $v = $src[$name] ?? null;
-    if (!is_string($v) || preg_match('/^[1-9][0-9]{0,9}$/', $v) !== 1) {
+    if (!is_string($v) || preg_match('/\A[1-9][0-9]{0,9}\z/', $v) !== 1) {
         error_page(400);
     }
     return (int) $v;
@@ -105,7 +105,7 @@ function post_str(string $name, bool $trim = true): string
 
 function is_valid_period(string $p): bool
 {
-    return preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', $p) === 1;
+    return preg_match('/\A\d{4}-(0[1-9]|1[0-2])\z/', $p) === 1;
 }
 
 function str_len(string $s): int

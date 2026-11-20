@@ -40,7 +40,7 @@ if (str_len($keywordText) > 50 || has_control_chars($keywordText)) {
 
 if ($isOwnReportsOnly || $selectedDepartmentText === '') {
     $selectedDepartmentIdList = array_map('intval', array_keys($reviewableDepartmentById));
-} elseif (preg_match('/^\d{1,10}$/', $selectedDepartmentText) === 1 && isset($reviewableDepartmentById[(int) $selectedDepartmentText])) {
+} elseif (preg_match('/\A\d{1,10}\z/', $selectedDepartmentText) === 1 && isset($reviewableDepartmentById[(int) $selectedDepartmentText])) {
     $selectedDepartmentIdList = [(int) $selectedDepartmentText];
 } else {
     error_page(403);
@@ -61,7 +61,7 @@ $choiceFieldById = search_choice_fields(array_values(array_unique($choiceDepartm
 $selectedChoiceField = null;
 $selectedChoiceCode = '';
 if ($choiceTargetText !== '') {
-    if (preg_match('/^(\d{1,10}):([a-z0-9_]{1,40})$/', $choiceTargetText, $choiceTargetParts) !== 1
+    if (preg_match('/\A(\d{1,10}):([a-z0-9_]{1,40})\z/', $choiceTargetText, $choiceTargetParts) !== 1
         || !isset($choiceFieldById[(int) $choiceTargetParts[1]])) {
         error_page(400);
     }

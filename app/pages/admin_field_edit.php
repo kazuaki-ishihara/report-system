@@ -32,7 +32,7 @@ if ($id !== null) {
     $deptId = $field['department_id'] === null ? null : (int) $field['department_id'];
 } else {
     $dp = (string) ($_GET['dept'] ?? 'common');
-    $deptId = $dp === 'common' ? null : (preg_match('/^\d+$/', $dp) === 1 ? (int) $dp : -1);
+    $deptId = $dp === 'common' ? null : (preg_match('/\A\d+\z/', $dp) === 1 ? (int) $dp : -1);
     if ($deptId === -1 || ($deptId !== null && db_one('SELECT id FROM departments WHERE id = ?', [$deptId]) === null)) {
         error_page(400);
     }
@@ -85,7 +85,7 @@ if (is_post()) {
             } while (db_val('SELECT 1 FROM report_fields WHERE code = ?', [$code]) !== null);
         }
         $newFieldCode = $code;
-        if (preg_match('/^[a-z][a-z0-9_]{2,39}$/', $code) !== 1) {
+        if (preg_match('/\A[a-z][a-z0-9_]{2,39}\z/', $code) !== 1) {
             $errors[] = msg('コードは英小文字で始まる、英小文字・数字・_ の 3〜40 文字にしてください');
         } elseif (db_val('SELECT 1 FROM report_fields WHERE code = ?', [$code]) !== null) {
             $errors[] = msg('同じコードの項目があります');
@@ -127,7 +127,7 @@ if (is_post()) {
         if ($v === '') {
             return null;
         }
-        if (preg_match('/^\d+$/', $v) !== 1 || (int) $v < $min || (int) $v > $max) {
+        if (preg_match('/\A\d+\z/', $v) !== 1 || (int) $v < $min || (int) $v > $max) {
             $errors[] = msg('{label}は {min}〜{max} にしてください', ['label' => $lbl, 'min' => $min, 'max' => $max]);
             return null;
         }
@@ -142,7 +142,7 @@ if (is_post()) {
     if ($type === 'number') {
         foreach (['min' => '最小', 'max' => '最大'] as $k => $lbl) {
             $v = post_str($k);
-            if ($v !== '' && preg_match('/^-?\d{1,12}(\.\d+)?$/', $v) !== 1) {
+            if ($v !== '' && preg_match('/\A-?\d{1,12}(\.\d+)?\z/', $v) !== 1) {
                 $errors[] = msg('{label}は数値にしてください', ['label' => $lbl]);
             } elseif ($v !== '') {
                 $settings[$k] = $v;
@@ -166,7 +166,7 @@ if (is_post()) {
                 continue;
             }
             $p = array_map('trim', explode('|', $line));
-            if (count($p) < 3 || preg_match('/^[a-z][a-z0-9_]{0,29}$/', $p[0]) !== 1 || $p[1] === '' || !in_array($p[2], TABLE_COLUMN_TYPES, true)) {
+            if (count($p) < 3 || preg_match('/\A[a-z][a-z0-9_]{0,29}\z/', $p[0]) !== 1 || $p[1] === '' || !in_array($p[2], TABLE_COLUMN_TYPES, true)) {
                 $errors[] = msg('表の列の定義が正しくありません: {line}', ['line' => $line]);
                 continue;
             }
@@ -264,7 +264,7 @@ if (is_post()) {
                 $c = 'o' . $nextOptionNumber;
                 $usedOptionCodeSet[$c] = true;
             }
-            if (preg_match('/^[a-z0-9_]{1,40}$/', $c) !== 1) {
+            if (preg_match('/\A[a-z0-9_]{1,40}\z/', $c) !== 1) {
                 $errors[] = msg('選択肢のコードは英小文字・数字・_ の 1〜40 文字にしてください: {code}', ['code' => $c]);
                 continue;
             }

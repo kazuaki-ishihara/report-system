@@ -26,7 +26,7 @@ if ($deptParam === '' ) {
 }
 $deptId = null;
 if ($deptParam !== 'common') {
-    if (preg_match('/^\d+$/', $deptParam) !== 1 || !isset($manageable[(int) $deptParam])) {
+    if (preg_match('/\A\d+\z/', $deptParam) !== 1 || !isset($manageable[(int) $deptParam])) {
         error_page(403);
     }
     $deptId = (int) $deptParam;

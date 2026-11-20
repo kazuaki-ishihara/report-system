@@ -848,7 +848,7 @@ function faq_is_unrelated(string $queryText, array $faqList): bool
     // 「誰が誰なの」のように、誰・だれ のほかに中身の無い文は、関係のない質問（「誰」の言い換えで管理者の答えに当てない）
     // （「あなたは誰」のように、言い換えの表にあるほかの言葉があれば、その言葉で答えを探す）
     $withoutWhoText = str_replace(['誰', 'だれ'], ' ', $normalizedQuery);
-    if ($withoutWhoText !== $normalizedQuery && preg_match('/^[\p{Hiragana}ー〜~ ]*$/u', $withoutWhoText) === 1) {
+    if ($withoutWhoText !== $normalizedQuery && preg_match('/\A[\p{Hiragana}ー〜~ ]*\z/u', $withoutWhoText) === 1) {
         $hasOtherSynonym = false;
         foreach (array_keys(FAQ_SEARCH_SYNONYMS) as $synonymWord) {
             if (!in_array((string) $synonymWord, ['誰', 'はだれ', 'ってだれ'], true) && faq_text_contains_term($normalizedQuery, (string) $synonymWord)) {
@@ -879,9 +879,9 @@ function faq_is_unrelated(string $queryText, array $faqList): bool
     // 「システムクラスは？」のように、システムという言葉のあとが、よくある質問に出てこないカタカナの言葉だけの文も同じ（2026-11-18）
     $compactQuery = str_replace(' ', '', $normalizedQuery);
     $unknownKatakanaWord = '';
-    if (preg_match('/^(上司|課長|部長|係長|主任|社長|部下|同僚|先輩|後輩|管理者)(が|は|って)([\p{Katakana}ー]{3,})$/u', $compactQuery, $personKatakanaMatch) === 1) {
+    if (preg_match('/\A(上司|課長|部長|係長|主任|社長|部下|同僚|先輩|後輩|管理者)(が|は|って)([\p{Katakana}ー]{3,})\z/u', $compactQuery, $personKatakanaMatch) === 1) {
         $unknownKatakanaWord = $personKatakanaMatch[3];
-    } elseif (preg_match('/^(この|その)?システム(の)?([\p{Katakana}ー]{3,})(は|って|とは|ってなに|ってなんですか|とはなに)?$/u', $compactQuery, $systemKatakanaMatch) === 1) {
+    } elseif (preg_match('/\A(この|その)?システム(の)?([\p{Katakana}ー]{3,})(は|って|とは|ってなに|ってなんですか|とはなに)?\z/u', $compactQuery, $systemKatakanaMatch) === 1) {
         $unknownKatakanaWord = $systemKatakanaMatch[3];
     }
     if ($unknownKatakanaWord !== '') {
@@ -1032,7 +1032,7 @@ function faq_is_foreign_language(string $queryText): bool
         }
     }
     // ラテン文字（アクセント付きを含む）だけの文
-    if (preg_match('/^[\x00-\x7F\x{00C0}-\x{024F}\x{1E00}-\x{1EFF}\x{FF01}-\x{FF5E}\x{3000}？！。、]+$/u', $trimmedText) !== 1) {
+    if (preg_match('/\A[\x00-\x7F\x{00C0}-\x{024F}\x{1E00}-\x{1EFF}\x{FF01}-\x{FF5E}\x{3000}？！。、]+\z/u', $trimmedText) !== 1) {
         return false;
     }
     preg_match_all('/[a-z\x{00C0}-\x{024F}\x{1E00}-\x{1EFF}]+/u', mb_strtolower(faq_normalize_text($trimmedText), 'UTF-8'), $wordMatchList);
@@ -1040,7 +1040,7 @@ function faq_is_foreign_language(string $queryText): bool
     if (count($latinWordList) >= 2 && array_intersect($latinWordList, FAQ_ENGLISH_COMMON_WORDS) !== []) {
         return true;
     }
-    return count($latinWordList) >= 3 && preg_match('/[?？]$/u', $trimmedText) === 1;
+    return count($latinWordList) >= 3 && preg_match('/[?？]\z/u', $trimmedText) === 1;
 }
 
 function faq_classify_question(string $questionText, array $faqList): array
@@ -1140,7 +1140,7 @@ const FAQ_CONVERSATION_DISTRESS_TURNS = 3;
 /** 話題が心の不調の会話の印なら、残りの発言の数（印でなければ 0） */
 function faq_conversation_distress_turns_left(string $topicText): int
 {
-    if (preg_match('/^' . preg_quote(FAQ_CONVERSATION_DISTRESS_MARK, '/') . ':(\d+)$/', $topicText, $turnMatch) !== 1) {
+    if (preg_match('/\A' . preg_quote(FAQ_CONVERSATION_DISTRESS_MARK, '/') . ':(\d+)\z/', $topicText, $turnMatch) !== 1) {
         return 0;
     }
     return (int) $turnMatch[1];
@@ -1365,15 +1365,15 @@ function faq_is_vague(string $queryText): bool
         return false;
     }
     // 「3 か月前」「三カ月」「何か月」のような期間だけの文は、表記にかかわらず分野を選んでもらう（他の端末の確かめで、表記で答えが変わっていた）
-    if (preg_match('/^([0-9]+|[一二三四五六七八九十何]+)(か|カ|ヶ|ヵ|ケ|箇|k)?月(前|後)?$/u', str_replace([' ', '?', '？'], '', $normalizedQuery)) === 1) {
+    if (preg_match('/\A([0-9]+|[一二三四五六七八九十何]+)(か|カ|ヶ|ヵ|ケ|箇|k)?月(前|後)?\z/u', str_replace([' ', '?', '？'], '', $normalizedQuery)) === 1) {
         return true;
     }
     // 「システム系システム」のように、システムという言葉と つなぎの字 だけの文は、知りたいことが分からないので分野を選んでもらう
-    if (preg_match('/^((この|その|あの)?(システム|しすてむ|system)|系|の|が|は|と|で|って|[?？!！。、 ])+$/u', $normalizedQuery) === 1) {
+    if (preg_match('/\A((この|その|あの)?(システム|しすてむ|system)|系|の|が|は|と|で|って|[?？!！。、 ])+\z/u', $normalizedQuery) === 1) {
         return true;
     }
     // 「誰が誰なの」「だれがだれ」は、曖昧ではなく関係のない質問として扱う（faq_is_unrelated()）
-    if (preg_match('/^(誰|だれ)(が|は|と|も)(誰|だれ)/u', str_replace(' ', '', $normalizedQuery)) === 1) {
+    if (preg_match('/\A(誰|だれ)(が|は|と|も)(誰|だれ)/u', str_replace(' ', '', $normalizedQuery)) === 1) {
         return false;
     }
     // 1 文字だけの入力（「は」「わ」）は、打ち間違い・途中で送ったものとみなし、分野を選んでもらう（断らない）
@@ -1402,7 +1402,7 @@ function faq_is_vague(string $queryText): bool
     // ひらがなだけで、探す言葉が 1 つも取れない文（方言・話し言葉の「いってこうわい」など）は、断らずに分野を選んでもらう。
     // 関係のない話題の言葉（しりとり など）があれば、関係のない質問として扱う
     // （「だれがだれ」のような だれ の問いは、関係のない質問で扱う）
-    if (preg_match('/^[\p{Hiragana}ー〜~ ]+$/u', $normalizedQuery) === 1 && faq_search_terms($queryText) === [] && strpos($normalizedQuery, 'だれ') === false) {
+    if (preg_match('/\A[\p{Hiragana}ー〜~ ]+\z/u', $normalizedQuery) === 1 && faq_search_terms($queryText) === [] && strpos($normalizedQuery, 'だれ') === false) {
         foreach (array_merge(FAQ_OFFTOPIC_WORDS, FAQ_OFFTOPIC_STRONG_WORDS) as $offtopicWord) {
             if (strpos($normalizedQuery, $offtopicWord) !== false) {
                 return false;
@@ -1624,7 +1624,7 @@ function faq_normalize_text(string $text): string
  */
 function faq_text_contains_term(string $normalizedText, string $termText): bool
 {
-    if (preg_match('/^[a-z0-9]+$/', $termText) === 1) {
+    if (preg_match('/\A[a-z0-9]+\z/', $termText) === 1) {
         return preg_match('/(?<![a-z0-9])' . preg_quote($termText, '/') . '(?![a-z0-9])/', $normalizedText) === 1;
     }
     return strpos($normalizedText, $termText) !== false;
@@ -1727,16 +1727,16 @@ function faq_search_terms(string $queryText): array
     }
     preg_match_all('/[a-z0-9]+|[^a-z0-9 ]+/u', $normalizedQuery, $runMatchList);
     foreach ($runMatchList[0] as $runText) {
-        if (preg_match('/^[a-z0-9]+$/', $runText) === 1) {
+        if (preg_match('/\A[a-z0-9]+\z/', $runText) === 1) {
             // 数字だけの言葉（時刻・日付・回数など）は、答えの中の別の数字に当たってしまうので探す言葉にしない（「10:30」が「10 文字以上」に当たらないように）
-            if (strlen($runText) >= 2 && preg_match('/^[0-9]+$/', $runText) !== 1) {
+            if (strlen($runText) >= 2 && preg_match('/\A[0-9]+\z/', $runText) !== 1) {
                 $termSet[$runText] = true;
             }
             continue;
         }
         $characterList = preg_split('//u', $runText, -1, PREG_SPLIT_NO_EMPTY) ?: [];
         if (count($characterList) === 1) {
-            if (preg_match('/^\p{Hiragana}$/u', $runText) !== 1) {
+            if (preg_match('/\A\p{Hiragana}\z/u', $runText) !== 1) {
                 $termSet[$runText] = true;
             }
             continue;
@@ -1745,7 +1745,7 @@ function faq_search_terms(string $queryText): array
             $bigramText = $characterList[$characterIndex] . $characterList[$characterIndex + 1];
             // ひらがなで始まる並び（「の人」「を機」）と、助詞で終わる並び（「日は」「面が」）は、言葉の区切りをまたぐので使わない。
             // 「忘れ」「直せ」のような、漢字に送り仮名が続く並びは使う
-            if (preg_match('/^\p{Hiragana}/u', $bigramText) !== 1 && preg_match('/[はがをにのでともへや]$/u', $bigramText) !== 1) {
+            if (preg_match('/\A\p{Hiragana}/u', $bigramText) !== 1 && preg_match('/[はがをにのでともへや]\z/u', $bigramText) !== 1) {
                 $termSet[$bigramText] = true;
             }
         }
