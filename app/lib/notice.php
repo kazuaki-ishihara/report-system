@@ -10,7 +10,7 @@ const NOTICE_TITLE_MAX_LENGTH = 60;
 const NOTICE_BODY_MAX_LENGTH = 1000;
 const FAQ_QUESTION_MAX_LENGTH = 200;
 const FAQ_ANSWER_MAX_LENGTH = 2000;
-const FAQ_MAX_COUNT = 200;
+const FAQ_MAX_COUNT = 500;   // よくある質問の上限（2026-11-20 に 200 件から引き上げ。標準の質問が増えたため）
 
 /**
  * 今出している更新のお知らせ（表示の期間の中。新しい順に $limit 件）。

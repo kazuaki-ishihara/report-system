@@ -90,6 +90,9 @@ $check('G-03', '年をまたいでも正しい（1 月 5 日は前の年の 12 �
 $check('G-03', '締め日が決まっていない課・課の無い人は、前の月が対象', $periodOn($noCloseDepartmentId, '2026-11-25') === '2026-10' && $periodOn(null, '2026-11-25') === '2026-10');
 @unlink($temporaryDatabasePath);
 
+// ---- G-25: よくある質問の上限は 500 件（標準の質問 192 件に、管理者が足す分の余裕を持たせる） ----
+$check('G-25', 'よくある質問の上限は 500 件', FAQ_MAX_COUNT === 500);
+
 // ---- 共通: 入力の確かめの正規表現は文字列全体で見る（末尾に改行を足した値を通さない。\A・\z） ----
 $check('共通', 'ログイン ID の確かめは、末尾に改行を足した値を通さない', auth_is_valid_login_id('ippan_a1') && !auth_is_valid_login_id("ippan_a1\n"));
 $check('共通', '対象月の確かめは、末尾に改行を足した値を通さない', is_valid_period('2026-11') && !is_valid_period("2026-11\n"));
