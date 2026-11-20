@@ -20,6 +20,7 @@ import datetime
 import json
 import os
 import re
+import secrets
 import sqlite3
 import subprocess
 import sys
@@ -44,7 +45,6 @@ SAMPLE_SECRET_TEXT = "ABCD EFGH IJKL MNOP QRST UVWX YZ23 4567"
 SAMPLE_LOGIN_URL_TEXT = "https://（このシステムのアドレス）/login.php"
 SAMPLE_BACKUP_CODE_TEXT = "xxxx-xxxxxx"
 FIRST_LOGIN_ID = "shinnyu01"
-FIRST_LOGIN_NEW_PASSWORD = "manual sample new password 2026"
 
 # 印を付ける JavaScript。印の指定は {"sel": CSS, "text": 含む文字, "nth": 何番目, "up": 枠を広げる先の CSS, "label": 番号}
 MARK_JS = r"""(function (markList, scrollMode) {
@@ -314,8 +314,10 @@ def capture_all(camera, php_path, environment, database_path):
         camera.shoot("m02_08_backup_codes", [mark("#backup-codes", label=1), mark(".copy-text", label=2), mark("a.button.primary", text="保管しました", label=3)])
         browser.click("a.button.primary", navigate=True)
         if browser.exists("#new_password"):
-            browser.fill("#new_password", FIRST_LOGIN_NEW_PASSWORD)
-            browser.fill("#new_password_confirm", FIRST_LOGIN_NEW_PASSWORD)
+            # 新しいパスワードは撮るたびに作る（画像では「•」で隠れる）
+            first_login_new_password = secrets.token_urlsafe(18)
+            browser.fill("#new_password", first_login_new_password)
+            browser.fill("#new_password_confirm", first_login_new_password)
             camera.shoot("m02_11_first_password", [mark("#new_password", label=1), mark("#new_password_confirm", label=2), mark("form.form button.primary", label=3)])
     run_scene(camera, "2.2 はじめてのログイン", chapter_first_login)
 
