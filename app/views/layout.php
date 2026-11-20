@@ -61,17 +61,17 @@ $flashes = take_flashes();
   <?php if (($screenHelpText ?? '') !== ''): ?>
     <details class="screen-help no-print">
       <summary>？ この画面の使い方</summary>
-      <div class="screen-help-body"><?= h_lines($screenHelpText) ?> <a href="<?= h(url('/faq.php' . (($supportRequestScreenCode ?? null) !== null ? '?' . http_build_query(['screen' => $supportRequestScreenCode, 'from' => (string) ($_SERVER['REQUEST_URI'] ?? '')]) : ''))) ?>">よくある質問</a></div>
+      <div class="screen-help-body"><?= h_phrases($screenHelpText) ?> <a href="<?= h(url('/faq.php' . (($supportRequestScreenCode ?? null) !== null ? '?' . http_build_query(['screen' => $supportRequestScreenCode, 'from' => (string) ($_SERVER['REQUEST_URI'] ?? '')]) : ''))) ?>">よくある質問</a></div>
     </details>
   <?php endif; ?>
   <?php if (($user ?? null) !== null && maintenance_state() !== null): ?>
-    <div class="flash flash-error maintenance-notice" role="alert"><?= h_lines(can_manage_system($user) ? msg('メンテナンス中です（管理者・補佐の画面）。ほかの人は保存などの操作ができません。終わったら管理のトップで「メンテナンスを終える」を押してください。') : maintenance_notice_text()) ?></div>
+    <div class="flash flash-error maintenance-notice" role="alert"><?= h_phrases(can_manage_system($user) ? msg('メンテナンス中です（管理者・補佐の画面）。ほかの人は保存などの操作ができません。終わったら管理のトップで「メンテナンスを終える」を押してください。') : maintenance_notice_text()) ?></div>
   <?php endif; ?>
   <?php foreach ($reminderBannerList ?? [] as $reminderBanner): ?>
-    <div class="flash flash-warning reminder-banner no-print" role="status"><a href="<?= h($reminderBanner['url']) ?>"><?= h_lines($reminderBanner['text']) ?></a></div>
+    <div class="flash flash-warning reminder-banner no-print" role="status"><a href="<?= h($reminderBanner['url']) ?>"><?= h_phrases($reminderBanner['text']) ?></a></div>
   <?php endforeach; ?>
   <?php foreach ($flashes as $f): ?>
-    <div class="flash flash-<?= h($f['type']) ?>" role="status"><?= h_lines($f['message']) ?></div>
+    <div class="flash flash-<?= h($f['type']) ?>" role="status"><?= h_phrases($f['message']) ?></div>
   <?php endforeach; ?>
   <?= $content ?>
   <?php if ($user !== null && ($supportRequestScreenCode ?? null) !== null && support_request_can_submit($user)): ?>

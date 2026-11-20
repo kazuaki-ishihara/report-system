@@ -153,7 +153,7 @@ function h_lines(string $text): string
 }
 
 /**
- * 説明の文を、区切り（「、」「。」「・」「〜」「）」のあと、「（」の前）ごとのまとまりにして出す。改行は <br>。
+ * 説明の文を、区切り（「、」「。」「・」「〜」「：」「）」「を」のあと、「（」の前）ごとのまとまりにして出す。「／」は「月／日」のように言葉の中で使うので区切らない。改行は <br>。
  * まとまりは途中で折り返さず、まとまりごと次の行に送る（スマートフォンで「課長代｜理」のように言葉の途中で折り返さない。
  * まとまりが 1 行に入らないときだけ、その中で折り返す。「）。」のように閉じる記号が続くときは区切らない）。画面の決まった文に使い、利用者が書いた文には h_lines を使う
  */
@@ -161,7 +161,7 @@ function h_phrases(string $text): string
 {
     $lineHtmlList = [];
     foreach (preg_split('/\R/u', $text) ?: [] as $lineText) {
-        $phraseList = preg_split('/(?<=[、。・〜／：）」])(?![、。，．）」])|(?=[（「])/u', $lineText, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+        $phraseList = preg_split('/(?<=[、。・〜：）」を])(?![、。，．）」])|(?=[（「])/u', $lineText, -1, PREG_SPLIT_NO_EMPTY) ?: [];
         $phraseHtmlList = [];
         foreach ($phraseList as $phraseText) {
             $phraseHtmlList[] = '<span class="phrase">' . h($phraseText) . '</span>';

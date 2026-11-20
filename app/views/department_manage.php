@@ -18,7 +18,7 @@ $renderTeamOptions = function (?int $selectedTeamId, string $emptyLabel) use ($a
 ?>
 <section class="card wide">
   <h1>課の管理</h1>
-  <p class="note">自分が課長の課の、締め日・管理の仕方・確認者（課長代理・リーダー）・チェックする人・項目管理者・班を決めます。課の名前・課長・組織の改訂（引き継ぎ）は、システム管理者が決めます。</p>
+  <p class="note"><?= h_phrases('自分が課長の課の、締め日・管理の仕方・確認者（課長代理・リーダー）・チェックする人・項目管理者・班を決めます。課の名前・課長・組織の改訂（引き継ぎ）は、システム管理者が決めます。') ?></p>
   <?php if (count($manageableDepartmentById) > 1): ?>
     <form method="get" action="<?= h(url('/admin/department.php')) ?>" class="filters">
       <select name="dept" aria-label="課"><?php foreach ($manageableDepartmentById as $manageableDepartmentId => $manageableDepartment): ?><option value="<?= (int) $manageableDepartmentId ?>" <?= $manageableDepartmentId === $departmentId ? 'selected' : '' ?>><?= h($manageableDepartment['name']) ?></option><?php endforeach; ?></select>
@@ -82,8 +82,8 @@ $renderTeamOptions = function (?int $selectedTeamId, string $emptyLabel) use ($a
   </section>
 
   <section id="dept-teams" data-tab-title="班">
-    <?php if (!$isTeamScope): ?><p class="note">この課の管理の仕方は「課全体」です。班は「基本」で「班ごと」にしたときに使います。</p><?php endif; ?>
-    <p class="note">「班ごと」の課で使います。課長代理ごとの班を作り、「確認者と課員」で確認者の担当の班と、課員の班を選びます。班を移った人の過去の報告は、今の班の課長代理・リーダーが見ます。</p>
+    <?php if (!$isTeamScope): ?><p class="note"><?= h_phrases('この課の管理の仕方は「課全体」です。班は「基本」で「班ごと」にしたときに使います。') ?></p><?php endif; ?>
+    <p class="note"><?= h_phrases('「班ごと」の課で使います。課長代理ごとの班を作り、「確認者と課員」で確認者の担当の班と、課員の班を選びます。班を移った人の過去の報告は、今の班の課長代理・リーダーが見ます。') ?></p>
     <?php foreach ($teamList as $teamRow): ?>
       <form method="post" action="<?= h($selfUrl) ?>" class="filters">
         <?= form_hidden() ?>

@@ -30,7 +30,7 @@ $statusFilterLabelByName = ['unresolved' => '未解決（回答待ち・回答�
       : '「回答待ち」は、あなたの返信を待っているコメントです。' ?></p>
 
   <?php if (!$commentItemList): ?>
-    <p><?= h_lines(msg('該当するコメントはありません。')) ?></p>
+    <p><?= h_phrases(msg('該当するコメントはありません。')) ?></p>
   <?php else: ?>
     <ul class="list comment-list">
       <?php foreach ($commentItemList as $commentItem): ?>
@@ -47,6 +47,6 @@ $statusFilterLabelByName = ['unresolved' => '未解決（回答待ち・回答�
         </li>
       <?php endforeach; ?>
     </ul>
-    <?php if (count($commentItemList) >= 200): ?><p class="note"><?= h_lines(msg('新しい 200 件まで出しています。')) ?></p><?php endif; ?>
+    <?php if (count($commentItemList) >= 200): ?><p class="note"><?= h_phrases(msg('新しい 200 件まで出しています。')) ?></p><?php endif; ?>
   <?php endif; ?>
 </section>

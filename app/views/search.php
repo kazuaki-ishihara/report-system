@@ -68,11 +68,11 @@
 <?php if ($searchResult !== null): ?>
 <section class="card">
   <?php if ($searchResult['isTooMany']): ?>
-    <p class="flash flash-error"><?= h_lines(msg('キーワードで探す報告が {count} 件あり、上限（{limit} 件）を超えています。対象月・課・選択式の値で絞ってください。', ['count' => $searchResult['candidateCount'], 'limit' => $decryptLimit])) ?></p>
+    <p class="flash flash-error"><?= h_phrases(msg('キーワードで探す報告が {count} 件あり、上限（{limit} 件）を超えています。対象月・課・選択式の値で絞ってください。', ['count' => $searchResult['candidateCount'], 'limit' => $decryptLimit])) ?></p>
   <?php elseif (!$searchResult['resultList']): ?>
-    <p><?= h_lines(msg('該当する報告はありません。')) ?></p>
+    <p><?= h_phrases(msg('該当する報告はありません。')) ?></p>
   <?php else: ?>
-    <h2><?= h_lines(msg('{count} 件', ['count' => count($searchResult['resultList'])])) ?><?= count($searchResult['resultList']) >= 200 ? ' ' . h(msg('（200 件まで出しています。条件を足して絞ってください）')) : '' ?></h2>
+    <h2><?= h_phrases(msg('{count} 件', ['count' => count($searchResult['resultList'])])) ?><?= count($searchResult['resultList']) >= 200 ? ' ' . h(msg('（200 件まで出しています。条件を足して絞ってください）')) : '' ?></h2>
     <ul class="list search-result-list">
       <?php foreach ($searchResult['resultList'] as $resultItem): ?>
         <li>

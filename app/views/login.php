@@ -30,14 +30,14 @@
   <form method="post" action="<?= h(url('/login.php')) ?>" class="form">
     <?= form_hidden(false) ?>
     <input type="hidden" name="action" value="code">
-    <p>スマートフォンの認証アプリ（Google Authenticator など）に表示される 6 桁の数字を入れてください。</p>
+    <p><?= h_phrases('スマートフォンの認証アプリ（Google Authenticator など）に表示される 6 桁の数字を入れてください。') ?></p>
     <label for="code">認証アプリの 6 桁のコード</label>
     <input id="code" name="code" type="text" inputmode="numeric" autocomplete="one-time-code" autocapitalize="none" autocorrect="off" spellcheck="false" maxlength="12" required autofocus>
     <button type="button" class="small use-backup-code" data-target="code">予備のコードを入れる（英字のキーボードにする）</button>
     <label class="check"><input type="checkbox" name="remember" value="1" checked> この端末を <?= (int) cfg('remember_device_days') ?> 日間記憶する</label>
     <button type="submit" class="primary">確認</button>
   </form>
-  <p class="note">認証アプリが使えないときは、予備のコード（xxxx-xxxxxx）を上の欄に入れてください。</p>
+  <p class="note"><?= h_phrases('認証アプリが使えないときは、予備のコード（xxxx-xxxxxx）を上の欄に入れてください。') ?></p>
   <p class="sub-link"><a href="<?= h(url('/login.php')) ?>">最初からやり直す</a></p>
   <?php endif; ?>
 </section>

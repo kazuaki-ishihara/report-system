@@ -14,7 +14,7 @@ $deptSelect = function (string $name, $selected) use ($departments): string {
 ?>
 <section class="card wide">
   <h1>案件の管理</h1>
-  <p class="warn">客先名・案件名は入力しないでください。客先との対応は、このシステムの外で管理します。</p>
+  <p class="warn"><?= h_phrases('客先名・案件名は入力しないでください。客先との対応は、このシステムの外で管理します。') ?></p>
   <?php foreach ($errors as $e): ?>
     <div class="flash flash-error" role="alert"><?= h_lines($e) ?></div>
   <?php endforeach; ?>

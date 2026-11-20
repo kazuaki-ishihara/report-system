@@ -22,7 +22,7 @@
       <input type="hidden" name="action" value="dept_save">
       <label for="name">課の名前</label>
       <input id="name" name="name" type="text" maxlength="40" required>
-      <p class="note">課の名前には人名を入れないことをおすすめします（例: A課）。</p>
+      <p class="note"><?= h_phrases('課の名前には人名を入れないことをおすすめします（例: A課）。') ?></p>
       <label for="sort_order">並び順</label>
       <input id="sort_order" name="sort_order" type="number" min="0" max="999999" step="1" value="0">
       <button type="submit" class="primary">追加する</button>
@@ -48,7 +48,7 @@
     </form>
     </section>
     <section id="dept-final" data-tab-title="課長">
-    <p class="note">この課の課長（最終確認者）を決めます。課長代理・リーダー（確認者）・チェックする人・項目管理者・班・締め日・管理の仕方は、この課の課長が「課の管理」の画面で決めます（システム管理者は、個々の課の管理はしません）。</p>
+    <p class="note"><?= h_phrases('この課の課長（最終確認者）を決めます。課長代理・リーダー（確認者）・チェックする人・項目管理者・班・締め日・管理の仕方は、この課の課長が「課の管理」の画面で決めます（システム管理者は、個々の課の管理はしません）。') ?></p>
     <?php $currentFinalCandidate = null; foreach ($candidates as $candidateRow) { if ((int) $candidateRow['is_final'] === 1) { $currentFinalCandidate = $candidateRow; } } ?>
     <p>今の課長: <strong><?= $currentFinalCandidate === null ? h(msg('課長がいません（確認を完了にできません）')) : h($currentFinalCandidate['display_name']) ?></strong></p>
     <form method="post" action="<?= h(url('/admin/org.php?tab=departments&edit=' . (int) $edit['id'])) ?>" class="form"
@@ -67,7 +67,7 @@
     </form>
     </section>
     <section id="dept-succession" data-tab-title="引き継ぎ">
-    <p class="note">組織の改訂で課をまとめた・分けた・作り直したときに、改訂の前の課を選びます。この課の確認者（課長を含む）が、選んだ課の過去の報告も見られるようになります（前月との比べ・検索を含む）。改訂の前の課を無効にしても、報告は残ります。</p>
+    <p class="note"><?= h_phrases('組織の改訂で課をまとめた・分けた・作り直したときに、改訂の前の課を選びます。この課の確認者（課長を含む）が、選んだ課の過去の報告も見られるようになります（前月との比べ・検索を含む）。改訂の前の課を無効にしても、報告は残ります。') ?></p>
     <form method="post" action="<?= h(url('/admin/org.php?tab=departments&edit=' . (int) $edit['id'])) ?>" class="form"
           data-confirm="<?= h(msg('この課の確認者が、選んだ課の過去の報告を見られるようになります。保存しますか？')) ?>">
       <?= form_hidden() ?>
@@ -97,7 +97,7 @@
           <span class="tag"><?= (int) $r['is_final'] === 1 ? '課長 ' : '' ?><?= h($r['display_name']) ?></span>
         <?php endforeach; ?>
           <?php $hasFinalReviewer = (bool) array_filter($reviewers[(int) $d['id']] ?? [], function (array $reviewerRow): bool { return (int) $reviewerRow['is_final'] === 1; }); ?>
-          <?php if ((int) $d['is_active'] === 1 && !$hasFinalReviewer): ?><span class="tag tag-open"><?= h_lines(msg('課長がいません（確認を完了にできません）')) ?></span><?php endif; ?>
+          <?php if ((int) $d['is_active'] === 1 && !$hasFinalReviewer): ?><span class="tag tag-open"><?= h_phrases(msg('課長がいません（確認を完了にできません）')) ?></span><?php endif; ?>
           <?php if (!empty($predecessorNameListByDepartmentId[(int) $d['id']])): ?><br><span class="note">引き継ぎ: <?= h(implode('、', $predecessorNameListByDepartmentId[(int) $d['id']])) ?></span><?php endif; ?></td>
         <td><?= (int) $d['is_active'] === 1 ? '有効' : '無効' ?></td>
         <td><a href="<?= h(url('/admin/org.php?tab=departments&edit=' . (int) $d['id'])) ?>">編集</a></td>
@@ -142,7 +142,7 @@
   </table>
 
 <?php elseif ($tab === 'bulk'): /** @var array|null $bulkPlan org_csv_plan() の戻り値（取り込んだとき） */ ?>
-  <p>毎年の組織改訂で、ユーザーの所属の課・班・役割（課長・確認者・担当の班・項目管理者）・有効をまとめて入れます。手順は「組織の改訂の手順」（docs/org_revision.md）。</p>
+  <p><?= h_phrases('毎年の組織改訂で、ユーザーの所属の課・班・役割（課長・確認者・担当の班・項目管理者）・有効をまとめて入れます。手順は「組織の改訂の手順」（docs/org_revision.md）。') ?></p>
   <ol class="steps">
     <li>今の組織を出力する: <a class="button" href="<?= h(url('/admin/org.php?tab=bulk&csv=1')) ?>">今の組織を CSV に出力</a></li>
     <li>CSV を直す（動かない人はそのまま。CSV に載せない人は変わりません。新しい人は先に「ユーザーを追加」で登録します。無い班の名前は、その課に班を作ります）。</li>
@@ -162,7 +162,7 @@
       <p>新しく作る班: <?php foreach ($bulkPlan['newTeamList'] as $newTeam): ?><span class="tag"><?= h($newTeam['departmentName']) ?> / <?= h($newTeam['teamName']) ?></span><?php endforeach; ?></p>
     <?php endif; ?>
     <?php if (!$bulkPlan['changeList']): ?>
-      <p><?= h_lines(msg('変わる人はいません。')) ?></p>
+      <p><?= h_phrases(msg('変わる人はいません。')) ?></p>
     <?php else: ?>
       <table class="table">
         <thead><tr><th>ログイン ID</th><th>表示名</th><th>変わる内容</th></tr></thead>
@@ -188,9 +188,9 @@
         <input id="apply_on" name="apply_on" type="date" min="<?= h(date('Y-m-d', strtotime('+1 day'))) ?>" required>
         <button type="submit">この日に反映するよう予約する</button>
       </form>
-      <p class="note">年度内の組織改訂は、すぐに発令される場合と、事前に予告がある場合があります。予告があるときは予約しておくと、その日に反映されます（その日の最初の画面の表示で、その時点の組織に対してもう一度確かめてから反映します）。</p>
+      <p class="note"><?= h_phrases('年度内の組織改訂は、すぐに発令される場合と、事前に予告がある場合があります。予告があるときは予約しておくと、その日に反映されます（その日の最初の画面の表示で、その時点の組織に対してもう一度確かめてから反映します）。') ?></p>
     <?php elseif ($bulkPlan['errorTextList']): ?>
-      <p class="note"><?= h_lines(msg('誤りを直してから、もう一度取り込んでください（反映はしていません）。')) ?></p>
+      <p class="note"><?= h_phrases(msg('誤りを直してから、もう一度取り込んでください（反映はしていません）。')) ?></p>
     <?php endif; ?>
   <?php endif; ?>
 
@@ -222,8 +222,8 @@
   <?php endif; ?>
 
 <?php else: ?>
-  <p>自由記述にこれらの言葉が入ると、「客先名や個人名が含まれていませんか」と注意を出します。</p>
-  <p class="warn">実際の客先名は入れないでください（この一覧が漏れても客先が分からないように）。</p>
+  <p><?= h_phrases('自由記述にこれらの言葉が入ると、「客先名や個人名が含まれていませんか」と注意を出します。') ?></p>
+  <p class="warn"><?= h_phrases('実際の客先名は入れないでください（この一覧が漏れても客先が分からないように）。') ?></p>
   <form method="post" action="<?= h(url('/admin/org.php?tab=words')) ?>" class="filters">
     <?= form_hidden() ?>
     <input type="hidden" name="action" value="word_add">

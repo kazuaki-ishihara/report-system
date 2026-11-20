@@ -66,7 +66,7 @@ $statusLabel = $req === null ? '新規' : ((int) $req['is_template'] === 1 ? '�
 <?php if ($req !== null): ?>
 <section class="card">
   <h2>質問（<?= count($questions) ?>）</h2>
-  <?php if (!$questions): ?><p class="note">質問がまだありません。下から足してください。</p><?php endif; ?>
+  <?php if (!$questions): ?><p class="note"><?= h_phrases('質問がまだありません。下から足してください。') ?></p><?php endif; ?>
   <ol>
     <?php foreach ($questions as $q): ?>
       <li>
@@ -89,7 +89,7 @@ $statusLabel = $req === null ? '新規' : ((int) $req['is_template'] === 1 ? '�
 
   <?php if ($editable): ?>
     <h3>月次報告の項目を使う</h3>
-    <p class="note">回答欄には、回答する人の最新の月次報告の値が入ります。</p>
+    <p class="note"><?= h_phrases('回答欄には、回答する人の最新の月次報告の値が入ります。') ?></p>
     <form method="post" action="<?= h(url($self)) ?>" class="filters">
       <?= form_hidden() ?>
       <select name="field_id" aria-label="月次の項目"><?php foreach ($sources as $f): ?><option value="<?= (int) $f['id'] ?>"><?= h($f['label']) ?></option><?php endforeach; ?></select>

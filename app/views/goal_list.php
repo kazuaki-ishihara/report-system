@@ -29,7 +29,7 @@ $progressLabel = function (?array $progressFlags): string {
       <span class="note"><?= (int) $newYear ?>/10/1〜<?= (int) $newYear + 1 ?>/9/30</span></p>
   <?php endforeach; ?>
   <?php if (!$mySheetList): ?>
-    <p><?= h_lines(msg('目標管理シートはまだありません。')) ?></p>
+    <p><?= h_phrases(msg('目標管理シートはまだありません。')) ?></p>
   <?php else: ?>
     <div class="table-wrap">
     <table class="table goal-list-table">
@@ -64,7 +64,7 @@ $progressLabel = function (?array $progressFlags): string {
           <span class="note"><?= h_phrases(msg('課の人の、この年度のシートを、会社の様式の Excel（1 人 1 ファイル）にして zip でまとめます。')) ?></span></p>
       <?php endif; ?>
       <?php if (!$departmentOverview['members']): ?>
-        <p class="note"><?= h(msg('見られる人がいません。')) ?></p>
+        <p class="note"><?= h_phrases(msg('見られる人がいません。')) ?></p>
       <?php else: ?>
         <div class="table-wrap">
         <table class="table goal-list-table">

@@ -37,7 +37,7 @@ $selfUrl = $target === null ? '/admin/user_edit.php' : '/admin/user_edit.php?id=
     <label for="login_id">ログイン ID</label>
     <?php if ($target === null): ?>
       <input id="login_id" name="login_id" type="text" maxlength="32" inputmode="email" autocapitalize="none" autocorrect="off" spellcheck="false" value="<?= h($v('login_id')) ?>" required>
-      <p class="note">英小文字・数字・. _ - の 3〜32 文字。メールアドレスは使えません。あとから変更できません。</p>
+      <p class="note"><?= h_phrases('英小文字・数字・. _ - の 3〜32 文字。メールアドレスは使えません。あとから変更できません。') ?></p>
     <?php else: ?>
       <p><strong><?= h((string) $target['login_id']) ?></strong></p>
     <?php endif; ?>
@@ -52,7 +52,7 @@ $selfUrl = $target === null ? '/admin/user_edit.php' : '/admin/user_edit.php?id=
       <option value="">（なし）</option>
       <?php foreach ($departments as $d): ?><option value="<?= (int) $d['id'] ?>" <?= $v('department_id') === (string) $d['id'] ? 'selected' : '' ?>><?= h($d['name']) ?></option><?php endforeach; ?>
     </select>
-    <p class="note">班（「班ごと」で管理する課）は、その課の課長が「課の管理」で決めます。課を移すと班は外れます。</p>
+    <p class="note"><?= h_phrases('班（「班ごと」で管理する課）は、その課の課長が「課の管理」で決めます。課を移すと班は外れます。') ?></p>
     <?php if (!$isOperatorDeputy): ?>
     <label class="check"><input type="checkbox" name="is_admin" value="1" <?= $v('is_admin', '0') === '1' ? 'checked' : '' ?>
       data-confirm-on="<?= h(msg('管理者は管理画面（項目・案件・組織・ユーザー・記録）を使えるようになります。報告の中身は、確認者の課の分だけ見られます')) ?>"> 管理者</label>

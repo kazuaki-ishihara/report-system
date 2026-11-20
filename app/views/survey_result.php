@@ -33,7 +33,7 @@ $total = count($responses);
 
   <h2>個人の回答</h2>
   <?php if (!$showDetail): ?>
-    <p class="note">個人の回答を開くと、記録に残ります。</p>
+    <p class="note"><?= h_phrases('個人の回答を開くと、記録に残ります。') ?></p>
     <a class="button" href="<?= h(url('/surveys/result.php?id=' . (int) $req['id'] . '&detail=1')) ?>">個人の回答を表示</a>
   <?php else: ?>
     <div class="table-input">

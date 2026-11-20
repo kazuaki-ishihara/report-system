@@ -828,7 +828,7 @@ form.wizard-active .sticky-actions button[value="submit"] { display: none; }
 .goal-sheet .label-text { display: block; font-weight: 600; margin-bottom: 4px; }
 .goal-grade-line .label-text { display: inline; margin-right: 6px; }
 /* 説明の文の区切り（h_phrases）: まとまりごとに折り返す。スマートフォンで言葉の途中で折り返さない */
-.phrase { display: inline-block; }
+.phrase { display: inline-block; word-break: auto-phrase; }   /* まとまりが 1 行に入らないときも、対応するブラウザー（Chrome・Edge）では文節で折り返す */
 /* 評価の行の「見出し＋選ぶ欄」は、まとめて次の行に送る */
 .goal-grade-item { display: inline-block; white-space: nowrap; margin-right: 10px; }
 .goal-grade-line select { width: auto; margin-right: 16px; }

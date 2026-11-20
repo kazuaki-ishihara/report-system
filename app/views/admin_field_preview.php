@@ -4,7 +4,7 @@
 ?>
 <section class="card">
   <h1><?= h($dept['name']) ?>の様式（プレビュー）</h1>
-  <p class="note">入力画面の見た目です。保存はできません。</p>
+  <p class="note"><?= h_phrases('入力画面の見た目です。保存はできません。') ?></p>
   <p><a href="<?= h(url('/admin/fields.php?dept=' . (int) $dept['id'])) ?>">← 項目マスタ</a></p>
   <form class="form" action="#" method="get" data-preview="1">
     <h2>案件 1</h2>

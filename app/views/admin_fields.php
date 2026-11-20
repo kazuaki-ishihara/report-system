@@ -25,7 +25,7 @@ $back = '/admin/fields.php?dept=' . rawurlencode($deptParam);
       <a class="button" href="<?= h(url('/admin/field_edit.php?preview=' . (int) $deptId)) ?>">プレビュー</a>
     <?php endif; ?>
   </form>
-  <p class="note">変更は、これから作る報告に反映されます。すでにある報告は、作成したときの項目のまま表示されます。</p>
+  <p class="note"><?= h_phrases('変更は、これから作る報告に反映されます。すでにある報告は、作成したときの項目のまま表示されます。') ?></p>
 
   <?php foreach (['active' => 1, 'inactive' => 0] as $stateName => $state): ?>
     <?php if ($state === 0): ?><details><summary>無効の項目</summary><?php endif; ?>

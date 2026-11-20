@@ -54,7 +54,7 @@ $roleNoteByViewerRole = [
   <h1><?= (int) $sheet['fiscal_year'] ?> 年度 目標管理シート<?= $isOwner ? '' : '（' . h($ownerName) . ' さん）' ?></h1>
   <p class="note"><?= (int) $sheet['fiscal_year'] ?>/10/1〜<?= (int) $sheet['fiscal_year'] + 1 ?>/9/30・様式: <?= h($kindDefinition['label']) ?></p>
   <p class="flash flash-info"><?= h_phrases($roleNoteByViewerRole[$viewerRole]) ?></p>
-  <?php if ($sheet['unreadable']): ?><div class="flash flash-error" role="alert"><?= h(msg('このシートは読めません（暗号の鍵が変わった可能性があります）。システム管理者に連絡してください。')) ?></div><?php endif; ?>
+  <?php if ($sheet['unreadable']): ?><div class="flash flash-error" role="alert"><?= h_phrases(msg('このシートは読めません（暗号の鍵が変わった可能性があります）。システム管理者に連絡してください。')) ?></div><?php endif; ?>
   <?php foreach ($errorTextList as $errorText): ?><div class="flash flash-error" role="alert"><?= h_lines($errorText) ?></div><?php endforeach; ?>
   <?php if (!$isNewSheet && !$isMobile): ?>
     <p><a class="button" href="<?= h(url('/goals/download.php?id=' . $sheet['id'])) ?>">目標管理評価シートの Excel を受け取る（.xlsx）</a></p>
@@ -188,7 +188,7 @@ $roleNoteByViewerRole = [
 <section class="card goal-comments" id="comments">
   <h2>コメント</h2>
   <p class="note"><?= h_phrases(msg('本人・課長・課長代理が書けます。書いたコメントは、あとから直したり消したりできません（監査のため）。直したいことは、新しく書いてください。')) ?></p>
-  <?php if (!$comments): ?><p class="note"><?= h(msg('コメントはまだありません。')) ?></p><?php endif; ?>
+  <?php if (!$comments): ?><p class="note"><?= h_phrases(msg('コメントはまだありません。')) ?></p><?php endif; ?>
   <?php foreach ($comments as $commentItem): ?>
     <div class="goal-comment">
       <p class="goal-comment-head"><strong><?= h($commentItem['user_name']) ?></strong> <span class="note"><?= h(display_datetime($commentItem['created_at'])) ?></span></p>
@@ -227,7 +227,7 @@ $roleNoteByViewerRole = [
   $reviewerUserIdList = array_column($meetingReviewers, 'user_id');
   $formerMeetingList = array_values(array_filter($meetings, function (array $meetingItem) use ($reviewerUserIdList): bool { return !in_array($meetingItem['created_by'], $reviewerUserIdList, true); }));
   ?>
-  <?php if (!$meetingReviewers): ?><p class="note"><?= h(msg('このシートには、面談の結果を書く人（課長・課長代理）がいません。')) ?></p><?php endif; ?>
+  <?php if (!$meetingReviewers): ?><p class="note"><?= h_phrases(msg('このシートには、面談の結果を書く人（課長・課長代理）がいません。')) ?></p><?php endif; ?>
   <?php foreach ($meetingReviewers as $reviewerItem): $reviewerMeetingList = array_values(array_filter($meetings, function (array $meetingItem) use ($reviewerItem): bool { return $meetingItem['created_by'] === $reviewerItem['user_id']; })); ?>
     <div class="goal-meeting-block" data-reviewer-id="<?= (int) $reviewerItem['user_id'] ?>">
       <h3><?= h($reviewerItem['role_label']) ?> <?= h($reviewerItem['name']) ?> の面談の結果<?= $reviewerItem['role_label'] === '課長代理' ? '（任意）' : '' ?></h3>

@@ -10,7 +10,7 @@
 <section class="card">
   <?php if ($isPreview): ?>
     <p><a href="<?= h(url('/surveys/survey_edit.php?id=' . (int) $req['id'])) ?>">← 臨時の調査の編集</a></p>
-    <div class="flash flash-info" role="status"><?= h_lines(msg('回答する人に見える画面の見本です。入力して確かめられますが、「回答する」は押せず、何も保存されません。')) ?></div>
+    <div class="flash flash-info" role="status"><?= h_phrases(msg('回答する人に見える画面の見本です。入力して確かめられますが、「回答する」は押せず、何も保存されません。')) ?></div>
   <?php else: ?>
   <p><a href="<?= h(url('/index.php')) ?>">← ホーム</a></p>
   <?php endif; ?>
@@ -25,7 +25,7 @@
     <p class="note">回答済み（<?= h(display_datetime($response['submitted_at'])) ?>）。<?= $open ? '期限までは直せます。' : '' ?></p>
   <?php endif; ?>
   <?php if ($errors): ?><div class="flash flash-error" role="alert">入力が必要な質問があります。</div><?php endif; ?>
-  <?php if (!$open): ?><div class="flash flash-info"><?= h_lines(msg('この調査は締め切られました。')) ?></div><?php endif; ?>
+  <?php if (!$open): ?><div class="flash flash-info"><?= h_phrases(msg('この調査は締め切られました。')) ?></div><?php endif; ?>
 
   <?php if ($isPreview): ?>
   <div class="form survey-preview">

@@ -39,7 +39,7 @@ $myLabels = ['unchecked' => '未チェック', 'updated' => '更新あり', 'che
   <?php endif; ?>
 
   <?php if (!$isPersonRowsShown): ?>
-    <p class="note">システム管理者補佐の画面では、課ごとの件数だけを出します（人ごとの状態は出しません）。</p>
+    <p class="note"><?= h_phrases('システム管理者補佐の画面では、課ごとの件数だけを出します（人ごとの状態は出しません）。') ?></p>
   <?php elseif (!$list): ?>
     <p class="note">該当する人はいません。</p>
   <?php else: ?>

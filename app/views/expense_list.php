@@ -5,11 +5,11 @@
 <section class="card">
   <p><a href="<?= h(url('/index.php')) ?>">← ホーム</a></p>
   <h1>通勤定期代の精算</h1>
-  <p class="note"><?= h_lines(msg('通勤定期代の精算書を作って、総務の様式の Excel（.xlsx）で受け取ります。精算書を見られるのは自分だけです。月次報告とは別の機能で、承認の流れはありません。')) ?></p>
-  <p class="flash flash-info"><?= h_lines(msg('このシステムで受け付けるのは通勤定期だけです。通勤実費・業務交通費などは、別のシステムで申請してください。')) ?></p>
+  <p class="note"><?= h_phrases(msg('通勤定期代の精算書を作って、総務の様式の Excel（.xlsx）で受け取ります。精算書を見られるのは自分だけです。月次報告とは別の機能で、承認の流れはありません。')) ?></p>
+  <p class="flash flash-info"><?= h_phrases(msg('このシステムで受け付けるのは通勤定期だけです。通勤実費・業務交通費などは、別のシステムで申請してください。')) ?></p>
   <p><a class="button primary" href="<?= h(url('/expenses/edit.php')) ?>">＋ 新しく作る</a></p>
   <?php if (!$sheetList): ?>
-    <p><?= h_lines(msg('精算書はまだありません。')) ?></p>
+    <p><?= h_phrases(msg('精算書はまだありません。')) ?></p>
   <?php else: ?>
     <div class="table-wrap">
     <table class="table expense-list-table">
@@ -18,7 +18,7 @@
         <?php foreach ($sheetList as $sheetItem): ?>
           <tr>
             <?php if (isset($sheetItem['data']['unreadable'])): ?>
-              <td colspan="5"><?= h(msg('この精算書は読めません（暗号の鍵が変わった可能性があります）。システム管理者に連絡してください。')) ?></td>
+              <td colspan="5"><?= h_phrases(msg('この精算書は読めません（暗号の鍵が変わった可能性があります）。システム管理者に連絡してください。')) ?></td>
             <?php else: ?>
               <td><a href="<?= h(url('/expenses/edit.php?id=' . $sheetItem['id'])) ?>"><?= h($sheetItem['data']['submitted_on']) ?></a></td>
               <td><?= h(EXPENSE_PAYMENT_METHODS[$sheetItem['data']['payment_method']] ?? '') ?></td>
@@ -37,5 +37,5 @@
     </table>
     </div>
   <?php endif; ?>
-  <?php if ($isMobile): ?><p class="note"><?= h(msg('精算書のファイルは PC で受け取ってください。')) ?></p><?php endif; ?>
+  <?php if ($isMobile): ?><p class="note"><?= h_phrases(msg('精算書のファイルは PC で受け取ってください。')) ?></p><?php endif; ?>
 </section>

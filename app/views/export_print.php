@@ -11,7 +11,7 @@
     <p class="note"><?= h($headerLines[2]) ?></p>
   </div>
   <p class="no-print"><button type="button" class="primary print-button">印刷する（PDF として保存）</button>
-    <span class="note">印刷の画面で、送信先に「PDF に保存」（Firefox では「ファイルへ出力」）を選びます。</span></p>
+    <span class="note"><?= h_phrases('印刷の画面で、送信先に「PDF に保存」（Firefox では「ファイルへ出力」）を選びます。') ?></span></p>
   <?php if ($rows): ?>
   <table class="table print-table">
     <thead><tr><?php foreach ($header as $hd): ?><th><?= h($hd) ?></th><?php endforeach; ?></tr></thead>

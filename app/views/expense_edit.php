@@ -10,14 +10,14 @@ $formPath = '/expenses/edit.php' . ($sheetId !== null ? '?id=' . $sheetId : '');
 <section class="card">
   <p><a href="<?= h(url('/expenses/index.php')) ?>">← 通勤定期代の精算</a></p>
   <h1><?= $sheetId === null ? '精算書を作る' : '精算書を直す' ?></h1>
-  <p class="flash flash-info"><?= h_lines(msg('このシステムで受け付けるのは通勤定期だけです。通勤実費・業務交通費などは、別のシステムで申請してください。')) ?></p>
+  <p class="flash flash-info"><?= h_phrases(msg('このシステムで受け付けるのは通勤定期だけです。通勤実費・業務交通費などは、別のシステムで申請してください。')) ?></p>
   <?php if (isset($sheetData['unreadable'])): ?>
-    <div class="flash flash-error" role="alert"><?= h(msg('この精算書は読めません（暗号の鍵が変わった可能性があります）。システム管理者に連絡してください。')) ?></div>
+    <div class="flash flash-error" role="alert"><?= h_phrases(msg('この精算書は読めません（暗号の鍵が変わった可能性があります）。システム管理者に連絡してください。')) ?></div>
   <?php endif; ?>
   <?php foreach ($errorTextList as $errorText): ?><div class="flash flash-error" role="alert"><?= h_lines($errorText) ?></div><?php endforeach; ?>
   <?php if ($sheetId !== null && !$isMobile): ?>
     <p><a class="button" href="<?= h(url('/expenses/download.php?id=' . $sheetId)) ?>">精算書の Excel を受け取る（.xlsx）</a>
-      <span class="note"><?= h(msg('総務の様式に、保存した内容を入れたファイルです。')) ?></span></p>
+      <span class="note"><?= h_phrases(msg('総務の様式に、保存した内容を入れたファイルです。')) ?></span></p>
   <?php endif; ?>
 
   <form method="post" action="<?= h(url($formPath)) ?>" class="form expense-form" data-leave-warn="1">
@@ -62,8 +62,8 @@ $formPath = '/expenses/edit.php' . ($sheetId !== null ? '?id=' . $sheetId : '');
     </fieldset>
 
     <fieldset class="expense-rows">
-      <legend>明細（<?= (int) EXPENSE_MAX_ROWS ?> 行まで。空の行は保存しません）</legend>
-      <p class="note"><?= h_lines(msg('1 行に 1 つの定期券を書きます。月／日には、定期券の使い始めの日と終わりの日を入れます。行が足りないときは、保存すると空の行が増えます。')) ?></p>
+      <legend><?= h_phrases('明細（' . (int) EXPENSE_MAX_ROWS . ' 行まで。空の行は保存しません）') ?></legend>
+      <p class="note"><?= h_phrases(msg('1 行に 1 つの定期券を書きます。月／日には、定期券の使い始めの日と終わりの日を入れます。行が足りないときは、保存すると空の行が増えます。')) ?></p>
       <div class="table-wrap">
       <table class="table expense-input-table">
         <thead><tr><th>#</th><?php foreach (EXPENSE_ROW_COLUMNS as $columnLabel): ?><th><?= h($columnLabel) ?></th><?php endforeach; ?></tr></thead>
