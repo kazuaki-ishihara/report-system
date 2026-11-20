@@ -23,5 +23,5 @@ render('goal_criteria', [
     'user'               => $user,
     'sheetNameList'      => $sheetNameList,
     'selectedSheetIndex' => $selectedSheetIndex,
-    'tableRowList'       => GOAL_CRITERIA_SHEETS[$sheetNameList[$selectedSheetIndex]],
+    'tableList'          => GOAL_CRITERIA_SHEETS[$sheetNameList[$selectedSheetIndex]],
 ]);

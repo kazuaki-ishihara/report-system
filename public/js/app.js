@@ -42,6 +42,29 @@
     btn.textContent = show ? '隠す' : '表示';
   });
 
+  // ---- コンピテンシー評価基準（G-27 §3.5）: 横スライドのつまみ・◀ ▶ と、表の横の位置を合わせる ----
+  document.querySelectorAll('.goal-criteria-block').forEach(function (criteriaBlock) {
+    var scrollBox = criteriaBlock.querySelector('.goal-criteria-scroll');
+    var sliderBox = criteriaBlock.querySelector('.goal-criteria-slider');
+    if (!scrollBox || !sliderBox) { return; }
+    var rangeInput = sliderBox.querySelector('input[type=range]');
+    function maxScroll() { return Math.max(0, scrollBox.scrollWidth - scrollBox.clientWidth); }
+    function syncSlider() {
+      var scrollableWidth = maxScroll();
+      sliderBox.hidden = scrollableWidth < 2;
+      rangeInput.value = scrollableWidth > 0 ? String(Math.round(scrollBox.scrollLeft / scrollableWidth * 1000)) : '0';
+    }
+    rangeInput.addEventListener('input', function () { scrollBox.scrollLeft = maxScroll() * Number(rangeInput.value) / 1000; });
+    sliderBox.addEventListener('click', function (clickEvent) {
+      var stepButton = clickEvent.target.closest('[data-criteria-step]');
+      if (!stepButton) { return; }
+      scrollBox.scrollBy({ left: Number(stepButton.getAttribute('data-criteria-step')) * scrollBox.clientWidth * 0.6, behavior: 'smooth' });
+    });
+    scrollBox.addEventListener('scroll', syncSlider);
+    window.addEventListener('resize', syncSlider);
+    syncSlider();
+  });
+
   // ---- 2 段階認証のコードの欄: ふだんは数字のキーボード。予備のコード（英字を含む）を入れるときは、英字のキーボードにする ----
   document.addEventListener('click', function (clickEvent) {
     var backupButton = clickEvent.target.closest('.use-backup-code');

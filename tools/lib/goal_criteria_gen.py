@@ -88,10 +88,33 @@ def read_sheets(source_path):
     return sheet_list
 
 
-def build_table(text_by_position, merge_list, hidden_rows, hidden_columns):
-    """出す行・列を決め、行ごとのセル（文字・rowspan・colspan）にする"""
+def build_tables(text_by_position, merge_list, hidden_rows, hidden_columns):
+    """シートを表の並びにする。部門の表（「◆〇〇部門」の見出し）が横に並んだシートは、部門ごとの表に分けて縦に並べる"""
     visible_text_by_position = {position: text for position, text in text_by_position.items()
                                 if position[0] not in hidden_rows and position[1] not in hidden_columns}
+    if not visible_text_by_position:
+        return []
+    block_start_columns = []
+    for row in sorted({row for row, _ in visible_text_by_position}):
+        marked_columns = sorted(column for (cell_row, column), text in visible_text_by_position.items() if cell_row == row and text.startswith("◆"))
+        if len(marked_columns) >= 2:
+            block_start_columns = marked_columns
+            break
+    if not block_start_columns:
+        return [build_table(visible_text_by_position, merge_list)]
+    first_column = min(column for _, column in visible_text_by_position)
+    last_column = max(column for _, column in visible_text_by_position)
+    boundaries = [first_column] + block_start_columns[1:] + [last_column + 1]
+    table_list = []
+    for block_index in range(len(boundaries) - 1):
+        block_texts = {position: text for position, text in visible_text_by_position.items() if boundaries[block_index] <= position[1] < boundaries[block_index + 1]}
+        if block_texts:
+            table_list.append(build_table(block_texts, merge_list))
+    return table_list
+
+
+def build_table(visible_text_by_position, merge_list):
+    """出す行・列を決め、行ごとのセル（文字・rowspan・colspan）にする"""
     if not visible_text_by_position:
         return []
     merge_by_anchor = {(merge[0], merge[1]): merge for merge in merge_list}
@@ -142,14 +165,17 @@ def render_php(sheet_tables):
         "// G-27 目標管理: コンピテンシー評価基準（app/templates/competency_criteria.xlsx）を画面に出す表。手で直さない。",
         "// 評価基準のファイルを差し替えたら python3 tools/lib/goal_criteria_gen.py で作り直す。",
         "// ====================================================================", "",
-        "/** シート => 行の並び（行は セル の並び。セルは text・rowspan・colspan） */",
+        "/** シート => 表の並び（部門の表が横に並んだシートは部門ごとに分ける）。表は行の並び、行はセル [文字, rowspan, colspan] の並び */",
         "const GOAL_CRITERIA_SHEETS = [",
     ]
-    for sheet_name, table_row_list in sheet_tables:
+    for sheet_name, table_list in sheet_tables:
         line_list.append("    %s => [" % php_string(sheet_name))
-        for cell_list in table_row_list:
-            cell_text_list = ["[%s, %d, %d]" % (php_string(cell["text"]), cell["rowspan"], cell["colspan"]) for cell in cell_list]
-            line_list.append("        [" + ", ".join(cell_text_list) + "],")
+        for table_row_list in table_list:
+            line_list.append("        [")
+            for cell_list in table_row_list:
+                cell_text_list = ["[%s, %d, %d]" % (php_string(cell["text"]), cell["rowspan"], cell["colspan"]) for cell in cell_list]
+                line_list.append("            [" + ", ".join(cell_text_list) + "],")
+            line_list.append("        ],")
         line_list.append("    ],")
     line_list.append("];")
     return "\n".join(line_list) + "\n"
@@ -162,7 +188,7 @@ def main():
     parser = argparse.ArgumentParser(description="コンピテンシー評価基準を画面に出す表にする")
     parser.add_argument("--check", action="store_true", help="書き出したものが評価基準のファイルと合っているかだけ確かめる")
     arguments = parser.parse_args()
-    sheet_tables = [(sheet_name, build_table(text_by_position, merge_list, hidden_rows, hidden_columns))
+    sheet_tables = [(sheet_name, build_tables(text_by_position, merge_list, hidden_rows, hidden_columns))
                     for sheet_name, text_by_position, merge_list, hidden_rows, hidden_columns in read_sheets(SOURCE_PATH)]
     php_text = render_php(sheet_tables)
     if arguments.check:
@@ -174,8 +200,8 @@ def main():
         return 1
     with open(OUTPUT_PATH, "w", encoding="utf-8", newline="\n") as output_file:
         output_file.write(php_text)
-    for sheet_name, table_row_list in sheet_tables:
-        print("%s: %d 行" % (sheet_name, len(table_row_list)))
+    for sheet_name, table_list in sheet_tables:
+        print("%s: 表 %d・%s 行" % (sheet_name, len(table_list), "・".join(str(len(table_row_list)) for table_row_list in table_list)))
     print("書きました: %s" % OUTPUT_PATH)
     return 0
 

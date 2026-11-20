@@ -841,6 +841,14 @@ form.wizard-active .sticky-actions button[value="submit"] { display: none; }
 .use-backup-code { margin: 4px 0 8px; }
 .goal-meeting-block { border-top: 1px solid var(--line); padding-top: 8px; margin-top: 12px; }
 .goal-meeting-block h3 { margin: 0 0 6px; font-size: 1rem; }
-.goal-criteria-table { border-collapse: collapse; font-size: 0.85rem; min-width: 900px; }
-.goal-criteria-table td { border: 1px solid var(--line); padding: 4px 6px; vertical-align: top; min-width: 4em; }
-.app-main:has(.goal-criteria) { max-width: 1400px; }
+/* コンピテンシー評価基準: 文の長い欄は広く取って折り返しを減らし、表は横に動かして見る（横スライド） */
+.goal-criteria-table { border-collapse: collapse; font-size: 0.9rem; line-height: 1.6; }
+.goal-criteria-table td { border: 1px solid var(--line); padding: 6px 8px; vertical-align: top; min-width: 5em; }
+.goal-criteria-table td.criteria-short { white-space: nowrap; }
+.goal-criteria-table td.criteria-long { min-width: 20em; max-width: 28em; }
+.goal-criteria-block { margin-bottom: 24px; }
+.app-main:has(.goal-criteria) { max-width: none; }
+.goal-criteria-scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); }
+.goal-criteria-slider { display: flex; align-items: center; gap: 8px; margin: 8px 0; position: sticky; top: 0; z-index: 2; background: var(--card); padding: 6px 0; }
+.goal-criteria-slider input[type=range] { flex: 1; }
+.goal-criteria-slider button { flex: none; }

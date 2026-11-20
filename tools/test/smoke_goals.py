@@ -301,6 +301,10 @@ def main():
           status_code == 200 and all(title in criteria_html for title in sheet_titles) and "受益者志向" in criteria_html and "エキスパート" in criteria_html, status_code)
     status_code, _, criteria_html = owner.get("/goals/criteria.php?sheet=3")
     check("タブで管理職登用基準に切り替えられる", status_code == 200 and "管理職登用維持基準" in criteria_html, status_code)
+    status_code, _, criteria_html = owner.get("/goals/criteria.php?sheet=4")
+    check("職能レベル定義は、横に並んだ部門の表を部門ごとに分けて縦に並べ、表ごとに横スライドを付ける",
+          status_code == 200 and criteria_html.count('class="goal-criteria-table"') == 5 and criteria_html.count('class="goal-criteria-slider"') == 5
+          and all(text in criteria_html for text in ("◆システム部門", "◆ヘルプデスク部門", "◆営業部門", "◆管理部門")), status_code)
     status_code, _, _ = owner.get("/goals/criteria.php?sheet=9")
     check("無いシートは 404", status_code == 404, status_code)
     criteria_statuses = [client_of(login_id).get("/goals/criteria.php")[0] for login_id in ("kacho_a", "dairi_a", "admin01")]
