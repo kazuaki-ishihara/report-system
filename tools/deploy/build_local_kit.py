@@ -25,6 +25,7 @@ import argparse
 import datetime
 import io
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -326,6 +327,10 @@ def collect_files(use_worktree, ref):
 def find_php_directory(given_directory):
     if given_directory:
         return given_directory
+    # tools/lib/php_version_check.py で適用した PHP（利用者の環境変数 PHP_BIN）を先に使う
+    applied_php_path = os.environ.get("PHP_BIN", "")
+    if applied_php_path.lower().endswith("php.exe") and os.path.isfile(applied_php_path):
+        return os.path.dirname(applied_php_path)
     winget_directory = os.path.join(os.environ.get("LOCALAPPDATA", ""), "Microsoft", "WinGet", "Packages")
     if os.path.isdir(winget_directory):
         for name in sorted(os.listdir(winget_directory), reverse=True):
@@ -341,9 +346,15 @@ VC_RUNTIME_FILE_NAMES = ["vcruntime140.dll", "vcruntime140_1.dll", "msvcp140.dll
 
 
 def find_x86_php_directory():
-    """32 ビット版の PHP（php.net の x86 版を展開したもの）を、リポジトリの隣の php-*-x86 から探す"""
+    """32 ビット版の PHP（php.net の x86 版を展開したもの）。tools/lib/php_version_check.py で適用したもの（環境変数 PHP_BIN_X86）を先に使い、
+    無ければリポジトリの隣の php-*-x86 のうち版のいちばん新しいもの"""
+    applied_php_path = os.environ.get("PHP_BIN_X86", "")
+    if os.path.isfile(applied_php_path):
+        return os.path.dirname(applied_php_path)
     parent_directory = os.path.dirname(REPOSITORY_ROOT)
-    for name in sorted(os.listdir(parent_directory), reverse=True):
+    def version_key(name):
+        return tuple(int(number_text) for number_text in re.findall(r"\d+", name)[:3])
+    for name in sorted(os.listdir(parent_directory), key=version_key, reverse=True):
         candidate = os.path.join(parent_directory, name)
         if name.startswith("php-") and name.endswith("-x86") and os.path.isfile(os.path.join(candidate, "php.exe")):
             return candidate

@@ -189,10 +189,10 @@ foreach ($csvPathList as $csvPath) {
     if (fread($csvHandle, 3) !== "\xEF\xBB\xBF") {
         rewind($csvHandle);
     }
-    $headerRow = fgetcsv($csvHandle) ?: [];
+    $headerRow = fgetcsv($csvHandle, 0, ',', '"', '') ?: [];
     $topicByConversationId = [];
     $csvLabel = basename(dirname($csvPath)) . '/' . basename($csvPath);
-    while (($csvRow = fgetcsv($csvHandle)) !== false) {
+    while (($csvRow = fgetcsv($csvHandle, 0, ',', '"', '')) !== false) {
         if (count($csvRow) !== count($headerRow)) {
             continue;
         }

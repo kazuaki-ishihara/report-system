@@ -183,12 +183,12 @@ if ($commandName === 'csv') {
     if (fread($csvHandle, 3) !== "\xEF\xBB\xBF") {
         rewind($csvHandle);   // BOM が無いときは先頭から
     }
-    $headerRow = fgetcsv($csvHandle);
+    $headerRow = fgetcsv($csvHandle, 0, ',', '"', '');
     $rowCount = 0;
     // 列「会話」がある CSV（2026-11-17 以降の書き出し）は、会話ごとに前の話題を補って判定し直す（G-25 §2.14）
     $topicByConversationId = [];
     $previousConversationId = null;
-    while (($csvRow = fgetcsv($csvHandle)) !== false) {
+    while (($csvRow = fgetcsv($csvHandle, 0, ',', '"', '')) !== false) {
         if (count($csvRow) !== count($headerRow)) {
             continue;
         }
