@@ -148,12 +148,13 @@ python tools\lib\ui_watch.py --keep-open      # 終わったあともブラウ�
 ## 8. 次の作業
 
 > **2026-11-20 の区切り（ここから再開）**
-> - **状態**: `dev_ono_check8_3` は `6afbcb2`、`dev_ono_check` は `3ccb271`（どちらも操作マニュアルの画像付き化）まで push 済み。そのあと作業再開ポイントを更新した。コミット前の変更は無い（`dev` の直下の `画面の目視確認_2026111315.txt`・`_2026111318.txt` は自分が作ったものではないので入れていない）。
+> - **状態（2026-11-20 の終わり）**: すべてコミットして push 済み。`dev_ono_check` は `2a524f2`、`dev_ono_check8_3` は `03e55b2`。どちらも全件の検証（画面の自動操作・Office のソフトを含む）が成功（dev_ono_check: OK 2060 / NG 0、dev_ono_check8_3: OK 1841 / NG 0。未実施 1 はどちらも LibreOffice が入っていないため）。`dev`・`dev8_3` の作業ツリーには、ほかのセッションのコミット前の変更（`verify_all.php_server_command()` など。`verify_all.py`・`manual_capture.py`・`ui_watch.py`・`check_menu_logout.py`・`smoke_edges.py`、`dev` は `work_resume.md` の 1 行も）がある。自分のものではないので触らず、コミットにも入れていない（共有のファイルを直したときは、自分の差分だけを index に入れた）。
 > - **PHP 8.3 対応（`dev_ono_check8_3`。課題管理 APP-111〜113）**:
 >   - 設計書・公開操作指示書・ローカル検証環境の案内を PHP 8.3 にし、自動検証の書き方の確認を「PHP 8.3 で動く書き方」（8.4 以降の関数・書き方を見つける）にした。
 >   - 値を返すだけの switch 文を match 式にした（`screen_help_text`・`support_request_default_reply_text`・`export_text`・`form_display_html`・`faq_check.php`）。`form.php` の入力の確かめ・入力欄の HTML、`report_act.php` は枝ごとに複数の文があるので switch のまま。列挙型はまだ使っていない。
 >   - 道具: `tools/lib/php_version_check.py`（PHP の版を調べ、取ってくると答えたら適用まで。Windows・Linux）、`tools/test/php_compat_check.py`（新しい PHP で動くか）。見つかった fgetcsv の escape の省略（8.4 で非推奨）を直した。
 >   - 検証: 変えた所に関わる工程（OK 898・1140 / NG 0）、出力・表示の直す前との比べ（32 通り一致）、記録の CSV の読み取り（331 件一致）。全体検証（画面の自動操作を含む）は成功（OK 1753 / NG 0・未実施 1（LibreOffice）。11-18 の 1910 との差は、一式を Git の管理から外す前に数えた 157 ファイルぶん）。
+> - **2026-11-20 の後半にしたこと（このブランチ）**: 入力の確かめの正規表現を `\A`・`\z` に、ログイン ID などに `inputmode`、2 段階認証のコードの欄に「予備のコードを入れる」（`7cb43a5`。dev_ono_check と同じ直し）。通勤定期代の精算・目標管理・よくある質問の追加は `dev_ono_check` だけ（このブランチには無い）。
 > - **操作マニュアルを画面の画像付きにした（両方のブランチ）**: `docs/operation_manual.md` の手順ごとに、押す場所を赤い枠と番号（手順の番号と同じ）で示した画像（76 枚。`docs/manual/images/`）を付けた。0 章に Linux の PC の基本の操作（ブラウザーの開き方・アドレスとブックマーク・キー・日本語の入力・ダウンロードの場所・画面のロック）、11 章・12 章に PDF・CSV・Excel 形式の細かい手順を足した。
 >   - 画像は `python tools\lib\manual_capture.py` で撮る（自分用の DB `app/data/manual.sqlite` とサーバーを使う。Windows の Claude Code からは Bash で実行。`--only m04` で一部だけ）。画面を変えたら撮り直す。`--check`（マニュアルが使う画像がそろっているか）は自動検証の工程「操作マニュアルの画像がそろっている」に入れた。
 >   - 他の端末に渡す一式（`build_local_kit.py`）に、画像と、ブラウザーで画像付きで読める `操作マニュアル.html` を入れるようにした。リポジトリでは `tools/lib/mdview.py` で画像付きで読める。
