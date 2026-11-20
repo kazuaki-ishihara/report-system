@@ -88,7 +88,7 @@ function goal_normalize(array $sheetData, string $kindCode): array
         $scoreList = [];
         for ($itemIndex = 0; $itemIndex < $itemCount; $itemIndex++) {
             $storedScore = $sheetData[$scoreKey][$itemIndex] ?? '';
-            $scoreList[] = (is_int($storedScore) || (is_string($storedScore) && preg_match('/^[0-5]$/', $storedScore) === 1)) ? (string) $storedScore : '';
+            $scoreList[] = (is_int($storedScore) || (is_string($storedScore) && preg_match('/\A[0-5]\z/', $storedScore) === 1)) ? (string) $storedScore : '';
         }
         $scoreListByOwner[$scoreKey] = $scoreList;
     }
@@ -295,7 +295,7 @@ function goal_validate(array $sheetData): array
     validate_text($sheetData['full_name'], msg('氏名'), 40, true, $errorTextList);
     validate_text($sheetData['position'], msg('職位'), 20, false, $errorTextList);
     foreach (['business_plan' => msg('業績目標の計画'), 'business_actual' => msg('業績目標の実績')] as $businessKey => $businessLabel) {
-        if ($sheetData[$businessKey] !== '' && (preg_match('/^\d{1,7}(\.\d)?$/', $sheetData[$businessKey]) !== 1)) {
+        if ($sheetData[$businessKey] !== '' && (preg_match('/\A\d{1,7}(\.\d)?\z/', $sheetData[$businessKey]) !== 1)) {
             $errorTextList[] = msg('{label}は千円の数（小数は 1 けたまで）で入れてください', ['label' => $businessLabel]);
         }
     }
@@ -327,7 +327,7 @@ function goal_validate(array $sheetData): array
     }
     foreach (['competency_self', 'competency_boss'] as $scoreKey) {
         foreach ($sheetData[$scoreKey] as $scoreText) {
-            if ($scoreText !== '' && preg_match('/^[0-5]$/', $scoreText) !== 1) {
+            if ($scoreText !== '' && preg_match('/\A[0-5]\z/', $scoreText) !== 1) {
                 $errorTextList[] = msg('コンピテンシーの評点は 0〜5 から選んでください');
                 break;
             }
@@ -464,7 +464,7 @@ function goal_xlsx_set_cell(DOMDocument $sheetDocument, DOMXPath $sheetXPath, st
     if ($cellNodeList !== false && $cellNodeList->length > 0) {
         $cellElement = $cellNodeList->item(0);
     } else {
-        $rowNumber = (int) preg_replace('/^[A-Z]+/', '', $cellReference);
+        $rowNumber = (int) preg_replace('/\A[A-Z]+/', '', $cellReference);
         $rowNodeList = $sheetXPath->query('//m:sheetData/m:row[@r="' . $rowNumber . '"]');
         if ($rowNodeList === false || $rowNodeList->length === 0) {
             throw new RuntimeException('xlsx: row not found in template: ' . $rowNumber);

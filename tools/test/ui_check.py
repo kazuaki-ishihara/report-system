@@ -197,6 +197,24 @@ def main():
         b.click('details.reply-form button[value="reply"]', navigate=True)
         check("返信できる", "返信しました" in b.text() and "回答あり" in b.text())
 
+        # ---- 2 段階認証のコードの欄: 「予備のコードを入れる」で英字のキーボードにする（予備のコードは英字を含む） ----
+        section("G-01", "2 段階認証のコードの欄で、予備のコードを入れられる（スマートフォン）")
+        b.clear_cookies()
+        b.goto(a.base + "/login.php")
+        b.fill("#login_id", "leader_a")
+        b.fill("#password", U["leader_a"]["password"])
+        b.click("form.form button[type=submit]", navigate=True)
+        check("コードの欄は、ふだんは数字のキーボード", b.eval("document.getElementById('code').getAttribute('inputmode')") == "numeric")
+        b.click(".use-backup-code")
+        check("「予備のコードを入れる」で英字のキーボードにする", b.eval("document.getElementById('code').getAttribute('inputmode')") == "email"
+              and "数字のキーボード" in (b.eval("document.querySelector('.use-backup-code').textContent") or ""))
+        b.click(".use-backup-code")
+        check("もう一度押すと数字のキーボードに戻る", b.eval("document.getElementById('code').getAttribute('inputmode')") == "numeric")
+        b.clear_cookies()
+        b.goto(a.base + "/login.php")
+        check("ログイン ID の欄は英字のキーボード（inputmode）で、自動の大文字・修正をしない",
+              b.eval("(function(){var i=document.getElementById('login_id');return [i.getAttribute('inputmode'),i.getAttribute('autocapitalize'),i.getAttribute('autocorrect')].join(',');})()") == "email,none,off")
+
         # ---- PC の幅で課長が横並び・項目マスタ・出力を使う ----
         section("G-09", "PC の幅で課長が横並び・項目マスタ・出力を使う")
         b.mobile(False)

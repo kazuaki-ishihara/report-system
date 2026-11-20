@@ -53,7 +53,7 @@ $sw = $settings['show_when'] ?? null;
 
     <label for="code">コード</label>
     <?php if ($field === null): ?>
-      <input id="code" name="code" type="text" maxlength="40" pattern="[a-z][a-z0-9_]{2,39}" value="<?= h($val('code')) ?>" placeholder="空欄なら自動（item_番号）">
+      <input id="code" name="code" type="text" maxlength="40" inputmode="email" autocapitalize="none" autocorrect="off" spellcheck="false" pattern="[a-z][a-z0-9_]{2,39}" value="<?= h($val('code')) ?>" placeholder="空欄なら自動（item_番号）">
       <p class="note">空欄なら自動で付けます。決めたいときは、英小文字で始まる英小文字・数字・_ で入れます。作成後は変更できません。</p>
     <?php else: ?>
       <p><strong><?= h($field['code']) ?></strong>（変更できません）</p>
@@ -79,7 +79,7 @@ $sw = $settings['show_when'] ?? null;
           <tr>
             <td><input type="text" name="opt_label[<?= $i ?>]" value="<?= h($o['label']) ?>" maxlength="60"></td>
             <td><?php if ($isExisting): ?><input type="hidden" name="opt_code[<?= $i ?>]" value="<?= h($o['code']) ?>"><span class="note"><?= h($o['code']) ?></span>
-                <?php else: ?><input type="text" name="opt_code[<?= $i ?>]" value="<?= h($o['code']) ?>" maxlength="40" pattern="[a-z0-9_]{1,40}" placeholder="自動"><?php endif; ?></td>
+                <?php else: ?><input type="text" name="opt_code[<?= $i ?>]" value="<?= h($o['code']) ?>" maxlength="40" inputmode="email" autocapitalize="none" autocorrect="off" spellcheck="false" pattern="[a-z0-9_]{1,40}" placeholder="自動"><?php endif; ?></td>
             <td><input type="checkbox" name="opt_active[<?= $i ?>]" value="1" <?= $o['active'] ? 'checked' : '' ?>></td>
             <td><?php if ($isExisting): ?><input type="checkbox" name="opt_delete[<?= $i ?>]" value="1" aria-label="<?= h($o['label']) ?>を削除" data-confirm-on="<?= h(msg('使われていない選択肢を削除します（報告で使われていれば削除せず、知らせます）')) ?>"><?php endif; ?></td>
           </tr>

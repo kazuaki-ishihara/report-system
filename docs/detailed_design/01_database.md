@@ -128,7 +128,7 @@ CREATE TABLE IF NOT EXISTS remembered_devices (
 );
 ```
 
-- `login_id` は英小文字・数字・`.`・`_`・`-` の 3〜32 文字で、先頭は英小文字か数字（`^[a-z0-9][a-z0-9._-]{2,31}$`）。入力は前後の空白を除き、小文字にそろえる。
+- `login_id` は英小文字・数字・`.`・`_`・`-` の 3〜32 文字で、先頭は英小文字か数字（`\A[a-z0-9][a-z0-9._-]{2,31}\z`）。入力は前後の空白を除き、小文字にそろえる。
 - `role_title`（役職）は表示だけに使う。権限には使わない。
 - `manager_id` は移行のあとは使わない（確認者は課ごとに設定する）。
 
@@ -260,7 +260,7 @@ CREATE TABLE IF NOT EXISTS warning_words (
 - `field_scope = 'project'` の項目は案件ブロックの中に、`'report'` の項目は報告全体に出る。
 - `field_type = 'project'` の項目は、全体で 1 つだけ置ける（案件ブロックの見出しになる）。`field_scope` は `project` に固定し、無効にはできない。
 - `settings_json` の中身:
-  - `columns`: `[{key, label, type, options?}]`。`key` は `^[a-z][a-z0-9_]{0,29}$`、`type` は `single_text`・`multi_text`・`number`・`date`・`select`。
+  - `columns`: `[{key, label, type, options?}]`。`key` は `\A[a-z][a-z0-9_]{0,29}\z`、`type` は `single_text`・`multi_text`・`number`・`date`・`select`。
   - `max_rows`: 1〜50（既定 20）。
   - `show_when`: `{field: <項目のコード>, values: [...]}`。
   - 画面では、表の列を 1 行に 1 列ずつ `キー|名前|種類|選択肢1,選択肢2` の文字で入れ、表示の条件は項目のコードとカンマ区切りの値で入れる（G-12）。

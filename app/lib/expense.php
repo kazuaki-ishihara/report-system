@@ -130,11 +130,11 @@ function expense_totals(array $sheetData): array
 {
     $subtotalAmount = 0;
     foreach ($sheetData['rows'] as $rowData) {
-        if (preg_match('/^\d+$/', (string) $rowData['amount']) === 1) {
+        if (preg_match('/\A\d+\z/', (string) $rowData['amount']) === 1) {
             $subtotalAmount += (int) $rowData['amount'];
         }
     }
-    $advanceAmount = preg_match('/^\d+$/', (string) $sheetData['advance_amount']) === 1 ? (int) $sheetData['advance_amount'] : 0;
+    $advanceAmount = preg_match('/\A\d+\z/', (string) $sheetData['advance_amount']) === 1 ? (int) $sheetData['advance_amount'] : 0;
     return ['subtotal' => $subtotalAmount, 'advance' => $advanceAmount, 'total' => $subtotalAmount - $advanceAmount];
 }
 
@@ -211,7 +211,7 @@ function expense_amount_text(string $amountText): string
 /** 日付（YYYY-MM-DD）として正しいか */
 function expense_is_valid_date(string $dateText): bool
 {
-    if (preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $dateText, $dateParts) !== 1) {
+    if (preg_match('/\A(\d{4})-(\d{2})-(\d{2})\z/', $dateText, $dateParts) !== 1) {
         return false;
     }
     return checkdate((int) $dateParts[2], (int) $dateParts[3], (int) $dateParts[1]);
@@ -237,7 +237,7 @@ function expense_validate(array $sheetData): array
     }
     validate_text($sheetData['department_name'], msg('部署'), 40, true, $errorTextList);
     validate_text($sheetData['full_name'], msg('氏名'), 40, true, $errorTextList);
-    if ($sheetData['advance_amount'] !== '' && (preg_match('/^\d+$/', $sheetData['advance_amount']) !== 1 || (int) $sheetData['advance_amount'] > EXPENSE_MAX_AMOUNT)) {
+    if ($sheetData['advance_amount'] !== '' && (preg_match('/\A\d+\z/', $sheetData['advance_amount']) !== 1 || (int) $sheetData['advance_amount'] > EXPENSE_MAX_AMOUNT)) {
         $errorTextList[] = msg('仮払いは 0 から {max} までの円の数で入れてください', ['max' => number_format(EXPENSE_MAX_AMOUNT)]);
     }
     if (!$sheetData['rows']) {
@@ -269,7 +269,7 @@ function expense_validate(array $sheetData): array
         if (!in_array($rowData['trip'], EXPENSE_TRIPS, true)) {
             $errorTextList[] = msg('{row}: 片道か往復を選んでください', ['row' => $rowLabel]);
         }
-        if (preg_match('/^\d+$/', $rowData['amount']) !== 1 || (int) $rowData['amount'] > EXPENSE_MAX_AMOUNT) {
+        if (preg_match('/\A\d+\z/', $rowData['amount']) !== 1 || (int) $rowData['amount'] > EXPENSE_MAX_AMOUNT) {
             $errorTextList[] = msg('{row}: 金額は 0 から {max} までの円の数で入れてください', ['row' => $rowLabel, 'max' => number_format(EXPENSE_MAX_AMOUNT)]);
         }
     }
@@ -412,7 +412,7 @@ function expense_xlsx(array $sheetData): string
     $sheetXPath->registerNamespace('m', 'http://schemas.openxmlformats.org/spreadsheetml/2006/main');
 
     $submittedParts = explode('-', $sheetData['submitted_on']);
-    $employeeNumber = preg_match('/^\d{1,9}$/', $sheetData['employee_number']) === 1 ? (int) $sheetData['employee_number'] : $sheetData['employee_number'];
+    $employeeNumber = preg_match('/\A\d{1,9}\z/', $sheetData['employee_number']) === 1 ? (int) $sheetData['employee_number'] : $sheetData['employee_number'];
     $pageRowLists = array_chunk($sheetData['rows'], EXPENSE_ROWS_PER_PAGE);
     $advanceAmount = expense_totals($sheetData)['advance'];
     foreach (EXPENSE_TEMPLATE_PAGES as $pageIndex => $pageCells) {

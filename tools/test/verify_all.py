@@ -409,6 +409,8 @@ def main():
         r.run("メッセージの一覧が最新", [sys.executable, "-I", os.path.join(ROOT, "tools", "lib", "msg_catalog.py"), "--check"], default_screen="コード")
         # 操作マニュアル（docs/operation_manual.md）が使う画面の画像がそろい、使っていない画像がない（tools/lib/manual_capture.py）
         # 目標管理の様式（app/templates/goal_*.xlsx）から作った定数（app/lib/goal_templates.php）が様式と合っている
+        # 入力の確かめの正規表現は、文字列全体の先頭・末尾（\A・\z）で書く（^・$ は改行を混ぜた値を通すおそれ）
+        r.run("正規表現は文字列全体で確かめる", [sys.executable, "-I", os.path.join(HERE, "check_regex_anchors.py")], default_screen="コード")
         r.run("目標管理の様式の定数が最新", [sys.executable, "-I", os.path.join(ROOT, "tools", "lib", "goal_template_gen.py"), "--check"], default_screen="G-27")
         r.run("操作マニュアルの画像がそろっている", [sys.executable, "-I", os.path.join(ROOT, "tools", "lib", "manual_capture.py"), "--check"], default_screen="共通")
         # よくある質問のチャットの判定（システムに寄る・グレーゾーン・明確にアウトの入力。tools/test/faq_input_cases.tsv）。サーバー・DB は使わない

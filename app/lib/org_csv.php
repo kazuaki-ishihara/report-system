@@ -60,7 +60,7 @@ function org_csv_plan(string $csvText, int $operatorUserId): array
     // 補佐が取り込むときは、管理者・補佐の利用者を変えられない（K-043）
     // 補佐（開発担当。K-059）は管理者と同じに扱う
     $isOperatorDeputy = (int) db_val('SELECT is_admin_deputy FROM users WHERE id = ? AND is_admin_deputy_lead = 0', [$operatorUserId]) === 1;
-    $csvText = preg_replace('/^\xEF\xBB\xBF/', '', $csvText);
+    $csvText = preg_replace('/\A\xEF\xBB\xBF/', '', $csvText);
     $csvStream = fopen('php://memory', 'r+');
     fwrite($csvStream, $csvText);
     rewind($csvStream);

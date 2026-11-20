@@ -109,7 +109,7 @@ if (is_post() && post_str('action') === 'bulk_preview') {
         // 並び順: 空なら 0。0〜999999 の整数でなければ断る（範囲外・負の数・数字以外を黙って 0 にしない）
         $sortN = 0;
         if ($sort !== '') {
-            if (preg_match('/^\d{1,6}$/', $sort) === 1) {
+            if (preg_match('/\A\d{1,6}\z/', $sort) === 1) {
                 $sortN = (int) $sort;
             } else {
                 $errors[] = msg('並び順は 0〜999999 の整数にしてください');
@@ -175,7 +175,7 @@ if (is_post() && post_str('action') === 'bulk_preview') {
         }
         $predecessorIdList = [];
         foreach ($predecessorIdTextList as $predecessorIdText) {
-            if (!is_string($predecessorIdText) || preg_match('/^\d{1,10}$/', $predecessorIdText) !== 1
+            if (!is_string($predecessorIdText) || preg_match('/\A\d{1,10}\z/', $predecessorIdText) !== 1
                 || db_one('SELECT id FROM departments WHERE id = ?', [(int) $predecessorIdText]) === null) {
                 error_page(400);
             }
@@ -206,7 +206,7 @@ if (is_post() && post_str('action') === 'bulk_preview') {
         $finalUserIdText = post_str('final_user_id');
         $finalUserId = null;
         if ($finalUserIdText !== '') {
-            if (preg_match('/^\d{1,10}$/', $finalUserIdText) !== 1 || db_one('SELECT id FROM users WHERE id = ? AND is_active = 1', [(int) $finalUserIdText]) === null) {
+            if (preg_match('/\A\d{1,10}\z/', $finalUserIdText) !== 1 || db_one('SELECT id FROM users WHERE id = ? AND is_active = 1', [(int) $finalUserIdText]) === null) {
                 error_page(400);
             }
             $finalUserId = (int) $finalUserIdText;
@@ -293,7 +293,7 @@ if ($tab === 'departments') {
     $q = trim((string) ($_GET['q'] ?? ''));
     $where = [];
     $params = [];
-    if ($deptFilter !== '' && preg_match('/^\d+$/', $deptFilter) === 1) {
+    if ($deptFilter !== '' && preg_match('/\A\d+\z/', $deptFilter) === 1) {
         $where[] = 'u.department_id = ?';
         $params[] = (int) $deptFilter;
     }

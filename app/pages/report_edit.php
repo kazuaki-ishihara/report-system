@@ -60,7 +60,7 @@ if ($report !== null) {
 // copy_target = "<報告ID>"（報告全体）または "<報告ID>-<案件ID>"（その案件だけ。今の入力に足す）。copy_from は報告全体と同じ
 $copyTargetText = isset($_GET['copy_target']) ? (string) $_GET['copy_target'] : (isset($_GET['copy_from']) ? (string) $_GET['copy_from'] : null);
 if ($copyTargetText !== null) {
-    if (preg_match('/^(\d{1,10})(?:-(\d{1,10}))?$/', $copyTargetText, $copyTargetParts) !== 1) {
+    if (preg_match('/\A(\d{1,10})(?:-(\d{1,10}))?\z/', $copyTargetText, $copyTargetParts) !== 1) {
         error_page(400);
     }
     $copySourceReportId = (int) $copyTargetParts[1];

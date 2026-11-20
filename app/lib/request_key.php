@@ -15,7 +15,7 @@ declare(strict_types=1);
 function rk_begin(string $action, int $userId): void
 {
     $key = $_POST['request_key'] ?? '';
-    if (!is_string($key) || preg_match('/^[0-9a-f]{32}$/', $key) !== 1) {
+    if (!is_string($key) || preg_match('/\A[0-9a-f]{32}\z/', $key) !== 1) {
         error_page(400);
     }
     $row = db_one('SELECT * FROM request_keys WHERE request_key = ?', [$key]);

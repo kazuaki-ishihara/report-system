@@ -205,7 +205,7 @@ if ($tab === 'totp') {
         $vars['totpUri'] = totp_uri($b32, (string) $user['login_id']);
         // PC で開いている人に、スマートフォンで開くアドレスを案内する（ホスト名の形でないものは出さない）
         $requestHostName = (string) ($_SERVER['HTTP_HOST'] ?? '');
-        $vars['loginUrl'] = preg_match('/^[A-Za-z0-9.\-]+(:\d+)?$/', $requestHostName) === 1
+        $vars['loginUrl'] = preg_match('/\A[A-Za-z0-9.\-]+(:\d+)?\z/', $requestHostName) === 1
             ? (cfg('https') ? 'https://' : 'http://') . $requestHostName . url('/login.php')
             : url('/login.php');
     }

@@ -45,7 +45,7 @@ if (is_post()) {
         $closeDayText = post_str('close_day');
         $closeDay = null;
         if ($closeDayText !== '') {
-            if (preg_match('/^\d{1,2}$/', $closeDayText) !== 1 || (int) $closeDayText < 1 || (int) $closeDayText > 31) {
+            if (preg_match('/\A\d{1,2}\z/', $closeDayText) !== 1 || (int) $closeDayText < 1 || (int) $closeDayText > 31) {
                 $errorTextList[] = msg('締め日は 1〜31（31 は月末）にしてください');
             } else {
                 $closeDay = (int) $closeDayText;
@@ -74,7 +74,7 @@ if (is_post()) {
                 error_page(400);
             }
             foreach ($postedArrayByName[$postedName] as $postedUserIdText => $postedValue) {
-                if (preg_match('/^\d{1,10}$/', (string) $postedUserIdText) !== 1 || !is_string($postedValue) || !isset($memberById[(int) $postedUserIdText])) {
+                if (preg_match('/\A\d{1,10}\z/', (string) $postedUserIdText) !== 1 || !is_string($postedValue) || !isset($memberById[(int) $postedUserIdText])) {
                     error_page(400);
                 }
             }
@@ -83,7 +83,7 @@ if (is_post()) {
             if ($teamIdText === '') {
                 return null;
             }
-            if (!isset($teamIdSet[(int) $teamIdText]) || preg_match('/^\d{1,10}$/', $teamIdText) !== 1) {
+            if (!isset($teamIdSet[(int) $teamIdText]) || preg_match('/\A\d{1,10}\z/', $teamIdText) !== 1) {
                 error_page(400);
             }
             return (int) $teamIdText;

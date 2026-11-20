@@ -36,7 +36,7 @@ $selfUrl = $target === null ? '/admin/user_edit.php' : '/admin/user_edit.php?id=
     <input type="hidden" name="action" value="save">
     <label for="login_id">ログイン ID</label>
     <?php if ($target === null): ?>
-      <input id="login_id" name="login_id" type="text" maxlength="32" autocapitalize="none" value="<?= h($v('login_id')) ?>" required>
+      <input id="login_id" name="login_id" type="text" maxlength="32" inputmode="email" autocapitalize="none" autocorrect="off" spellcheck="false" value="<?= h($v('login_id')) ?>" required>
       <p class="note">英小文字・数字・. _ - の 3〜32 文字。メールアドレスは使えません。あとから変更できません。</p>
     <?php else: ?>
       <p><strong><?= h((string) $target['login_id']) ?></strong></p>

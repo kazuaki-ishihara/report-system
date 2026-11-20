@@ -16,7 +16,7 @@ if (!$depts) {
 
 // 自由記述のセルを 1 つ開く（JSON）
 if (isset($_GET['cell'])) {
-    if (preg_match('/^(\d+):(\d+):(\d+)$/', (string) $_GET['cell'], $m) !== 1) {
+    if (preg_match('/\A(\d+):(\d+):(\d+)\z/', (string) $_GET['cell'], $m) !== 1) {
         error_page(400);
     }
     [$_x, $rid, $rpId, $fid] = array_map('intval', $m);

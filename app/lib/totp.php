@@ -65,7 +65,7 @@ function totp_code(string $secretBin, int $step): string
  */
 function totp_verify(string $secretBin, string $code, ?int $lastStep, ?int $time = null): ?int
 {
-    if (preg_match('/^\d{6}$/', $code) !== 1) {
+    if (preg_match('/\A\d{6}\z/', $code) !== 1) {
         return null;
     }
     $now = intdiv($time ?? time(), TOTP_PERIOD);
