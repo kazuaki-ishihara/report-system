@@ -25,6 +25,7 @@ import urllib.request
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib_http import Client, check, csrf, login, next_login_code, rkey, section, summary  # noqa: E402
+from verify_all import PHP_SESSION_DIR, php_server_command  # noqa: E402
 
 LOCK_MESSAGE_PART = "しばらく"
 
@@ -47,8 +48,9 @@ def code_step(client, code_text):
 
 
 def session_file_path(session_id):
-    """PHP の組み込みサーバーのセッションのファイル（session.save_path が空なので、一時フォルダーの sess_<ID>）"""
-    candidate_dir_list = [tempfile.gettempdir(), os.environ.get("TEMP", ""), os.environ.get("TMP", "")]
+    """PHP の組み込みサーバーのセッションのファイル（sess_<ID>）。検証のサーバーは PHP_SESSION_DIR に置く。
+    手で立てたサーバー（session.save_path が空）なら一時フォルダーにある"""
+    candidate_dir_list = [PHP_SESSION_DIR, tempfile.gettempdir(), os.environ.get("TEMP", ""), os.environ.get("TMP", "")]
     for candidate_dir in candidate_dir_list:
         if candidate_dir:
             candidate_path = os.path.join(candidate_dir, "sess_" + session_id)
@@ -188,7 +190,7 @@ def main():
     # 同時の新規作成: 同じ DB のサーバーをもう 1 本立て、2 つの画面（別々のセッション）から同じ月を同時に作る
     second_port = free_port()
     second_base = "http://127.0.0.1:%d" % second_port
-    second_server = subprocess.Popen([arguments.php, "-S", "127.0.0.1:%d" % second_port, "-t", os.path.join(root_dir, "public")],
+    second_server = subprocess.Popen(php_server_command(arguments.php, second_port),
                                      cwd=root_dir, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     try:
         server_ready = False

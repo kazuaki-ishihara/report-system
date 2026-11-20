@@ -87,6 +87,27 @@ def free_port():
     return p
 
 
+# 検証で立てる PHP の組み込みサーバーのセッションのファイル（sess_<ID>）の置き場所。
+# 指定しないと一時フォルダー（%TEMP%）の直下に溜まるので、リポジトリに入らない検証の出力の下にまとめる
+PHP_SESSION_DIR = os.path.join(ROOT, "tools", "test", "output", "php_sessions")
+PHP_SESSION_KEEP_SECONDS = 24 * 60 * 60
+
+
+def php_server_command(php_path, port_number):
+    """検証用の PHP の組み込みサーバーを立てるコマンド（セッションは PHP_SESSION_DIR に置く）。
+    前回までに溜まった 1 日より古いセッションのファイルは、ここで消す"""
+    os.makedirs(PHP_SESSION_DIR, exist_ok=True)
+    oldest_kept_time = time.time() - PHP_SESSION_KEEP_SECONDS
+    for session_file_path in glob.glob(os.path.join(PHP_SESSION_DIR, "sess_*")):
+        try:
+            if os.path.getmtime(session_file_path) < oldest_kept_time:
+                os.remove(session_file_path)
+        except OSError:
+            pass
+    return [php_path, "-d", "session.save_path=" + PHP_SESSION_DIR,
+            "-S", "127.0.0.1:%d" % port_number, "-t", os.path.join(ROOT, "public")]
+
+
 class Runner:
     def __init__(self, out_dir):
         self.out = out_dir
@@ -416,7 +437,7 @@ def main():
 
         port = free_port()
         base = "http://127.0.0.1:%d" % port
-        server = subprocess.Popen([php, "-S", "127.0.0.1:%d" % port, "-t", os.path.join(ROOT, "public")],
+        server = subprocess.Popen(php_server_command(php, port),
                                   cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         if not wait_server(base):
             r.add("サーバーの起動", False, 0, ["NG  ローカルのサーバーが起動しません"])

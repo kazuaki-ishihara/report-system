@@ -25,7 +25,7 @@ import sys
 REPOSITORY_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 TEST_TOOL_DIR = os.path.join(REPOSITORY_ROOT, "tools", "test")
 sys.path.insert(0, TEST_TOOL_DIR)
-from verify_all import find_php, free_port, wait_server  # noqa: E402
+from verify_all import find_php, free_port, php_server_command, wait_server  # noqa: E402
 
 WATCH_DB_PATH = os.path.join(REPOSITORY_ROOT, "app", "data", "watch.sqlite")
 WATCH_OUTPUT_ROOT = os.path.join(TEST_TOOL_DIR, "output", "見学")
@@ -60,7 +60,7 @@ def main():
     base_url = "http://127.0.0.1:%d" % port_number
     print("見学 %s（サーバー: %s、DB: %s）" % (stamp, base_url, os.path.abspath(arguments.db)))
 
-    server_process = subprocess.Popen([php_path, "-S", "127.0.0.1:%d" % port_number, "-t", os.path.join(REPOSITORY_ROOT, "public")],
+    server_process = subprocess.Popen(php_server_command(php_path, port_number),
                                       cwd=REPOSITORY_ROOT, env=child_environment,
                                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     try:
