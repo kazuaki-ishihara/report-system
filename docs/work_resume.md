@@ -96,7 +96,7 @@ python3 tools/test/dev_code.py           # テスト用の利用者と 2 段階�
 ## 6. 検証
 
 ```powershell
-python tools\test\verify_all.py          # 自動検証（構文・PHP 7.4 の書き方・秘密の確認・全シナリオ・課題の対応・保管期限）
+python tools\test\verify_all.py          # 自動検証（構文・PHP 8.3 の書き方・秘密の確認・全シナリオ・課題の対応・保管期限）
 python tools\test\verify_all.py --ui     # 画面の自動操作検証も行う（Edge / Chrome をプログラムから操作）
 python tools\test\verify_all.py --only G-25,G-16   # その画面の確かめを含む工程だけ流す（工程の名前 auth なども使える）
 python tools\test\verify_all.py --list   # 工程と、工程ごとの画面の番号を出す（流さない）
@@ -136,7 +136,7 @@ python tools\lib\ui_watch.py --keep-open      # 終わったあともブラウ�
 
 | 状態 | 内容 |
 |---|---|
-| 済み | 本番（さくら）の PHP で動くことを確かめた（2026-11-18）。本番は PHP のバージョンを応答の見出しに出していない。PHP 7.4 そのものでの動作は、書き方の確認のみ |
+| 済み | 本番（さくら）の PHP で動くことを確かめた（2026-11-18）。本番は PHP のバージョンを応答の見出しに出していない（外からは分からない）。`dev_ono_check8_3` は PHP 8.3 が前提なので、本番のバージョン（画面とコマンドの両方）を課長に確かめてもらってから出す |
 | 確認待ち | 本番（さくら。`~/www/report-system/` に `app/` ごと置き、`.htaccess` で `app/` を拒否する配置）への反映。手順は `公開操作指示書.txt`。反映したら `check_prod.py` で確かめる。xlsx の zip は自前で書くため `ZipArchive` は不要 |
 | 未検証 | 通常の端末で `--ui` が自分でブラウザーを起動できるか |
 | 未決 | 会社として判断が必要な事項（記録してよい範囲、保管期限）、締め日、各ユーザーの所属、案件コードの付け方（基本設計書 §16）。課の一覧・管理の仕方（課全体／班ごと）・管理者の閲覧の範囲は決定済み（基本設計書 §2.5・§8） |

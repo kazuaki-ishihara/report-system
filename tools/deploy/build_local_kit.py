@@ -12,7 +12,7 @@
     report-system-local/      ← これを渡す（同じ中身の .zip も作る。フォルダー名は英字）
         はじめにお読みください.txt
         1_起動.bat  2_テストデータを作り直す.bat  3_記録を書き出す.bat  （Windows）
-        start.sh  reset_data.sh  export_log.sh      （Linux・macOS。PHP 7.4 以上が要る）
+        start.sh  reset_data.sh  export_log.sh      （Linux・macOS。PHP 8.3 以上が要る）
         php/        Windows 用の PHP（この端末の PHP を写したもの。インストール不要）
         app/  public/  tools/test/dev_seed.php  tools/test/export_faq_chat_log.php  操作マニュアル.md
     report-system-local.zip
@@ -168,7 +168,7 @@ php tools/test/export_faq_chat_log.php && echo "このフォルダーにでき�
 START_SH = """#!/bin/sh
 # 月次報告システム ローカル検証環境を起動する（この PC の中だけで動く。止めるときは Ctrl + C）
 cd "$(dirname "$0")" || exit 1
-command -v php >/dev/null 2>&1 || { echo "PHP が見つかりません（PHP 7.4 以上と pdo_sqlite・mbstring・openssl が要ります）"; exit 1; }
+command -v php >/dev/null 2>&1 || { echo "PHP が見つかりません（PHP 8.3 以上と pdo_sqlite・mbstring・openssl が要ります）"; exit 1; }
 if [ ! -f app/data/dev.sqlite ]; then
   echo "はじめての起動なので、テストデータを作ります..."
   php tools/test/dev_seed.php --yes --with-faq || exit 1
@@ -218,7 +218,7 @@ README = """月次報告システム ローカル検証環境
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 2. 使い方（Linux・macOS）
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  PHP 7.4 以上（pdo_sqlite・mbstring・openssl）が要ります（Ubuntu: sudo apt install php-cli php-sqlite3 php-mbstring）。
+  PHP 8.3 以上（pdo_sqlite・mbstring・openssl）が要ります（Ubuntu: sudo apt install php-cli php-sqlite3 php-mbstring）。
   端末でこのフォルダーに移り、
      sh start.sh          ← 起動（止めるときは Ctrl + C）
      sh reset_data.sh     ← テストデータを作り直す

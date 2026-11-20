@@ -108,23 +108,14 @@ function export_text(array $f, string $value): string
     if ($value === '') {
         return '';
     }
-    switch ($f['type']) {
-        case 'select':
-        case 'radio':
-            return form_option_label($f, $value);
-        case 'checkbox':
-            return $value === '1' ? 'はい' : '';
-        case 'multi_check':
-            return implode('、', array_map(function ($c) use ($f) { return form_option_label($f, (string) $c); }, (array) json_decode($value, true)));
-        case 'table':
-            $out = [];
-            foreach ((array) json_decode($value, true) as $row) {
-                $out[] = implode(' / ', array_map('strval', (array) $row));
-            }
-            return implode("\n", $out);
-        default:
-            return $value;
-    }
+    return match ($f['type']) {
+        'select', 'radio' => form_option_label($f, $value),
+        'checkbox' => $value === '1' ? 'はい' : '',
+        'multi_check' => implode('、', array_map(fn($optionCode) => form_option_label($f, (string) $optionCode), (array) json_decode($value, true))),
+        // 表は 1 行を「 / 」でつなぎ、行を改行でつなぐ
+        'table' => implode("\n", array_map(fn($tableRow) => implode(' / ', array_map('strval', (array) $tableRow)), (array) json_decode($value, true))),
+        default => $value,
+    };
 }
 
 /** まとめ（終了が近い案件など）を作る */

@@ -39,7 +39,7 @@ ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
 
 # 画面の番号・共通の単位（lib_http.section() で付ける印）。並びは結果の画面ごとの表の並び
 SCREEN_CODE_PATTERN = re.compile(r"^(G-\d\d|共通|DB|道具|コード)$")
-COMMON_UNIT_LABELS = {"コード": "コード（構文・PHP 7.4・秘密・文言の一覧。数はファイルの数）", "共通": "共通（全画面の決まり。00_common）", "DB": "DB（01_database。暗号化・保管期限）", "道具": "道具（tools/。配布・確認の道具）"}
+COMMON_UNIT_LABELS = {"コード": "コード（構文・PHP 8.3・秘密・文言の一覧。数はファイルの数）", "共通": "共通（全画面の決まり。00_common）", "DB": "DB（01_database。暗号化・保管期限）", "道具": "道具（tools/。配布・確認の道具）"}
 
 
 class Interrupted(Exception):
@@ -57,21 +57,15 @@ def say(text):
 def stop_on_signal(signal_number, _frame):
     raise Interrupted("止める合図（%s）" % signal_number)
 
-# PHP 8.0 以降でしか動かない書き方（本番の PHP 7.4 で動かなくなる）
-PHP8_PATTERNS = [
-    (r"\bstr_contains\s*\(", "str_contains()"),
-    (r"\bstr_starts_with\s*\(", "str_starts_with()"),
-    (r"\bstr_ends_with\s*\(", "str_ends_with()"),
-    (r"\bmatch\s*\([^)]*\)\s*\{", "match 式"),
-    (r"\?->", "nullsafe 演算子"),
-    (r"^\s*enum\s+\w+", "enum"),
-    (r"\breadonly\s+(public|private|protected|function|\$)", "readonly"),
-    (r"\):\s*never\b", "never 型"),
-    (r"\):\s*mixed\b", "mixed 型"),
-    (r"\bfunction\s*\([^)]*\b\w+\s*\|\s*\w+\s+\$", "union 型（引数）"),
-    (r"\barray_is_list\s*\(", "array_is_list()"),
-    (r"\bget_debug_type\s*\(", "get_debug_type()"),
-    (r"#\[", "属性（attribute）"),
+# PHP 8.4 以降でしか動かない書き方（本番の PHP 8.3 で動かなくなる）。構文の誤りは「PHP の構文」（php -l。8.3）でも見つかる
+PHP84_PATTERNS = [
+    (r"\barray_(find|find_key|any|all)\s*\(", "array_find() などの配列の関数"),
+    (r"\bmb_(trim|ltrim|rtrim|ucfirst|lcfirst)\s*\(", "mb_trim() などの文字列の関数"),
+    (r"\b(public|protected|private)\(set\)", "非対称の可視性（private(set) など）"),
+    (r"\bnew\s+\w+\([^()]*\)->", "かっこで囲まない new のあとのメソッド呼び出し"),
+    (r"#\[\\?Deprecated\b", "Deprecated 属性"),
+    (r"\bbc(divmod|round|floor|ceil)\s*\(", "bcmath の新しい関数"),
+    (r"\brequest_parse_body\s*\(", "request_parse_body()"),
 ]
 
 
@@ -221,7 +215,7 @@ def step_lint(r, php):
     r.add("PHP の構文", not ng, len(files) - len(ng), ng, round(time.time() - t0, 1), default_screen="コード")
 
 
-def step_php74(r):
+def step_php83(r):
     ng = []
     files = php_files()
     for f in files:
@@ -229,10 +223,10 @@ def step_php74(r):
             for n, line in enumerate(fh, 1):
                 if line.lstrip().startswith(("//", "*", "#!")):
                     continue
-                for pat, label in PHP8_PATTERNS:
+                for pat, label in PHP84_PATTERNS:
                     if re.search(pat, line):
-                        ng.append("NG  PHP 8 の書き方（%s）: %s:%d" % (label, os.path.relpath(f, ROOT), n))
-    r.add("PHP 7.4 で動く書き方", not ng, len(files), ng, default_screen="コード")
+                        ng.append("NG  PHP 8.4 の書き方（%s）: %s:%d" % (label, os.path.relpath(f, ROOT), n))
+    r.add("PHP 8.3 で動く書き方", not ng, len(files), ng, default_screen="コード")
 
 
 def step_repo(r):
@@ -402,7 +396,7 @@ def main():
     try:
         say("自動検証 %s（PHP: %s）" % (stamp, php))
         step_lint(r, php)
-        step_php74(r)
+        step_php83(r)
         step_repo(r)
         r.run("メッセージの一覧が最新", [sys.executable, "-I", os.path.join(ROOT, "tools", "lib", "msg_catalog.py"), "--check"], default_screen="コード")
         # よくある質問のチャットの判定（システムに寄る・グレーゾーン・明確にアウトの入力。tools/test/faq_input_cases.tsv）。サーバー・DB は使わない

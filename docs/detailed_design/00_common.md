@@ -208,7 +208,7 @@ require APP_DIR . '/pages/home.php';
 
 | 項目 | 内容 |
 |---|---|
-| 方式 | AES-256-GCM（PHP の OpenSSL 機能。PHP 7.4 で使える） |
+| 方式 | AES-256-GCM（PHP の OpenSSL 機能） |
 | 鍵 | 32 バイトの乱数。`keys/field_<版>.key`（今は `field_v1.key`）に Base64 で保存（権限 600）。DB・公開ディレクトリとは別の場所。`app/bin/migrate.php` が、なければ作る |
 | 保存の形 | `v1:` ＋ Base64（IV 12 バイト ＋ 認証タグ 16 バイト ＋ 暗号文）。`v1` は鍵の版 |
 | 付加データ | テーブル名と行の識別（例: `rfv:<report_id>:<field_id>:<block>`）を付加データにする。暗号文を別の行に移し替えても復号できない。一覧は DB 編 §4 |

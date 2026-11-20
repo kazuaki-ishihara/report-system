@@ -47,24 +47,16 @@ function support_request_active_status_sql(): string
  */
 function support_request_default_reply_text(string $statusCode): string
 {
-    switch ($statusCode) {
-        case 'open':
-            return msg('受付前の状態に戻しました。');
-        case 'reviewing':
-            return msg('ご要望を受け付けました。対応するかどうかを検討しています。');
-        case 'in_progress':
-            return msg('対応を始めました。');
-        case 'testing':
-            return msg('対応が終わり、検証しています。');
-        case 'release_waiting':
-            return msg('検証が終わりました。リリースを待っています。');
-        case 'released':
-            return msg('リリースしました。画面で確かめてください。');
-        case 'done':
-            return msg('対応が終わりました。');
-        default:
-            return '';
-    }
+    return match ($statusCode) {
+        'open' => msg('受付前の状態に戻しました。'),
+        'reviewing' => msg('ご要望を受け付けました。対応するかどうかを検討しています。'),
+        'in_progress' => msg('対応を始めました。'),
+        'testing' => msg('対応が終わり、検証しています。'),
+        'release_waiting' => msg('検証が終わりました。リリースを待っています。'),
+        'released' => msg('リリースしました。画面で確かめてください。'),
+        'done' => msg('対応が終わりました。'),
+        default => '',
+    };
 }
 
 /** 急ぎ（コード => 表示名） */

@@ -561,38 +561,43 @@ function form_display_html(array $f, ?string $value): string
     if ($value === '') {
         return '<span class="muted">—</span>';
     }
-    switch ($f['type']) {
-        case 'multi_text':
-            return nl2br(h($value));
-        case 'select':
-        case 'radio':
-            return h(form_option_label($f, $value));
-        case 'checkbox':
-            return $value === '1' ? 'はい' : 'いいえ';
-        case 'multi_check':
-            $arr = json_decode($value, true);
-            $labels = [];
-            foreach (is_array($arr) ? $arr : [] as $c) {
-                $labels[] = h(form_option_label($f, (string) $c));
-            }
-            return implode('、', $labels);
-        case 'table':
-            $rows = json_decode($value, true);
-            $cols = isset($f['settings']['columns']) && is_array($f['settings']['columns']) ? $f['settings']['columns'] : [];
-            $html = '<table class="table"><thead><tr>';
-            foreach ($cols as $c) {
-                $html .= '<th>' . h((string) $c['label']) . '</th>';
-            }
-            $html .= '</tr></thead><tbody>';
-            foreach (is_array($rows) ? $rows : [] as $row) {
-                $html .= '<tr>';
-                foreach ($cols as $c) {
-                    $html .= '<td>' . nl2br(h((string) ($row[(string) $c['key']] ?? ''))) . '</td>';
-                }
-                $html .= '</tr>';
-            }
-            return $html . '</tbody></table>';
-        default:
-            return h($value);
+    return match ($f['type']) {
+        'multi_text' => nl2br(h($value)),
+        'select', 'radio' => h(form_option_label($f, $value)),
+        'checkbox' => $value === '1' ? 'はい' : 'いいえ',
+        'multi_check' => form_display_multi_check_html($f, $value),
+        'table' => form_display_table_html($f, $value),
+        default => h($value),
+    };
+}
+
+/** 複数選択の値（JSON の選択肢コードの並び）を、表示名を「、」でつないだ HTML にする */
+function form_display_multi_check_html(array $f, string $value): string
+{
+    $optionCodeList = json_decode($value, true);
+    $labelHtmlList = [];
+    foreach (is_array($optionCodeList) ? $optionCodeList : [] as $optionCode) {
+        $labelHtmlList[] = h(form_option_label($f, (string) $optionCode));
     }
+    return implode('、', $labelHtmlList);
+}
+
+/** 表の値（JSON の行の並び）を、設定の列で表の HTML にする */
+function form_display_table_html(array $f, string $value): string
+{
+    $tableRowList = json_decode($value, true);
+    $columnList = isset($f['settings']['columns']) && is_array($f['settings']['columns']) ? $f['settings']['columns'] : [];
+    $html = '<table class="table"><thead><tr>';
+    foreach ($columnList as $column) {
+        $html .= '<th>' . h((string) $column['label']) . '</th>';
+    }
+    $html .= '</tr></thead><tbody>';
+    foreach (is_array($tableRowList) ? $tableRowList : [] as $tableRow) {
+        $html .= '<tr>';
+        foreach ($columnList as $column) {
+            $html .= '<td>' . nl2br(h((string) ($tableRow[(string) $column['key']] ?? ''))) . '</td>';
+        }
+        $html .= '</tr>';
+    }
+    return $html . '</tbody></table>';
 }
