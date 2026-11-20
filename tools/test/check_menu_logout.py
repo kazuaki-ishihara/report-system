@@ -19,6 +19,7 @@ import urllib.request
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import lib_http  # noqa: E402
+from verify_all import php_server_command  # noqa: E402
 from cdp import Browser  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -65,7 +66,7 @@ def main():
     users = json.load(open(os.path.join(ROOT, "tools", "test", "output_dev_users.json"), encoding="utf-8"))["users"]
     port = free_port()
     base = "http://127.0.0.1:%d" % port
-    server = subprocess.Popen([php, "-S", "127.0.0.1:%d" % port, "-t", os.path.join(ROOT, "public")], cwd=ROOT,
+    server = subprocess.Popen(php_server_command(php, port), cwd=ROOT,
                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     browser = None
     ng_list = []
