@@ -139,7 +139,7 @@ def main():
     check("課長が評価を保存できる（本人の文は変わらない）", status_code in (302, 303) and SECRET_GOAL_TEXT in page_html and "課長が書き換えようとした文" not in page_html, status_code)
     # 中間: 本人 B×120=120・B×100=100 → 平均 110。上長 A×120=144・C1×100=70 → 平均 107。コンピテンシー 本人 4×16/80=80・上長 3×16/80=60
     check("評点の計算（中間の本人 110・上長 107、コンピテンシー 80・60）",
-          all(text in page_html for text in ('<td class="number">110</td>', '<td class="number">107</td>', '<td class="number">80</td>', '<td class="number">60</td>')))
+          all(re.search(r'<td class="number"[^>]*>%s</td>' % score_text, page_html) for score_text in ('110', '107', '80', '60')))
     deputy = client_of("dairi_a")
     _, _, page_html = deputy.get("/goals/edit.php?id=%d" % sheet_id)
     status_code, _, _ = deputy.post("/goals/edit.php?id=%d" % sheet_id, dict(boss_values, csrf_token=csrf(page_html), request_key=rkey(page_html)))

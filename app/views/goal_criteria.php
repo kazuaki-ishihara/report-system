@@ -5,13 +5,13 @@
 ?>
 <section class="card goal-criteria">
   <h1>コンピテンシー評価基準</h1>
-  <p class="note"><?= h_lines(msg('コンピテンシー評価（行動特性評価）の参考の基準です。目標管理シートで本人評価・上長評価を付けるときに見てください。この画面は見るだけです。')) ?></p>
+  <p class="note"><?= h_phrases(msg('コンピテンシー評価（行動特性評価）の参考の基準です。目標管理シートで本人評価・上長評価を付けるときに見てください。この画面は見るだけです。')) ?></p>
   <nav class="tabs">
     <?php foreach ($sheetNameList as $sheetIndex => $sheetName): ?>
       <a href="<?= h(url('/goals/criteria.php?sheet=' . ($sheetIndex + 1))) ?>" class="<?= $sheetIndex === $selectedSheetIndex ? 'active' : '' ?>"><?= h($sheetName) ?></a>
     <?php endforeach; ?>
   </nav>
-  <p class="note"><?= h(msg('表が画面に入りきらないときは、表の上のつまみ（横スライド）か ◀ ▶、または表の下のスクロールバーで左右に動かします（Shift を押しながらマウスのホイールでも動きます）。')) ?></p>
+  <p class="note"><?= h_phrases(msg('表が画面に入りきらないときは、表の上のつまみ（横スライド）か ◀ ▶、または表の下のスクロールバーで左右に動かします（Shift を押しながらマウスのホイールでも動きます）。')) ?></p>
   <?php foreach ($tableList as $tableRowList): ?>
     <div class="goal-criteria-block">
       <div class="goal-criteria-slider" hidden>

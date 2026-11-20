@@ -827,11 +827,32 @@ form.wizard-active .sticky-actions button[value="submit"] { display: none; }
 .goal-pair textarea { width: 100%; box-sizing: border-box; }
 .goal-sheet .label-text { display: block; font-weight: 600; margin-bottom: 4px; }
 .goal-grade-line .label-text { display: inline; margin-right: 6px; }
+/* 説明の文の区切り（h_phrases）: まとまりごとに折り返す。スマートフォンで言葉の途中で折り返さない */
+.phrase { display: inline-block; }
+/* 評価の行の「見出し＋選ぶ欄」は、まとめて次の行に送る */
+.goal-grade-item { display: inline-block; white-space: nowrap; margin-right: 10px; }
 .goal-grade-line select { width: auto; margin-right: 16px; }
 .goal-readonly { border: 1px dashed var(--line); border-radius: var(--radius); padding: 6px 10px; min-height: 2.2em; background: var(--bg); }
 .goal-choice-value { display: inline-block; min-width: 3em; font-weight: 600; margin-right: 16px; }
 .goal-competency-table .goal-guide { min-width: 18em; font-size: 0.9rem; }
 .goal-competency-table select { width: auto; }
+/* スマートフォンの幅: コンピテンシー評価の表は、1 項目ずつのカード（大分類 ＞ 中分類・行動指針・本人評価・上長評価）にする。
+   表のままだと大分類・中分類の列が 1 文字の幅になり、1 文字ずつ縦に折り返すため */
+@media (max-width: 720px) {
+  .goal-competency .table-wrap { overflow-x: visible; }
+  .goal-competency-table, .goal-competency-table tbody { display: block; width: 100%; }
+  .goal-competency-table thead { display: none; }
+  .goal-competency-table tr { display: block; padding: 10px 0; border-bottom: 1px solid var(--line, rgba(128, 128, 128, 0.35)); }
+  .goal-competency-table td, .goal-competency-table th { display: block; border: 0; padding: 2px 0; text-align: left; }
+  .goal-competency-table .goal-major, .goal-competency-table .goal-minor { display: inline; font-weight: 600; }
+  .goal-competency-table .goal-major::after { content: " ＞ "; font-weight: 400; }
+  .goal-competency-table .goal-guide { min-width: 0; margin: 4px 0; }
+  .goal-competency-table .goal-score-cell { display: flex; align-items: center; gap: 8px; margin: 4px 0; }
+  .goal-competency-table .goal-score-cell select { flex: 1 1 auto; min-width: 0; max-width: 100%; }
+  .goal-competency-total td { display: inline-block; white-space: nowrap; margin-right: 14px; }
+  .goal-competency-table .goal-score-cell::before, .goal-competency-total td::before { content: attr(data-label) " "; font-weight: 600; flex: 0 0 auto; }
+  .goal-competency-total th { font-weight: 600; }
+}
 .goal-score-table .number, .goal-competency-table .number { text-align: right; }
 .goal-list-table td { white-space: nowrap; }
 .goal-comment { border-top: 1px solid var(--line); padding: 8px 0; }

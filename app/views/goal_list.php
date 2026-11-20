@@ -19,9 +19,9 @@ $progressLabel = function (?array $progressFlags): string {
 <section class="card">
   <p><a href="<?= h(url('/index.php')) ?>">← ホーム</a></p>
   <h1>目標管理シート</h1>
-  <p class="note"><?= h_lines(msg('目標管理評価シートを書いて、会社の様式の Excel（.xlsx）で受け取ります。見られるのは本人と、その課の課長・課長代理だけです（課長代理は一般・主任の人の分）。評価期間は 10 月 1 日〜翌 9 月 30 日です。')) ?></p>
+  <p class="note"><?= h_phrases(msg('目標管理評価シートを書いて、会社の様式の Excel（.xlsx）で受け取ります。見られるのは本人と、その課の課長・課長代理だけです（課長代理は一般・主任の人の分）。評価期間は 10 月 1 日〜翌 9 月 30 日です。')) ?></p>
 
-  <p><a href="<?= h(url('/goals/criteria.php')) ?>" target="_blank" rel="noopener" class="goal-criteria-link">コンピテンシー評価基準を見る（別のタブで開く）</a></p>
+  <p><a href="<?= h(url('/goals/criteria.php')) ?>" target="_blank" rel="noopener" class="goal-criteria-link"><?= h_phrases('コンピテンシー評価基準を見る（別のタブで開く）') ?></a></p>
 
   <h2>自分のシート</h2>
   <?php foreach ($newYearList as $newYear): ?>
@@ -61,7 +61,7 @@ $progressLabel = function (?array $progressFlags): string {
       <?php $canDownloadMembers = $departmentOverview['is_boss'] && !$isMobile; ?>
       <?php if ($canDownloadMembers && array_filter(array_column($departmentOverview['members'], 'sheet'))): ?>
         <p><a class="button goal-download-all" href="<?= h(url('/goals/download_all.php?year=' . $selectedYear . '&dept=' . $departmentOverview['department_id'])) ?>">この課のシートをまとめて受け取る（zip）</a>
-          <span class="note"><?= h(msg('課の人の、この年度のシートを、会社の様式の Excel（1 人 1 ファイル）にして zip でまとめます。')) ?></span></p>
+          <span class="note"><?= h_phrases(msg('課の人の、この年度のシートを、会社の様式の Excel（1 人 1 ファイル）にして zip でまとめます。')) ?></span></p>
       <?php endif; ?>
       <?php if (!$departmentOverview['members']): ?>
         <p class="note"><?= h(msg('見られる人がいません。')) ?></p>

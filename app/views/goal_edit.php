@@ -21,7 +21,7 @@ $textField = function (string $fieldName, string $fieldValue, bool $isEditable, 
     if (!$isEditable) {
         return '<div class="goal-readonly">' . ($fieldValue !== '' ? h_lines($fieldValue) : '<span class="note">（未記入）</span>') . '</div>';
     }
-    return '<textarea name="' . h($fieldName) . '" rows="' . $rowCount . '">' . h($fieldValue) . '</textarea>' . ($hintText !== '' ? '<p class="note">' . h($hintText) . '</p>' : '');
+    return '<textarea name="' . h($fieldName) . '" rows="' . $rowCount . '">' . h($fieldValue) . '</textarea>' . ($hintText !== '' ? '<p class="note">' . h_phrases($hintText) . '</p>' : '');
 };
 // 選ぶ欄: 書ける人には選択肢、ほかの人には値だけ
 $choiceField = function (string $fieldName, string $fieldValue, array $optionLabelByValue, bool $isEditable, string $ariaLabel) {
@@ -53,7 +53,7 @@ $roleNoteByViewerRole = [
   <p><a href="<?= h(url('/goals/index.php')) ?>">← 目標管理シート</a></p>
   <h1><?= (int) $sheet['fiscal_year'] ?> 年度 目標管理シート<?= $isOwner ? '' : '（' . h($ownerName) . ' さん）' ?></h1>
   <p class="note"><?= (int) $sheet['fiscal_year'] ?>/10/1〜<?= (int) $sheet['fiscal_year'] + 1 ?>/9/30・様式: <?= h($kindDefinition['label']) ?></p>
-  <p class="flash flash-info"><?= h_lines($roleNoteByViewerRole[$viewerRole]) ?></p>
+  <p class="flash flash-info"><?= h_phrases($roleNoteByViewerRole[$viewerRole]) ?></p>
   <?php if ($sheet['unreadable']): ?><div class="flash flash-error" role="alert"><?= h(msg('このシートは読めません（暗号の鍵が変わった可能性があります）。システム管理者に連絡してください。')) ?></div><?php endif; ?>
   <?php foreach ($errorTextList as $errorText): ?><div class="flash flash-error" role="alert"><?= h_lines($errorText) ?></div><?php endforeach; ?>
   <?php if (!$isNewSheet && !$isMobile): ?>
@@ -68,10 +68,10 @@ $roleNoteByViewerRole = [
         <?php foreach ($selectableKindList as $kindCode): ?><option value="<?= h($kindCode) ?>" <?= $kindCode === $sheet['kind'] ? 'selected' : '' ?>><?= h(GOAL_TEMPLATE_KINDS[$kindCode]['label']) ?></option><?php endforeach; ?>
       </select>
       <button type="submit">様式を切り替える</button>
-      <span class="note"><?= h(msg('課長以上の様式を選んでいます。営業・間接部門の人は切り替えてください（コンピテンシーの項目が変わります）。')) ?></span>
+      <span class="note"><?= h_phrases(msg('課長以上の様式を選んでいます。営業・間接部門の人は切り替えてください（コンピテンシーの項目が変わります）。')) ?></span>
     </form>
   <?php elseif ($isNewSheet): ?>
-    <p class="note"><?= h(msg('様式は役職で決まります（{kind}）。', ['kind' => GOAL_TEMPLATE_KINDS[$sheet['kind']]['label']])) ?></p>
+    <p class="note"><?= h_phrases(msg('様式は役職で決まります（{kind}）。', ['kind' => GOAL_TEMPLATE_KINDS[$sheet['kind']]['label']])) ?></p>
   <?php endif; ?>
 
   <form method="post" action="<?= h(url($sheetPath)) ?>" class="form goal-form"<?= ($isOwner || $isBoss) ? ' data-leave-warn="1"' : '' ?>>
@@ -98,7 +98,7 @@ $roleNoteByViewerRole = [
             </div>
           <?php endforeach; ?>
         </div>
-        <p class="note"><?= h(msg('達成率（実績 ÷ 計画）と評点（120% を超える：5／110% 以上：4／100% 以上：3／95% 以上：2／85% 以上：1／それ未満：0）は、様式の式で計算します。')) ?></p>
+        <p class="note"><?= h_phrases(msg('達成率（実績 ÷ 計画）と評点（120% を超える：5／110% 以上：4／100% 以上：3／95% 以上：2／85% 以上：1／それ未満：0）は、様式の式で計算します。')) ?></p>
       <?php endif; ?>
     </fieldset>
 
@@ -110,30 +110,30 @@ $roleNoteByViewerRole = [
 
         <div class="goal-pair">
           <?php foreach (['goal', 'progress'] as $fieldKey): $fieldSetting = GOAL_TEXT_FIELDS[$fieldKey]; ?>
-            <div><span class="label-text"><?= h($fieldSetting[0]) ?></span>
+            <div><span class="label-text"><?= h_phrases($fieldSetting[0]) ?></span>
               <?= $textField($namePrefix . '[' . $fieldKey . ']', $goalData[$fieldKey], $isOwner, $fieldSetting[1], msg('様式の欄: {lines} 行・1 行 {width} 字ほど', ['lines' => $fieldSetting[1], 'width' => $fieldSetting[2]])) ?></div>
           <?php endforeach; ?>
         </div>
-        <p class="goal-grade-line"><span class="label-text">配点（設定目標が職位に対して。課長が入れる）</span>
+        <p class="goal-grade-line"><span class="label-text"><?= h_phrases('配点（設定目標が職位に対して。課長が入れる）') ?></span>
           <?= $choiceField($namePrefix . '[difficulty]', $goalData['difficulty'], $difficultyOptions, $isBoss, '目標' . $goalNumber . ' 配点') ?></p>
 
         <?php foreach (['mid' => ['mid_report', 'mid_plan', '中間'], 'final' => ['final_report', 'final_review', '最終']] as $phaseKey => $phaseFields): ?>
           <div class="goal-pair">
             <?php foreach ([$phaseFields[0], $phaseFields[1]] as $fieldKey): $fieldSetting = GOAL_TEXT_FIELDS[$fieldKey]; ?>
-              <div><span class="label-text"><?= h($fieldSetting[0]) ?></span>
+              <div><span class="label-text"><?= h_phrases($fieldSetting[0]) ?></span>
                 <?= $textField($namePrefix . '[' . $fieldKey . ']', $goalData[$fieldKey], $isOwner, $fieldSetting[1], msg('様式の欄: {lines} 行・1 行 {width} 字ほど', ['lines' => $fieldSetting[1], 'width' => $fieldSetting[2]])) ?></div>
             <?php endforeach; ?>
           </div>
           <p class="goal-grade-line">
-            <span class="label-text"><?= h($phaseFields[2]) ?>の本人評価</span> <?= $choiceField($namePrefix . '[' . $phaseKey . '_self]', $goalData[$phaseKey . '_self'], $gradeOptions, $isOwner, '目標' . $goalNumber . ' ' . $phaseFields[2] . 'の本人評価') ?>
-            <span class="label-text"><?= h($phaseFields[2]) ?>の上長評価（課長）</span> <?= $choiceField($namePrefix . '[' . $phaseKey . '_boss]', $goalData[$phaseKey . '_boss'], $gradeOptions, $isBoss, '目標' . $goalNumber . ' ' . $phaseFields[2] . 'の上長評価') ?>
+            <span class="goal-grade-item"><span class="label-text"><?= h($phaseFields[2]) ?>の本人評価</span> <?= $choiceField($namePrefix . '[' . $phaseKey . '_self]', $goalData[$phaseKey . '_self'], $gradeOptions, $isOwner, '目標' . $goalNumber . ' ' . $phaseFields[2] . 'の本人評価') ?></span>
+            <span class="goal-grade-item"><span class="label-text"><?= h($phaseFields[2]) ?>の上長評価（課長）</span> <?= $choiceField($namePrefix . '[' . $phaseKey . '_boss]', $goalData[$phaseKey . '_boss'], $gradeOptions, $isBoss, '目標' . $goalNumber . ' ' . $phaseFields[2] . 'の上長評価') ?></span>
           </p>
         <?php endforeach; ?>
       </fieldset>
     <?php endforeach; ?>
 
     <fieldset class="goal-scores">
-      <legend>評点（様式と同じ計算。評価 A=1.2・B=1.0・C1=0.7・C2=0.6・C3=0.5・D=0.3・E=0.1 × 配点）</legend>
+      <legend><?= h_phrases('評点（様式と同じ計算。評価 A=1.2・B=1.0・C1=0.7・C2=0.6・C3=0.5・D=0.3・E=0.1 × 配点）') ?></legend>
       <div class="table-wrap">
       <table class="table goal-score-table">
         <thead><tr><th></th><th>目標1</th><th>目標2</th><th>総合（平均）</th></tr></thead>
@@ -152,28 +152,28 @@ $roleNoteByViewerRole = [
     </fieldset>
 
     <fieldset class="goal-competency" id="competency">
-      <legend>コンピテンシー評価（行動特性評価。5：満足できる結果 〜 0：評価に値せず）</legend>
-      <p><a href="<?= h(url('/goals/criteria.php')) ?>" target="_blank" rel="noopener" class="goal-criteria-link">コンピテンシー評価基準を見る（別のタブで開く）</a></p>
+      <legend><?= h_phrases('コンピテンシー評価（行動特性評価。5：満足できる結果 〜 0：評価に値せず）') ?></legend>
+      <p><a href="<?= h(url('/goals/criteria.php')) ?>" target="_blank" rel="noopener" class="goal-criteria-link"><?= h_phrases('コンピテンシー評価基準を見る（別のタブで開く）') ?></a></p>
       <div class="table-wrap">
       <table class="table goal-competency-table">
         <thead><tr><th>大分類</th><th>中分類</th><th>行動指針</th><th>本人評価</th><th>上長評価（課長）</th></tr></thead>
         <tbody>
           <?php foreach ($kindDefinition['items'] as $itemIndex => $itemDefinition): ?>
             <tr>
-              <td><?= h($itemDefinition['major']) ?></td>
-              <td><?= h($itemDefinition['minor']) ?></td>
+              <td class="goal-major"><?= h($itemDefinition['major']) ?></td>
+              <td class="goal-minor"><?= h($itemDefinition['minor']) ?></td>
               <td class="goal-guide"><?= h($itemDefinition['guide']) ?></td>
-              <td><?= $choiceField('competency_self[' . $itemIndex . ']', $sheetData['competency_self'][$itemIndex], $competencyOptions, $isOwner, $itemDefinition['minor'] . ' 本人評価') ?></td>
-              <td><?= $choiceField('competency_boss[' . $itemIndex . ']', $sheetData['competency_boss'][$itemIndex], $competencyOptions, $isBoss, $itemDefinition['minor'] . ' 上長評価') ?></td>
+              <td class="goal-score-cell" data-label="本人評価"><?= $choiceField('competency_self[' . $itemIndex . ']', $sheetData['competency_self'][$itemIndex], $competencyOptions, $isOwner, $itemDefinition['minor'] . ' 本人評価') ?></td>
+              <td class="goal-score-cell" data-label="上長評価（課長）"><?= $choiceField('competency_boss[' . $itemIndex . ']', $sheetData['competency_boss'][$itemIndex], $competencyOptions, $isBoss, $itemDefinition['minor'] . ' 上長評価') ?></td>
             </tr>
           <?php endforeach; ?>
-          <tr><th colspan="3">評点（100 点換算）</th><td class="number"><?= h($formatScore($scores['competency_self'])) ?></td><td class="number"><?= h($formatScore($scores['competency_boss'])) ?></td></tr>
+          <tr class="goal-competency-total"><th colspan="3">評点（100 点換算）</th><td class="number" data-label="本人評価"><?= h($formatScore($scores['competency_self'])) ?></td><td class="number" data-label="上長評価（課長）"><?= h($formatScore($scores['competency_boss'])) ?></td></tr>
         </tbody>
       </table>
       </div>
     </fieldset>
 
-    <p class="goal-grade-line"><span class="label-text">総合評価（課長が入れる）</span>
+    <p class="goal-grade-line"><span class="label-text"><?= h_phrases('総合評価（課長が入れる）') ?></span>
       <?= $choiceField('overall_boss', $sheetData['overall_boss'], $gradeOptions, $isBoss, '総合評価') ?></p>
 
     <?php if ($isOwner): ?>
@@ -187,7 +187,7 @@ $roleNoteByViewerRole = [
 <?php if (!$isNewSheet): ?>
 <section class="card goal-comments" id="comments">
   <h2>コメント</h2>
-  <p class="note"><?= h_lines(msg('本人・課長・課長代理が書けます。書いたコメントは、あとから直したり消したりできません（監査のため）。直したいことは、新しく書いてください。')) ?></p>
+  <p class="note"><?= h_phrases(msg('本人・課長・課長代理が書けます。書いたコメントは、あとから直したり消したりできません（監査のため）。直したいことは、新しく書いてください。')) ?></p>
   <?php if (!$comments): ?><p class="note"><?= h(msg('コメントはまだありません。')) ?></p><?php endif; ?>
   <?php foreach ($comments as $commentItem): ?>
     <div class="goal-comment">
@@ -222,7 +222,7 @@ $roleNoteByViewerRole = [
 
 <section class="card goal-meetings" id="meetings">
   <h2>面談の結果</h2>
-  <p class="note"><?= h_lines(msg('個別の面談の結果（直すこと・確かめたこと）を、課長と課長代理が、それぞれ自分の欄に残します。課長代理の面談の結果は、なくてもかまいません（任意）。本人も読めます。あとから直したり消したりできません。')) ?></p>
+  <p class="note"><?= h_phrases(msg('個別の面談の結果（直すこと・確かめたこと）を、課長と課長代理が、それぞれ自分の欄に残します。課長代理の面談の結果は、なくてもかまいません（任意）。本人も読めます。あとから直したり消したりできません。')) ?></p>
   <?php
   $reviewerUserIdList = array_column($meetingReviewers, 'user_id');
   $formerMeetingList = array_values(array_filter($meetings, function (array $meetingItem) use ($reviewerUserIdList): bool { return !in_array($meetingItem['created_by'], $reviewerUserIdList, true); }));
