@@ -152,11 +152,11 @@ python tools\lib\ui_watch.py --keep-open      # 終わったあともブラウ�
 >   - 設計書・公開操作指示書・ローカル検証環境の案内を PHP 8.3 にし、自動検証の書き方の確認を「PHP 8.3 で動く書き方」（8.4 以降の関数・書き方を見つける）にした。
 >   - 値を返すだけの switch 文を match 式にした（`screen_help_text`・`support_request_default_reply_text`・`export_text`・`form_display_html`・`faq_check.php`）。`form.php` の入力の確かめ・入力欄の HTML、`report_act.php` は枝ごとに複数の文があるので switch のまま。列挙型はまだ使っていない。
 >   - 道具: `tools/lib/php_version_check.py`（PHP の版を調べ、取ってくると答えたら適用まで。Windows・Linux）、`tools/test/php_compat_check.py`（新しい PHP で動くか）。見つかった fgetcsv の escape の省略（8.4 で非推奨）を直した。
->   - 検証: 変えた所に関わる工程（OK 898・1140 / NG 0）、出力・表示の直す前との比べ（32 通り一致）、記録の CSV の読み取り（331 件一致）。全体検証は流していない。
+>   - 検証: 変えた所に関わる工程（OK 898・1140 / NG 0）、出力・表示の直す前との比べ（32 通り一致）、記録の CSV の読み取り（331 件一致）。全体検証（画面の自動操作を含む）は成功（OK 1753 / NG 0・未実施 1（LibreOffice）。11-18 の 1910 との差は、一式を Git の管理から外す前に数えた 157 ファイルぶん）。
 > - **本番の PHP**: さくらで選べる PHP は 8.3（8.3.36）が最新で、8.4 以降は選べない（さくらのお知らせ n-2701・n-2700）。この端末の PHP も 8.3.36。本番がどの版かは課長に確かめてもらっている（コントロールパネルの「言語のバージョン設定」と、サーバーで `php -v`。コマンドの PHP の場所も）。
 > - **次にすること**:
 >   1. 課長から本番の PHP の版が届いたら `python tools\lib\php_version_check.py --prod-web <版> --prod-cli <版>` で判定する。両方 8.3 なら `dev_ono_check8_3` を本番に出せる（出すかどうか・`dev_ono_check` との関係は相談する）。8.3 より古ければ、コントロールパネルで 8.3 を選んでもらう。
->   2. `dev_ono_check8_3` で全体検証を流す（`python tools\test\verify_all.py`。11-17 の指示で当面は変更に関わる工程だけ）。
+>   2. （済み）`dev_ono_check8_3` の全体検証は成功。これからは 11-17 の指示どおり、変更に関わる工程だけを流す。
 >   3. 下の 11-18 の区切りの「次にすること」（本番への反映の確かめ・他の端末に渡す一式の作り直し）。
 > - **了解が要ること**: 新しい PHP を入れる（`php_version_check.py --download`）。8.6 は本番で使えないので急がない。
 
