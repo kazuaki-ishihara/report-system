@@ -1,7 +1,7 @@
 <?php
-/** @var array<string, mixed> $department 管理する課の行 */
-/** @var array<int, array<string, mixed>> $manageableDepartmentById 自分が課長の課（課 ID => 課の行） */
-/** @var array<int, array<string, mixed>> $memberRowList 課員と確認者の行（department_manage_member_rows()） */
+/** @var array<string, int|float|string|null> $department 管理する課の行 */
+/** @var array<int, array<string, int|float|string|null>> $manageableDepartmentById 自分が課長の課（課 ID => 課の行） */
+/** @var array<int, array<string, int|float|string|null>> $memberRowList 課員と確認者の行（department_manage_member_rows()） */
 /** @var array<int, array{id: int|string, name: string, is_active: int|string}> $teamList 班（無効を含む） */
 /** @var string[] $errorTextList */
 $departmentId = (int) $department['id'];

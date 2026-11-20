@@ -48,7 +48,7 @@ $editUrl = url('/reports/edit.php?period=' . rawurlencode($period));
   <div class="flash flash-error" role="alert"><a href="<?= h(url('/admin/faq_logs.php#distress')) ?>"><?= h_lines(msg('よくある質問のチャットに、ID・パスワードを求める質問があります（未対応 {count} 件）。なりすましのおそれがないか確かめてください', ['count' => $faqDistressCounts['credential']])) ?></a></div>
 <?php endif; ?>
 <p class="greeting"><?= h($user['display_name'] !== '' ? $user['display_name'] : $user['login_id']) ?> さん</p>
-<?php /** @var array<int, array<string, mixed>> $activeNoticeList 出している更新のお知らせ */ ?>
+<?php /** @var array<int, array<string, int|float|string|null>> $activeNoticeList 出している更新のお知らせ */ ?>
 <?php if ($activeNoticeList): ?>
 <section class="card update-notices">
   <h2>更新のお知らせ</h2>

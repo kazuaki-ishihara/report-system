@@ -86,7 +86,7 @@ function department_teams_of(int $departmentId, bool $isActiveOnly = true): arra
  * 課の管理（G-23）の課員と確認者の行。この課の有効な課員と、この課の確認者（ほかの課の人を含む）。
  * 並びは 課長 → 確認者 → ほかの課員（名前の順）。
  *
- * @return array<int, array<string, mixed>> id・login_id・display_name・role_title・department_id・team_id・
+ * @return array<int, array<string, int|float|string|null>> id・login_id・display_name・role_title・department_id・team_id・
  *         is_reviewer・is_final・reviewer_team_id・does_check・is_field_admin
  */
 function department_manage_member_rows(int $departmentId): array

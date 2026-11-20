@@ -69,8 +69,8 @@ $askErrorTextList = [];
  * 不適切な表現と関係のない質問は続いた回数を数え、FAQ_UNRELATED_IGNORE_COUNT 回目から返事をしない。ほか（心の不調らしい文を含む）は 0 に戻す。
  * 心の不調らしい文は、心配な言葉の段階なら近い質問も探して一緒に返す（「助けて、ログインできない」など）。
  *
- * @param array<int, array<string, mixed>> $faqList
- * @return array{result: string, ignored: bool, distress_level: string, matches: array<int, array<string, mixed>>, log_id: int, context: string}
+ * @param array<int, array<string, int|float|string|null>> $faqList
+ * @return array{result: string, ignored: bool, distress_level: string, matches: array<int, array<string, int|float|string|null>>, log_id: int, context: string}
  *   context: 前の話題を補って答えたときの話題（G-25 §2.14。補っていなければ空）
  */
 function faq_answer_chat(array $user, array $faqList, string $searchQueryText, ?string $selectedCategory, string $screenCode): array

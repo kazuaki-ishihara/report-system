@@ -1,8 +1,8 @@
 <?php
-/** @var array<int, array<string, mixed>> $faqList よくある質問（並び順） */
+/** @var array<int, array<string, int|float|string|null>> $faqList よくある質問（並び順） */
 /** @var array<int, array{code: string, label: string, count: int}> $categoryCountList 質問のある分野と件数 */
 /** @var string|null $selectedCategory 選んだ分野（JavaScript が無いとき。null は選んでいない） */
-/** @var array<int, array<string, mixed>> $categoryFaqList 選んだ分野の質問 */
+/** @var array<int, array<string, int|float|string|null>> $categoryFaqList 選んだ分野の質問 */
 /** @var string|null $screenCategory 「この画面の使い方」から来たときの、その画面の分野 */
 /** @var bool $canEdit 管理者・補佐か（書く・直す・消す・並べ替える・取り込む） */
 /** @var int $standardMissingCount 標準のよくある質問のうち、まだ載っていない数 */
@@ -19,7 +19,7 @@
 /** @var bool $isIgnored 関係のない質問・不適切な表現が続いたので、返事をしないか */
 /** @var string $distressLevel 心の不調らしい文の段階（urgent・concern。空はちがう） */
 /** @var int $chatLogId チャットの記録の番号（質問として送ったときに、記録に残す） */
-/** @var array<int, array<string, mixed>> $matchedFaqList 近い質問（近い順） */
+/** @var array<int, array<string, int|float|string|null>> $matchedFaqList 近い質問（近い順） */
 /** @var bool $canAsk 見つからない質問を送れるか（課長・確認者） */
 /** @var bool $isStaff 管理者・補佐か（質問を受ける側） */
 /** @var string $askedQuestionText 送る質問の文 */

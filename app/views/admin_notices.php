@@ -1,5 +1,5 @@
 <?php
-/** @var array<int, array<string, mixed>> $noticeList 更新のお知らせ（新しい順） */
+/** @var array<int, array<string, int|float|string|null>> $noticeList 更新のお知らせ（新しい順） */
 /** @var int|null $editedNoticeId 編集しているお知らせ（新しく書くときは null） */
 /** @var int|null $sourceRequestId もとの要望・依頼の番号（「リリース済み」の画面から来たとき） */
 /** @var array<string, string> $typedValueByName */

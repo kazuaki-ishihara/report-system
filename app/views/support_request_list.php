@@ -4,7 +4,7 @@
 /** @var bool $isAllScope 全員分の一覧か */
 /** @var string $statusFilter 'active'・'all'・状態のコード */
 /** @var string $kindFilter 種類のコード（空ならすべて） */
-/** @var array<int, array<string, mixed>> $requestRowList 要望・依頼の行（title_text は復号した件名） */
+/** @var array<int, array<string, int|float|string|null>> $requestRowList 要望・依頼の行（title_text は復号した件名） */
 /** @var string[] $errorTextList */
 /** @var array<string, string> $typedValueByName 入れた値（誤りで戻ったとき） */
 /** @var array{open: int, waiting_reply: int}|null $staffCounts 管理者側に知らせる件数 */

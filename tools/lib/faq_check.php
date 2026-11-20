@@ -31,7 +31,7 @@ $commandName = $argv[1] ?? '';
 /**
  * 今の作りで、その質問をどう扱うか（faq_answer_chat() と同じ順。記録は残さない）。
  *
- * @param array<int, array<string, mixed>> $visibleFaqList 聞いた人に見えるよくある質問
+ * @param array<int, array<string, int|float|string|null>> $visibleFaqList 聞いた人に見えるよくある質問
  */
 function faq_check_judge(string $questionText, array $visibleFaqList, string $conversationTopic = '', string &$nextConversationTopic = ''): string
 {

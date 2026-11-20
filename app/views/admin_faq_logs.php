@@ -10,10 +10,10 @@
 /** @var array<int, array{text: string, count: int, last_at: string, log_id: int}> $unansweredGroupList 答えられなかった質問（多い順） */
 /** @var array<int, array{text: string, count: int, last_at: string, log_id: int}> $unrelatedGroupList 関係のない質問とした文（多い順） */
 /** @var array<int, array{solved: int, unsolved: int}> $feedbackCountByFaqId 答えごとの反応（解決しないが多い順） */
-/** @var array<int, array<string, mixed>> $abusiveLogRowList 不適切な表現（新しい順） */
-/** @var array<int, array<string, mixed>> $distressLogRowList 心の不調らしい文（未対応 → 命に関わる言葉 → 新しい順） */
+/** @var array<int, array<string, int|float|string|null>> $abusiveLogRowList 不適切な表現（新しい順） */
+/** @var array<int, array<string, int|float|string|null>> $distressLogRowList 心の不調らしい文（未対応 → 命に関わる言葉 → 新しい順） */
 /** @var bool $canReceiveNotice 心の不調・退職に関わる質問を見られるか（システム管理者だけ） */
-/** @var array<int, array<string, mixed>> $listedLogRowList 一覧（新しい順。会話を選んだときは、その会話の発言を古い順） */
+/** @var array<int, array<string, int|float|string|null>> $listedLogRowList 一覧（新しい順。会話を選んだときは、その会話の発言を古い順） */
 /** @var array<string, int> $conversationCountById 会話ごとの発言の数（G-25 §2.14） */
 /** @var string $conversationFilter 選んだ会話の番号（選んでいなければ空） */
 /** @var array<int|string, string> $faqQuestionById */

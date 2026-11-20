@@ -15,7 +15,7 @@ const FAQ_MAX_COUNT = 200;
 /**
  * 今出している更新のお知らせ（表示の期間の中。新しい順に $limit 件）。
  *
- * @return array<int, array<string, mixed>>
+ * @return array<int, array<string, int|float|string|null>>
  */
 function notices_active(int $limit = 5): array
 {
@@ -565,8 +565,8 @@ const FAQ_DISTRESS_COMPANION_MIN_RATIO = 0.6;
  * 心の不調らしい文・要配慮の文と一緒に出す答え。気持ちの言葉を除いた残りの文に、探す言葉が 2 つ以上あり、
  * はっきり当たるもの（近さ FAQ_DISTRESS_COMPANION_MIN_RATIO 以上）だけ（「仕事がつらい」の「仕事」1 語では出さない）。
  *
- * @param array<int, array<string, mixed>> $faqList
- * @return array<int, array<string, mixed>>
+ * @param array<int, array<string, int|float|string|null>> $faqList
+ * @return array<int, array<string, int|float|string|null>>
  */
 function faq_companion_matches(string $remainingText, array $faqList): array
 {
@@ -848,7 +848,7 @@ const FAQ_UNRELATED_IGNORE_COUNT = 5;
  * システムの言葉に半分以下しか出てこず、近い質問も弱い（半分以下）とき。言葉が 1 つも取れないとき（「1+1は」など）も関係のない質問とみなす。
  * 曖昧な質問（faq_is_vague()）かどうかは、先に確かめておく。
  *
- * @param array<int, array<string, mixed>> $faqList 載っているよくある質問
+ * @param array<int, array<string, int|float|string|null>> $faqList 載っているよくある質問
  */
 function faq_is_unrelated(string $queryText, array $faqList): bool
 {
@@ -988,8 +988,8 @@ const FAQ_STAFF_ONLY_CATEGORIES = ['admin'];
 /**
  * その人に見せてよいよくある質問だけにする（管理者・補佐でなければ、管理者・補佐だけの分野を除く）。
  *
- * @param array<int, array<string, mixed>> $faqList
- * @return array<int, array<string, mixed>>
+ * @param array<int, array<string, int|float|string|null>> $faqList
+ * @return array<int, array<string, int|float|string|null>>
  */
 function faq_visible_entries(array $faqList, array $user): array
 {
@@ -1007,8 +1007,8 @@ function faq_visible_entries(array $faqList, array $user): array
  *   → 要配慮個人情報に触れる文（§2.9） → 人への暴力を書いた文 → 不適切な表現 → 呼びかけだけの文 → 曖昧な質問 → 関係のない質問 → 近い質問を探す。
  * 心の不調らしい文は、心配な言葉の段階なら近い質問も探して一緒に返す（「助けて、ログインできない」など）。
  *
- * @param array<int, array<string, mixed>> $faqList 聞いた人に見えるよくある質問
- * @return array{code: string, matches: array<int, array<string, mixed>>, distressLevel: string, noticeLevel: string, harassmentBySuperior: bool}
+ * @param array<int, array<string, int|float|string|null>> $faqList 聞いた人に見えるよくある質問
+ * @return array{code: string, matches: array<int, array<string, int|float|string|null>>, distressLevel: string, noticeLevel: string, harassmentBySuperior: bool}
  *   code: emergency・distress・retirement・sensitive・sabotage（システム・データを壊す）・violence（人への暴力）・abusive・opener（呼びかけだけ）・closing（用件がない）・vague・unrelated・matched・no_match。
  *   noticeLevel: 管理者に知らせる理由（心の不調の段階 → sabotage（システム・データを壊す） → violence（人への暴力） → credential（K-057） → retirement（K-054）。なければ空）
  */
@@ -1184,7 +1184,7 @@ function faq_conversation_distress_turns_left(string $topicText): int
  * 話題にするのは、答えた・見つからなかった発言だけ（緊急・心の不調・要配慮・暴力・関係のない質問などの文は話題にしない）。
  * チャット（faq_answer_chat()）と自動入力検証（tools/test/faq_input_check.php）が使う。記録・セッションには触れない。
  *
- * @param array<int, array<string, mixed>> $faqList 聞いた人に見えるよくある質問
+ * @param array<int, array<string, int|float|string|null>> $faqList 聞いた人に見えるよくある質問
  * @return array{classification: array, contextTopic: string, nextTopic: string}
  *   classification: faq_classify_question() と同じ形。contextTopic: 前の話題を補って答えたときの話題（補っていなければ空）。nextTopic: 次の発言で使う話題
  */
@@ -1287,9 +1287,9 @@ const FAQ_RELATED_MAX_COUNT = 5;
  * 関係がありそうな質問（「解決しない」を押したとき。G-25 §2.15）。
  * 答えた質問の文で近い質問を探し、足りなければ同じ分野の質問で補う。出した質問（$excludedFaqIdList）は除く。
  *
- * @param array<int, array<string, mixed>> $faqList 見せてよい質問
+ * @param array<int, array<string, int|float|string|null>> $faqList 見せてよい質問
  * @param int[] $excludedFaqIdList
- * @return array<int, array<string, mixed>>
+ * @return array<int, array<string, int|float|string|null>>
  */
 function faq_related_entries(array $faqList, int $baseFaqId, array $excludedFaqIdList): array
 {
@@ -1344,7 +1344,7 @@ function faq_is_category(string $categoryCode): bool
  * 標準のよくある質問の答え・分野が新しくなったのに、まだ古いままの行（取り込みで新しくする行）。
  * 取り込んだあと管理者が画面で一度も直していない行（作った日時と直した日時が同じ）だけ。管理者が直した答えは変えない（2026-11-18）
  *
- * @param array<int, array<string, mixed>> $faqRowList faq_entries の行（id・category・question・answer・created_at・updated_at）
+ * @param array<int, array<string, int|float|string|null>> $faqRowList faq_entries の行（id・category・question・answer・created_at・updated_at）
  * @return array<int, array{id: int, category: string, answer: string}>
  */
 function faq_standard_updatable_rows(array $faqRowList): array
@@ -1450,7 +1450,7 @@ function faq_is_vague(string $queryText): bool
 /**
  * 分野ごとの件数（質問のある分野だけ。FAQ_CATEGORY_LABELS の並び）。
  *
- * @param array<int, array<string, mixed>> $faqList
+ * @param array<int, array<string, int|float|string|null>> $faqList
  * @return array<int, array{code: string, label: string, count: int}>
  */
 function faq_category_counts(array $faqList): array
@@ -1472,8 +1472,8 @@ function faq_category_counts(array $faqList): array
 /**
  * 分野の質問（並び順）。
  *
- * @param array<int, array<string, mixed>> $faqList
- * @return array<int, array<string, mixed>>
+ * @param array<int, array<string, int|float|string|null>> $faqList
+ * @return array<int, array<string, int|float|string|null>>
  */
 function faq_in_category(array $faqList, string $categoryCode): array
 {
@@ -1790,8 +1790,8 @@ function faq_search_terms(string $queryText): array
 /**
  * 入れた質問に近い、よくある質問を探す（近い順。同じ近さなら並び順）。
  *
- * @param array<int, array<string, mixed>> $faqList よくある質問（並び順）
- * @return array<int, array<string, mixed>> 近い質問（最大 FAQ_SEARCH_RESULT_MAX_COUNT 件。各行に match_ratio）
+ * @param array<int, array<string, int|float|string|null>> $faqList よくある質問（並び順）
+ * @return array<int, array<string, int|float|string|null>> 近い質問（最大 FAQ_SEARCH_RESULT_MAX_COUNT 件。各行に match_ratio）
  */
 function faq_search(string $queryText, array $faqList): array
 {

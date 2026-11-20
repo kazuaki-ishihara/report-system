@@ -80,7 +80,7 @@ foreach ($logRowList as $logRow) {
 /**
  * 同じ文（そろえた形）ごとにまとめ、多い順に並べる。
  *
- * @param array<int, array<string, mixed>> $targetLogRowList
+ * @param array<int, array<string, int|float|string|null>> $targetLogRowList
  * @return array<int, array{text: string, count: int, last_at: string, log_id: int}>
  */
 $groupByQuestion = static function (array $targetLogRowList, int $limit): array {

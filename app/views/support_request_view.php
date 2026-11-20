@@ -1,9 +1,9 @@
 <?php
-/** @var array<string, mixed> $requestRow 要望・依頼の行 */
+/** @var array<string, int|float|string|null> $requestRow 要望・依頼の行 */
 /** @var string $titleText 件名（復号したもの） */
 /** @var string $bodyText 内容（復号したもの） */
 /** @var array{display_name: string, login_id: string, department_name: ?string}|null $requesterRow 出した人 */
-/** @var array<int, array<string, mixed>> $messageList やり取り（body_text は復号した本文） */
+/** @var array<int, array<string, int|float|string|null>> $messageList やり取り（body_text は復号した本文） */
 /** @var bool $isStaff 管理者・補佐か */
 /** @var bool $isRequester 出した本人か */
 /** @var bool $isActive 続いているか（未受付〜リリース待ち） */

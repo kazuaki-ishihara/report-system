@@ -194,7 +194,7 @@
     <?php endif; ?>
   <?php endif; ?>
 
-  <?php /** @var array<int, array<string, mixed>> $scheduleList 組織の改訂の予約（新しい順） */ ?>
+  <?php /** @var array<int, array<string, int|float|string|null>> $scheduleList 組織の改訂の予約（新しい順） */ ?>
   <h2>予約した組織の改訂</h2>
   <?php if (!$scheduleList): ?>
     <p class="note">予約はありません。</p>
