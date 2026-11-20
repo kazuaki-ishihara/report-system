@@ -21,6 +21,8 @@ $progressLabel = function (?array $progressFlags): string {
   <h1>目標管理シート</h1>
   <p class="note"><?= h_lines(msg('目標管理評価シートを書いて、会社の様式の Excel（.xlsx）で受け取ります。見られるのは本人と、その課の課長・課長代理だけです（課長代理は一般・主任の人の分）。評価期間は 10 月 1 日〜翌 9 月 30 日です。')) ?></p>
 
+  <p><a href="<?= h(url('/goals/criteria.php')) ?>" target="_blank" rel="noopener" class="goal-criteria-link">コンピテンシー評価基準を見る（別のタブで開く）</a></p>
+
   <h2>自分のシート</h2>
   <?php foreach ($newYearList as $newYear): ?>
     <p><a class="button primary" href="<?= h(url('/goals/edit.php?year=' . $newYear)) ?>">＋ <?= (int) $newYear ?> 年度のシートを作る</a>

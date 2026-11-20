@@ -290,6 +290,21 @@ def main():
     _, _, page_html = owner.get("/goals/edit.php?id=%d" % sheet_id)
     check("主任に戻すと、その人の欄は消え、書いた面談の結果は「以前の担当」の欄に残る",
           second_deputy_user_id not in meeting_blocks(page_html) and "以前の担当の面談の結果" in page_html and "2 人目の課長代理の面談" in page_html)
+    section("G-27", "目標管理: コンピテンシー評価基準（別のタブで開く）")
+    _, _, list_html = owner.get("/goals/index.php")
+    check("一覧に、評価基準を別のタブで開くリンク", 'href="/goals/criteria.php" target="_blank" rel="noopener"' in list_html)
+    _, _, page_html = owner.get("/goals/edit.php?id=%d" % sheet_id)
+    check("シートのコンピテンシー評価の欄にも、評価基準を別のタブで開くリンク", 'href="/goals/criteria.php" target="_blank"' in page_html)
+    sheet_titles = ("システム", "ヘルプデスク", "管理職登用基準", "職能レベル定義")
+    status_code, _, criteria_html = owner.get("/goals/criteria.php")
+    check("評価基準の画面に、4 つのシートのタブと、システムの基準（受益者志向・4 点:エキスパート）が出る",
+          status_code == 200 and all(title in criteria_html for title in sheet_titles) and "受益者志向" in criteria_html and "エキスパート" in criteria_html, status_code)
+    status_code, _, criteria_html = owner.get("/goals/criteria.php?sheet=3")
+    check("タブで管理職登用基準に切り替えられる", status_code == 200 and "管理職登用維持基準" in criteria_html, status_code)
+    status_code, _, _ = owner.get("/goals/criteria.php?sheet=9")
+    check("無いシートは 404", status_code == 404, status_code)
+    criteria_statuses = [client_of(login_id).get("/goals/criteria.php")[0] for login_id in ("kacho_a", "dairi_a", "admin01")]
+    check("評価基準は、ログインしていればだれでも見られる（参考の資料）", criteria_statuses == [200, 200, 200], criteria_statuses)
     owner.headers["User-Agent"] = MOBILE_USER_AGENT
     status_code, _, _ = owner.get("/goals/download.php?id=%d" % sheet_id)
     check("スマートフォンでは受け取れない（PC から）", status_code == 403, status_code)

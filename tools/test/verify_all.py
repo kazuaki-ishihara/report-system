@@ -412,6 +412,8 @@ def main():
         # 入力の確かめの正規表現は、文字列全体の先頭・末尾（\A・\z）で書く（^・$ は改行を混ぜた値を通すおそれ）
         r.run("正規表現は文字列全体で確かめる", [sys.executable, "-I", os.path.join(HERE, "check_regex_anchors.py")], default_screen="コード")
         r.run("目標管理の様式の定数が最新", [sys.executable, "-I", os.path.join(ROOT, "tools", "lib", "goal_template_gen.py"), "--check"], default_screen="G-27")
+        # コンピテンシー評価基準（app/templates/competency_criteria.xlsx）から作った表（app/lib/goal_criteria.php）が最新
+        r.run("コンピテンシー評価基準の表が最新", [sys.executable, "-I", os.path.join(ROOT, "tools", "lib", "goal_criteria_gen.py"), "--check"], default_screen="G-27")
         r.run("操作マニュアルの画像がそろっている", [sys.executable, "-I", os.path.join(ROOT, "tools", "lib", "manual_capture.py"), "--check"], default_screen="共通")
         # よくある質問のチャットの判定（システムに寄る・グレーゾーン・明確にアウトの入力。tools/test/faq_input_cases.tsv）。サーバー・DB は使わない
         r.run("よくある質問の自動入力検証", [php, os.path.join("tools", "test", "faq_input_check.php")], default_screen="G-25")

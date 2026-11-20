@@ -153,6 +153,7 @@ $roleNoteByViewerRole = [
 
     <fieldset class="goal-competency" id="competency">
       <legend>コンピテンシー評価（行動特性評価。5：満足できる結果 〜 0：評価に値せず）</legend>
+      <p><a href="<?= h(url('/goals/criteria.php')) ?>" target="_blank" rel="noopener" class="goal-criteria-link">コンピテンシー評価基準を見る（別のタブで開く）</a></p>
       <div class="table-wrap">
       <table class="table goal-competency-table">
         <thead><tr><th>大分類</th><th>中分類</th><th>行動指針</th><th>本人評価</th><th>上長評価（課長）</th></tr></thead>
