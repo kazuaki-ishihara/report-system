@@ -799,3 +799,6 @@ form.wizard-active .sticky-actions button[value="submit"] { display: none; }
 :root[data-theme="cud"] :focus-visible { outline: 3px solid #f6aa00; outline-offset: 2px; }
 :root[data-theme="cud"] .card { border-color: #b5b5b5; }
 .use-backup-code { margin: 4px 0 8px; }
+
+/* 説明の文の区切り（h_phrases）: まとまりごとに折り返す。スマートフォンで言葉の途中で折り返さない */
+.phrase { display: inline-block; word-break: auto-phrase; }   /* まとまりが 1 行に入らないときも、対応するブラウザー（Chrome・Edge）では文節で折り返す */

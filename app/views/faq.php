@@ -47,7 +47,7 @@ $renderCategoryChoices = static function () use ($categoryCountList, $categoryUr
 <section class="card">
   <p><a href="<?= h(url('/index.php')) ?>">← ホーム</a></p>
   <h1>よくある質問</h1>
-  <p class="note">使い方でよく聞かれることと、その答えです。下のチャットに知りたいことを入れるか、分野を選んでください（自動の答えは、よくある質問に載っている文だけです）。聞いた質問は、よくある質問をよくするために記録します。</p>
+  <p class="note"><?= h_phrases('使い方でよく聞かれることと、その答えです。下のチャットに知りたいことを入れるか、分野を選んでください（自動の答えは、よくある質問に載っている文だけです）。聞いた質問は、よくある質問をよくするために記録します。') ?></p>
 
   <div class="faq-chat" id="faq-chat" data-ask-role="<?= h($askRole) ?>">
     <input type="hidden" name="csrf_token" value="<?= h(csrf_token()) ?>" class="faq-chat-csrf">
@@ -79,9 +79,9 @@ $renderCategoryChoices = static function () use ($categoryCountList, $categoryUr
         <div class="chat-bubble chat-user"><?= h($searchQueryText) ?></div>
         <?php if ($isIgnored): ?>
         <?php elseif ($chatResultCode === 'emergency'): ?>
-          <div class="chat-bubble chat-bot chat-care chat-emergency" role="alert"><?= h_lines(msg('命や体に関わる、急いだほうがよい状態かもしれません。少しでも危ないと感じたら、迷わず 119 番に電話して救急車を呼んでください。近くに人がいれば、すぐに助けを求めてください。救急車を呼ぶか迷うときは #7119（救急安心センター。地域によってはつながりません）、子どものことは #8000（子ども医療電話相談）に相談できます。このチャットでは、手当てのしかたにはお答えできません。')) ?></div>
+          <div class="chat-bubble chat-bot chat-care chat-emergency" role="alert"><?= h_phrases(msg('命や体に関わる、急いだほうがよい状態かもしれません。少しでも危ないと感じたら、迷わず 119 番に電話して救急車を呼んでください。近くに人がいれば、すぐに助けを求めてください。救急車を呼ぶか迷うときは #7119（救急安心センター。地域によってはつながりません）、子どものことは #8000（子ども医療電話相談）に相談できます。このチャットでは、手当てのしかたにはお答えできません。')) ?></div>
         <?php elseif ($chatResultCode === 'retirement'): ?>
-          <div class="chat-bubble chat-bot chat-care" role="status"><?= h_lines(msg('大切なことを書いてくれて、ありがとうございます。退職のことは、一人で抱えたり決めたりせず、まず上司（課長）に相談してください。気持ちや事情を話すことで、ほかの道が見つかることもあります。')) ?></div>
+          <div class="chat-bubble chat-bot chat-care" role="status"><?= h_phrases(msg('大切なことを書いてくれて、ありがとうございます。退職のことは、一人で抱えたり決めたりせず、まず上司（課長）に相談してください。気持ちや事情を話すことで、ほかの道が見つかることもあります。')) ?></div>
         <?php elseif ($chatResultCode === 'distress'): ?>
           <div class="chat-bubble chat-bot chat-care" role="status"><?= h_lines($chatHarassment
               ? msg('つらい思いを書いてくれて、ありがとうございます。上司からのハラスメントは、その上司ではなく、ほかの管理職（別の課長・部長など）や、会社の相談窓口に相談してください。一人で抱え込まないでください。') . ($distressLevel === 'urgent' ? msg('今すぐ危ないと感じるときは、ためらわずに周りの人に助けを求めてください。') : '')
@@ -95,7 +95,7 @@ $renderCategoryChoices = static function () use ($categoryCountList, $categoryUr
             </div>
           <?php endif; ?>
         <?php elseif ($chatResultCode === 'sensitive'): ?>
-          <div class="chat-bubble chat-bot chat-care" role="status"><?= h_lines(msg('大切なことを書いてくれて、ありがとうございます。体や家族のことなど、個人的な事情には、このチャットでは詳しくお答えできませんが、一人で抱えずに、上司や信頼できる人に相談してください。体の具合や病気・薬のことは、医療機関（医師）に相談してください。報告や締め日のことで困っているときは、課長に相談してください。')) ?></div>
+          <div class="chat-bubble chat-bot chat-care" role="status"><?= h_phrases(msg('大切なことを書いてくれて、ありがとうございます。体や家族のことなど、個人的な事情には、このチャットでは詳しくお答えできませんが、一人で抱えずに、上司や信頼できる人に相談してください。体の具合や病気・薬のことは、医療機関（医師）に相談してください。報告や締め日のことで困っているときは、課長に相談してください。')) ?></div>
           <?php if ($matchedFaqList): ?>
             <div class="chat-bubble chat-bot">
               <p class="chat-question">Q. <?= h((string) $matchedFaqList[0]['question']) ?></p>
@@ -103,23 +103,23 @@ $renderCategoryChoices = static function () use ($categoryCountList, $categoryUr
             </div>
           <?php endif; ?>
         <?php elseif ($chatResultCode === 'abusive'): ?>
-          <div class="chat-bubble chat-bot" role="status"><?= h_lines(msg('不適切な表現が含まれているため、返答できません。')) ?></div>
+          <div class="chat-bubble chat-bot" role="status"><?= h_phrases(msg('不適切な表現が含まれているため、返答できません。')) ?></div>
         <?php elseif ($chatResultCode === 'unrelated'): ?>
-          <div class="chat-bubble chat-bot" role="status"><?= h_lines(msg('その質問には返答できません。')) ?></div>
+          <div class="chat-bubble chat-bot" role="status"><?= h_phrases(msg('その質問には返答できません。')) ?></div>
         <?php elseif ($chatResultCode === 'sabotage'): ?>
-          <div class="chat-bubble chat-bot" role="status"><?= h_lines(msg('システムやデータを壊す・消す・持ち出す操作は、できません。困っていることや不満があるときは、課長やシステム管理者に相談してください。')) ?></div>
+          <div class="chat-bubble chat-bot" role="status"><?= h_phrases(msg('システムやデータを壊す・消す・持ち出す操作は、できません。困っていることや不満があるときは、課長やシステム管理者に相談してください。')) ?></div>
         <?php elseif ($chatResultCode === 'violence'): ?>
-          <div class="chat-bubble chat-bot chat-care" role="status"><?= h_lines(msg('強い怒りや、人を傷つけたい気持ちを一人で抱えていませんか。カウンセラーや、会社の相談窓口・産業医など、話を聞いてもらえるところで、カウンセリングを受けることをおすすめします。気持ちを言葉にするだけでも、楽になることがあります。今すぐ自分や人を傷つけてしまいそうなときは、ためらわずに周りの人に助けを求めてください。')) ?></div>
+          <div class="chat-bubble chat-bot chat-care" role="status"><?= h_phrases(msg('強い怒りや、人を傷つけたい気持ちを一人で抱えていませんか。カウンセラーや、会社の相談窓口・産業医など、話を聞いてもらえるところで、カウンセリングを受けることをおすすめします。気持ちを言葉にするだけでも、楽になることがあります。今すぐ自分や人を傷つけてしまいそうなときは、ためらわずに周りの人に助けを求めてください。')) ?></div>
         <?php elseif ($chatResultCode === 'closing'): ?>
-          <div class="chat-bubble chat-bot" role="status"><?= h_lines(msg('わかりました。知りたいことがあるときは、いつでも入れてください。')) ?></div>
+          <div class="chat-bubble chat-bot" role="status"><?= h_phrases(msg('わかりました。知りたいことがあるときは、いつでも入れてください。')) ?></div>
         <?php elseif ($chatResultCode === 'opener'): ?>
-          <div class="chat-bubble chat-bot" role="status"><?= h_lines(msg('どういったご用件でしょうか。')) ?></div>
+          <div class="chat-bubble chat-bot" role="status"><?= h_phrases(msg('どういったご用件でしょうか。')) ?></div>
         <?php elseif ($chatResultCode === 'vague'): ?>
           <div class="chat-bubble chat-bot" role="status">どのことについて知りたいですか？　分野を選ぶか、「パスワード」「提出」「コメント」のように、知りたいことの言葉を入れてください。</div>
           <?php $renderCategoryChoices(); ?>
         <?php elseif ($matchedFaqList): ?>
           <?php if ($chatContextTopic !== ''): ?>
-            <div class="chat-bubble chat-bot" role="status"><?= h_lines(msg('「{topic}」についての答えです。', ['topic' => $chatContextTopic])) ?></div>
+            <div class="chat-bubble chat-bot" role="status"><?= h_phrases(msg('「{topic}」についての答えです。', ['topic' => $chatContextTopic])) ?></div>
           <?php endif; ?>
           <div class="chat-bubble chat-bot">
             <p class="chat-question">Q. <?= h((string) $matchedFaqList[0]['question']) ?></p>
@@ -141,7 +141,7 @@ $renderCategoryChoices = static function () use ($categoryCountList, $categoryUr
 
       <div class="chat-bubble chat-bot faq-ask" id="faq-ask" <?= $askErrorTextList ? 'data-has-error="1"' : '' ?> <?= ($searchQueryText === '' && $selectedCategory === null && !$askErrorTextList) || in_array($chatResultCode, ['violence', 'sabotage', 'opener', 'closing', 'vague', 'unrelated', 'abusive', 'distress', 'sensitive', 'emergency', 'retirement'], true) ? 'hidden' : '' ?>>
         <?php if ($canAsk): ?>
-          <p>答えが見つからないときは、この質問を要望・依頼の「質問」としてシステム管理者に送れます。補足があれば書き足してください。返信はホームと「要望・依頼」に出ます。</p>
+          <p><?= h_phrases('答えが見つからないときは、この質問を要望・依頼の「質問」としてシステム管理者に送れます。補足があれば書き足してください。返信はホームと「要望・依頼」に出ます。') ?></p>
           <?php foreach ($askErrorTextList as $askErrorText): ?><div class="flash flash-error" role="alert"><?= h_lines($askErrorText) ?></div><?php endforeach; ?>
           <form method="post" action="<?= h(url('/faq.php')) ?>" class="form">
             <?= form_hidden() ?>
@@ -154,9 +154,9 @@ $renderCategoryChoices = static function () use ($categoryCountList, $categoryUr
             <button type="submit" class="primary">質問として送る</button>
           </form>
         <?php elseif ($isStaff): ?>
-          <p>システム管理者・補佐は質問を受ける側のため、ここからは送れません。答えを「＋ 質問を載せる」で足してください。</p>
+          <p><?= h_phrases('システム管理者・補佐は質問を受ける側のため、ここからは送れません。答えを「＋ 質問を載せる」で足してください。') ?></p>
         <?php else: ?>
-          <p>答えが見つからないときは、課長・確認者（課長代理・リーダー）に聞いてください。課長・確認者が、この画面からシステム管理者に質問を送れます。</p>
+          <p><?= h_phrases('答えが見つからないときは、課長・確認者（課長代理・リーダー）に聞いてください。課長・確認者が、この画面からシステム管理者に質問を送れます。') ?></p>
         <?php endif; ?>
       </div>
     </div>
@@ -178,9 +178,9 @@ $renderCategoryChoices = static function () use ($categoryCountList, $categoryUr
           <?= form_hidden() ?>
           <button type="submit" name="action" value="import_standard">標準のよくある質問を取り込む（まだ載っていない <?= (int) $standardMissingCount ?> 件・答えの直し <?= (int) $standardUpdatableCount ?> 件）</button>
         </form>
-        <p class="note">操作マニュアルの全章から想定される質問をまとめたものです。同じ質問の文がすでにあるものは足しません。答えが新しくなった質問は、ここで直していないものだけ答えを新しくします（ここで直した答えは変えません）。取り込んだあとは、ここで直す・消すことができます。</p>
+        <p class="note"><?= h_phrases('操作マニュアルの全章から想定される質問をまとめたものです。同じ質問の文がすでにあるものは足しません。答えが新しくなった質問は、ここで直していないものだけ答えを新しくします（ここで直した答えは変えません）。取り込んだあとは、ここで直す・消すことができます。') ?></p>
       <?php else: ?>
-        <p class="note">標準のよくある質問は、すべて載っています。</p>
+        <p class="note"><?= h_phrases('標準のよくある質問は、すべて載っています。') ?></p>
       <?php endif; ?>
     </div>
   <?php endif; ?>

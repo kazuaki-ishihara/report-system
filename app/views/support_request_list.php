@@ -42,9 +42,9 @@ $listQueryText = $isStaff && !$isAllScope ? 'scope=mine&' : '';
       <label for="request_body">内容（<?= SUPPORT_REQUEST_BODY_MAX_LENGTH ?> 文字まで）</label>
       <textarea id="request_body" name="body" maxlength="<?= SUPPORT_REQUEST_BODY_MAX_LENGTH ?>" rows="6" required
                 placeholder="困っていること、こうなってほしいこと、起きたこと（いつ・どの画面で・何をしたら）"><?= h($typedValueByName['body']) ?></textarea>
-      <p class="note">客先名・固有名詞・個人名は書かないでください（報告と同じです）。</p>
+      <p class="note"><?= h_phrases('客先名・固有名詞・個人名は書かないでください（報告と同じです）。') ?></p>
       <fieldset class="chip-choices">
-        <legend>関係する画面（押して選ぶ）</legend>
+        <legend><?= h_phrases('関係する画面（押して選ぶ）') ?></legend>
         <?php foreach (SUPPORT_REQUEST_SCREEN_LABELS as $screenCode => $screenLabel): ?>
           <label class="chip-choice"><input type="radio" name="screen_code" value="<?= h($screenCode) ?>" <?= $typedValueByName['screen_code'] === $screenCode ? 'checked' : '' ?>><span><?= h($screenLabel) ?></span></label>
         <?php endforeach; ?>
@@ -53,7 +53,7 @@ $listQueryText = $isStaff && !$isAllScope ? 'scope=mine&' : '';
         <input type="hidden" name="source_path" value="<?= h($typedValueByName['source_path']) ?>">
         <p class="note">開いていた画面（<?= h($typedValueByName['source_path']) ?>）と、使っている端末の種類も一緒に送ります。システム管理者が、どの画面の話かを確かめるためです。</p>
       <?php else: ?>
-        <p class="note">使っている端末の種類（PC／スマートフォン、ブラウザー）も一緒に送ります。画面の要望は、その画面の下の「この画面について要望・依頼を出す」から出すと、開いていた画面も自動で入ります。</p>
+        <p class="note"><?= h_phrases('使っている端末の種類（PC／スマートフォン、ブラウザー）も一緒に送ります。画面の要望は、その画面の下の「この画面について要望・依頼を出す」から出すと、開いていた画面も自動で入ります。') ?></p>
       <?php endif; ?>
       <label for="request_urgency">急ぎ</label>
       <select id="request_urgency" name="urgency">
@@ -121,7 +121,7 @@ $listQueryText = $isStaff && !$isAllScope ? 'scope=mine&' : '';
   <?php if ($isStaff): ?>
   <details class="reply-templates" id="reply-templates">
     <summary>返信の定型文（<?= count($replyTemplateList) ?> / <?= SUPPORT_REPLY_TEMPLATE_MAX_COUNT ?>）</summary>
-    <p class="note">要望・依頼の返信で選んで使う文です（例: 「ユーザーを追加しました。仮のパスワードは別にお伝えします。」）。要望の種類ごとに用意でき、返信では、その種類と「すべての種類」の定型文だけが出ます。</p>
+    <p class="note"><?= h_phrases('要望・依頼の返信で選んで使う文です（例: 「ユーザーを追加しました。仮のパスワードは別にお伝えします。」）。要望の種類ごとに用意でき、返信では、その種類と「すべての種類」の定型文だけが出ます。') ?></p>
     <?php if ($replyTemplateList): ?>
     <ul class="list compact">
       <?php foreach ($replyTemplateList as $replyTemplate): ?>

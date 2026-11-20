@@ -61,7 +61,7 @@ $postedShownFlagByCode = $postedValues['shown'] ?? null;
         <input type="text" name="new_label[]" maxlength="60" placeholder="例: 調査・企画" aria-label="足す選択肢の表示名 <?= $newOptionIndex + 1 ?>">
       <?php endfor; ?>
     </div>
-    <p class="note">表示名を入れるだけで追加できます（コードは自動で付きます）。さらに追加する場合は、一度保存すると空の入力欄が出ます。</p>
+    <p class="note"><?= h_phrases('表示名を入れるだけで追加できます（コードは自動で付きます）。さらに追加する場合は、一度保存すると空の入力欄が出ます。') ?></p>
     <button type="submit" name="action" value="save" class="primary">保存</button>
   </form>
 

@@ -31,7 +31,7 @@ foreach ($fields as $f) {
 $renderCommentEdit = function (array $commentRow) use ($rid, $uid): string {
     ob_start();
     if ($commentRow['text'] !== null && ($commentRow['edited_at'] ?? null) !== null) {
-        ?><span class="note comment-edited"><?= h(msg('（{time} に直しました）', ['time' => display_datetime((string) $commentRow['edited_at'])])) ?></span><?php
+        ?><span class="note comment-edited"><?= h_phrases(msg('（{time} に直しました）', ['time' => display_datetime((string) $commentRow['edited_at'])])) ?></span><?php
     }
     if ($commentRow['text'] !== null && (int) $commentRow['user_id'] === $uid) {
         ?>
@@ -184,7 +184,7 @@ $reportFields = array_values(array_filter($fields, function ($f) { return $f['sc
     <?php if (report_period_editable((string) $report['period'])): ?>
       <a class="button" href="<?= h(url('/reports/edit.php?period=' . rawurlencode((string) $report['period']))) ?>">編集する</a>
     <?php else: ?>
-      <p class="note">編集できるのは当月と過去 3 か月までの報告です。</p>
+      <p class="note"><?= h_phrases('編集できるのは当月と過去 3 か月までの報告です。') ?></p>
       <?php if ($report['status'] === 'draft'): ?>
         <form method="post" action="<?= h(url('/reports/save.php')) ?>" class="inline" data-confirm="<?= h(msg('この下書きを削除します。よろしいですか？')) ?>">
           <?= form_hidden() ?>
@@ -214,9 +214,9 @@ $droppedPreviousProjectCodeList = $previousComparison['previousReport'] === null
 ?>
 <?php if ($previousComparison['previousReport'] !== null): ?>
 <section class="card previous-summary">
-  <p class="note"><?= h_lines(msg('{period}の報告と比べて、変わった項目に「前月から変更」と前月の値を出しています。', ['period' => $previousComparison['previousPeriodLabel']])) ?></p>
+  <p class="note"><?= h_phrases(msg('{period}の報告と比べて、変わった項目に「前月から変更」と前月の値を出しています。', ['period' => $previousComparison['previousPeriodLabel']])) ?></p>
   <?php if ($droppedPreviousProjectCodeList): ?>
-    <p><?= h_lines(msg('{period}にあって今回ない案件: {codes}', ['period' => $previousComparison['previousPeriodLabel'], 'codes' => implode('、', $droppedPreviousProjectCodeList)])) ?></p>
+    <p><?= h_phrases(msg('{period}にあって今回ない案件: {codes}', ['period' => $previousComparison['previousPeriodLabel'], 'codes' => implode('、', $droppedPreviousProjectCodeList)])) ?></p>
   <?php endif; ?>
 </section>
 <?php endif; ?>
@@ -224,7 +224,7 @@ $droppedPreviousProjectCodeList = $previousComparison['previousReport'] === null
 <?php foreach ($blocks as $i => $b): ?>
 <section class="card">
   <h2>案件 <?= $i + 1 ?>: <?= h($b['code']) ?><?= $b['alias'] !== '' ? ' <span class="note">' . h($b['alias']) . '</span>' : '' ?>
-    <?php if ($previousComparison['previousReport'] !== null && !isset($previousComparison['previousProjectCodeById'][(int) $b['project_id']])): ?><span class="tag tag-changed"><?= h_lines(msg('前月にない案件')) ?></span><?php endif; ?></h2>
+    <?php if ($previousComparison['previousReport'] !== null && !isset($previousComparison['previousProjectCodeById'][(int) $b['project_id']])): ?><span class="tag tag-changed"><?= h_phrases(msg('前月にない案件')) ?></span><?php endif; ?></h2>
   <?php foreach ($blockFields as $f): ?><?= $renderField($f, (int) $b['id']) ?><?php endforeach; ?>
 </section>
 <?php endforeach; ?>

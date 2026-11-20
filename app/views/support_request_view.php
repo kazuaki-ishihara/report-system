@@ -35,7 +35,7 @@ $selfUrl = url('/requests/view.php?id=' . $requestId);
     <?php if ($requestRow['closed_at'] !== null): ?><li><span>閉じた日時</span><span><?= h(display_datetime($requestRow['closed_at'])) ?></span></li><?php endif; ?>
   </ul>
   <?php if ($isStaff && (int) $requestRow['has_warning'] === 1): ?>
-    <p class="field-warning">客先名や個人名らしい言葉が含まれています。必要なら、出した人に書き直しを頼んでください。</p>
+    <p class="field-warning"><?= h_phrases('客先名や個人名らしい言葉が含まれています。必要なら、出した人に書き直しを頼んでください。') ?></p>
   <?php endif; ?>
   <h2>内容</h2>
   <div class="support-request-body"><?= h_lines($bodyText) ?></div>
@@ -76,7 +76,7 @@ $selfUrl = url('/requests/view.php?id=' . $requestId);
       <?php endif; ?>
       <label for="staff_reply_body">出した人への返信（対応した内容・検討の結果）</label>
       <textarea id="staff_reply_body" name="body" rows="5" maxlength="<?= SUPPORT_REQUEST_BODY_MAX_LENGTH ?>"><?= h($typedReplyText) ?></textarea>
-      <p class="note">状態のボタンを押すと、状態を変えて返信します。返信を空のまま押すと、定型の返信を送ります（見送りは検討の結果を書いてください）。</p>
+      <p class="note"><?= h_phrases('状態のボタンを押すと、状態を変えて返信します。返信を空のまま押すと、定型の返信を送ります（見送りは検討の結果を書いてください）。') ?></p>
       <div class="support-status-buttons" role="group" aria-label="状態を変えて返信する">
         <?php foreach (SUPPORT_REQUEST_STAFF_STATUSES as $statusCode): $isCurrentStatus = $statusCode === $requestRow['status']; ?>
           <button type="submit" name="status" value="<?= h($statusCode) ?>" class="small support-status-<?= h($statusCode) ?><?= $isCurrentStatus ? ' is-current' : '' ?>"
@@ -120,7 +120,7 @@ $selfUrl = url('/requests/view.php?id=' . $requestId);
       <button type="submit" class="primary">返信する</button>
     </form>
   <?php elseif ($isRequester): ?>
-    <p class="note">この要望・依頼は閉じています。続きがあるときは、新しく出してください。</p>
+    <p class="note"><?= h_phrases('この要望・依頼は閉じています。続きがあるときは、新しく出してください。') ?></p>
   <?php endif; ?>
 
   <?php if ($isRequester && $requestRow['status'] === 'open'): ?>

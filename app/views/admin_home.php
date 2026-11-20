@@ -7,7 +7,7 @@
 ?>
 <section class="card wide">
   <h1>管理のトップ</h1>
-  <p class="note">管理の仕事ごとの入口と、今の状態です。目立つ札は、対応が要るものです。</p>
+  <p class="note"><?= h_phrases('管理の仕事ごとの入口と、今の状態です。目立つ札は、対応が要るものです。') ?></p>
   <?php if ($canManageSystem && $backupStatus !== null): ?>
   <section class="system-status" aria-label="システムの状態">
     <h2>システムの状態</h2>
@@ -35,7 +35,7 @@
         <input name="message" type="text" maxlength="<?= MAINTENANCE_MESSAGE_MAX_LENGTH ?>" placeholder="一言（例: 新しい版に入れ替えています）" aria-label="一言">
         <button type="submit" name="action" value="maintenance_start">メンテナンス中にする</button>
       </form>
-      <p class="note">メンテナンス中は、管理者・補佐以外の人の画面に知らせを出し、保存などの操作を止めます。終わる日時を過ぎると自動で終わります。</p>
+      <p class="note"><?= h_phrases('メンテナンス中は、管理者・補佐以外の人の画面に知らせを出し、保存などの操作を止めます。終わる日時を過ぎると自動で終わります。') ?></p>
     <?php endif; ?>
   </section>
   <?php endif; ?>

@@ -21,7 +21,7 @@ foreach ($surveys as $s) {
   </nav>
   <p class="note">削除から <?= (int) cfg('trash_days') ?> 日で完全に消えます。</p>
   <?php if ($isOperatorDeputy): ?>
-  <p class="note">補佐の画面では、種類ごとの件数だけを出します。戻すのは管理者が行います。</p>
+  <p class="note"><?= h_phrases('補佐の画面では、種類ごとの件数だけを出します。戻すのは管理者が行います。') ?></p>
   <table class="table">
     <thead><tr><th>種類</th><th>件数</th></tr></thead>
     <tbody>

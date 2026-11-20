@@ -51,7 +51,7 @@
       </tbody>
     </table>
     </div>
-    <p class="note">* は前月から変わった値。自由記述は「開く」を押したときだけ表示します（開いたことは記録されます）。</p>
+    <p class="note"><?= h_phrases('* は前月から変わった値。自由記述は「開く」を押したときだけ表示します（開いたことは記録されます）。') ?></p>
   <?php else: ?>
     <?php foreach ($summary['groups'] as $g): ?>
       <h2><?= h($g['label']) ?>（<?= count($g['items']) ?>件）</h2>

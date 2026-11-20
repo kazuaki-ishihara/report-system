@@ -31,7 +31,7 @@ $err = function (string $k) use ($errors): ?string { return $errors[$k] ?? null;
           data-confirm="<?= h($status === 'draft' ? msg('前月と同じ内容で提出します。この下書きの内容は前月の内容に置き換わります。よろしいですか？') : msg('前月と同じ内容で提出します。よろしいですか？')) ?>">
       <?= form_hidden() ?>
       <input type="hidden" name="period" value="<?= h($period) ?>">
-      <p>前月から変更がない場合は、このボタンで提出できます（入力は不要です）。</p>
+      <p><?= h_phrases('前月から変更がない場合は、このボタンで提出できます（入力は不要です）。') ?></p>
       <button type="submit" name="action" value="unchanged" class="primary big">前月から変更なしで提出</button>
     </form>
   <?php endif; ?>
@@ -51,11 +51,11 @@ $err = function (string $k) use ($errors): ?string { return $errors[$k] ?? null;
         <?php endforeach; ?>
       </select>
       <button type="submit">写す</button>
-      <p class="note">「全体」は入力欄の内容を置き換えます。「○○ だけ」は、その案件を今の入力に足します（同じ案件があれば置き換えます）。どちらも自由記述を含むすべての項目を写します。終了した案件は写しません。</p>
+      <p class="note"><?= h_phrases('「全体」は入力欄の内容を置き換えます。「○○ だけ」は、その案件を今の入力に足します（同じ案件があれば置き換えます）。どちらも自由記述を含むすべての項目を写します。終了した案件は写しません。') ?></p>
     </form>
   <?php endif; ?>
   <?php if ($status === 'submitted'): ?>
-    <p class="note">提出済みです。内容を直して「保存」すると、変更の履歴が残り、確認者の画面に「更新あり」と表示されます。もう一度提出する必要はありません。</p>
+    <p class="note"><?= h_phrases('提出済みです。内容を直して「保存」すると、変更の履歴が残り、確認者の画面に「更新あり」と表示されます。もう一度提出する必要はありません。') ?></p>
   <?php endif; ?>
 
   <form method="post" action="<?= h(url('/reports/save.php')) ?>" class="form report-form" id="report-form"
@@ -69,7 +69,7 @@ $err = function (string $k) use ($errors): ?string { return $errors[$k] ?? null;
     <?php foreach ($blocks as $i => $b): $isNew = !empty($b['new']); ?>
       <fieldset class="block<?= $isNew ? ' block-new' : '' ?>" data-scope="block">
         <legend><?= $isNew ? '案件を追加するとき' : '案件 ' . ($i + 1) ?>
-          <?php if (!$isNew && $previousComparison['previousReport'] !== null && !isset($previousComparison['previousProjectCodeById'][(int) $b['project_id']])): ?><span class="tag tag-changed"><?= h_lines(msg('前月にない案件')) ?></span><?php endif; ?></legend>
+          <?php if (!$isNew && $previousComparison['previousReport'] !== null && !isset($previousComparison['previousProjectCodeById'][(int) $b['project_id']])): ?><span class="tag tag-changed"><?= h_phrases(msg('前月にない案件')) ?></span><?php endif; ?></legend>
         <label for="b<?= $i ?>_project"><?= $isNew ? '' : '<span class="badge badge-required">必須</span>' ?><span class="field-label-text">案件</span></label>
         <select id="b<?= $i ?>_project" name="b[<?= $i ?>][project]">
           <option value=""><?= $isNew ? '（追加しない）' : '選んでください' ?></option>
@@ -79,7 +79,7 @@ $err = function (string $k) use ($errors): ?string { return $errors[$k] ?? null;
         </select>
         <?php if ($e = $err('b' . $i . '_project')): ?><p class="field-error"><?= h_lines($e) ?></p><?php endif; ?>
         <?php if ($isNew): ?>
-          <p class="note">新しい案件に入ったときは、ここで案件を選んで入力してください。案件がないとき（社内待機・研修など）は「案件なし」を選んでください。さらに追加する場合は、一度保存すると入力欄が増えます。</p>
+          <p class="note"><?= h_phrases('新しい案件に入ったときは、ここで案件を選んで入力してください。案件がないとき（社内待機・研修など）は「案件なし」を選んでください。さらに追加する場合は、一度保存すると入力欄が増えます。') ?></p>
         <?php else: ?>
           <label class="check"><input type="checkbox" name="b[<?= $i ?>][remove]" value="1"> この案件を外す（終わった案件）</label>
           <button type="button" class="small duplicate-block" data-source-block-index="<?= $i ?>" hidden>この内容で案件を追加</button>

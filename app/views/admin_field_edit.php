@@ -40,7 +40,7 @@ $sw = $settings['show_when'] ?? null;
   <h1><?= $field === null ? '項目の追加' : '項目の編集' ?>（<?= h($deptName) ?>）</h1>
   <p><a href="<?= h(url('/admin/fields.php?dept=' . rawurlencode($deptParam))) ?>">← 項目マスタ</a></p>
   <?php if ($used): ?>
-    <p class="note">この項目には入力済みのデータがあります。入力部品は互換のある種類（1 行→複数行、プルダウン⇔ラジオ）にだけ変えられます。区分は変えられません。</p>
+    <p class="note"><?= h_phrases('この項目には入力済みのデータがあります。入力部品は互換のある種類（1 行→複数行、プルダウン⇔ラジオ）にだけ変えられます。区分は変えられません。') ?></p>
   <?php endif; ?>
   <?php foreach ($errors as $e): ?>
     <div class="flash flash-error" role="alert"><?= h_lines($e) ?></div>
@@ -54,7 +54,7 @@ $sw = $settings['show_when'] ?? null;
     <label for="code">コード</label>
     <?php if ($field === null): ?>
       <input id="code" name="code" type="text" maxlength="40" inputmode="email" autocapitalize="none" autocorrect="off" spellcheck="false" pattern="[a-z][a-z0-9_]{2,39}" value="<?= h($val('code')) ?>" placeholder="空欄なら自動（item_番号）">
-      <p class="note">空欄なら自動で付けます。決めたいときは、英小文字で始まる英小文字・数字・_ で入れます。作成後は変更できません。</p>
+      <p class="note"><?= h_phrases('空欄なら自動で付けます。決めたいときは、英小文字で始まる英小文字・数字・_ で入れます。作成後は変更できません。') ?></p>
     <?php else: ?>
       <p><strong><?= h($field['code']) ?></strong>（変更できません）</p>
     <?php endif; ?>
@@ -71,7 +71,7 @@ $sw = $settings['show_when'] ?? null;
     </select>
 
     <fieldset class="sub" data-field-types="select radio multi_check">
-      <legend>選択肢（プルダウン・ラジオ・チェックボックス）</legend>
+      <legend><?= h_phrases('選択肢（プルダウン・ラジオ・チェックボックス）') ?></legend>
       <table class="table">
         <thead><tr><th>表示名</th><th>コード（任意）</th><th>有効</th><th>削除</th></tr></thead>
         <tbody>
@@ -87,7 +87,7 @@ $sw = $settings['show_when'] ?? null;
         </tbody>
       </table>
       <button type="button" class="small add-option-row" hidden>＋ 選択肢の行を足す</button>
-      <p class="note">表示名だけ入れれば、コードは自動で付けます（o1, o2, …）。報告で使われていない選択肢は「削除」で消せます。使われている選択肢は、「有効」を外して新しい報告に出ないようにします。コードは保存される値で、あとから変えられません。表示名は変えられます。</p>
+      <p class="note"><?= h_phrases('表示名だけ入れれば、コードは自動で付けます（o1, o2, …）。報告で使われていない選択肢は「削除」で消せます。使われている選択肢は、「有効」を外して新しい報告に出ないようにします。コードは保存される値で、あとから変えられません。表示名は変えられます。') ?></p>
     </fieldset>
 
     <fieldset class="sub">
@@ -106,7 +106,7 @@ $sw = $settings['show_when'] ?? null;
         <label for="max_rows">行数の上限</label><input id="max_rows" name="max_rows" type="number" min="1" max="50" value="<?= h($set('max_rows')) ?>">
         <label for="columns_text">表の列（1 行に 1 列。キー|表示名|種類|選択肢）</label>
         <textarea id="columns_text" name="columns_text" placeholder="item|課題|multi_text&#10;status|状態|select|未着手,対応中,完了"><?= h($post !== null ? (string) ($post['columns_text'] ?? '') : $columnsText) ?></textarea>
-        <p class="note">種類: single_text（1 行）/ multi_text（複数行）/ number（数値）/ date（日付）/ select（選択。選択肢をカンマ区切り）</p>
+        <p class="note"><?= h_phrases('種類: single_text（1 行）/ multi_text（複数行）/ number（数値）/ date（日付）/ select（選択。選択肢をカンマ区切り）') ?></p>
       </div>
     </fieldset>
 
@@ -120,7 +120,7 @@ $sw = $settings['show_when'] ?? null;
         <option value="<?= h($k) ?>" <?= $val('confidentiality', 'normal') === $k ? 'selected' : '' ?> <?= $disabled ? 'disabled' : '' ?>><?= h($lbl) ?></option>
       <?php endforeach; ?>
     </select>
-    <p class="note">自由記述（1 行・複数行・表）は、区分にかかわらず暗号化して保存します。「限定」は本人・課長・管理者だけが見られ、出力されません（管理者だけが設定できます）。</p>
+    <p class="note"><?= h_phrases('自由記述（1 行・複数行・表）は、区分にかかわらず暗号化して保存します。「限定」は本人・課長・管理者だけが見られ、出力されません（管理者だけが設定できます）。') ?></p>
 
     <label for="help_text">説明文</label>
     <textarea id="help_text" name="help_text" maxlength="300"><?= h($val('help_text')) ?></textarea>
@@ -140,7 +140,7 @@ $sw = $settings['show_when'] ?? null;
     ?>
     <fieldset class="sub show-when-box">
       <legend>表示の条件（任意）</legend>
-      <p class="note">ほかの選択式の項目で、決めた値を選んだときだけ、この項目を出します（例: 進捗が「遅延あり」のときだけ「進捗の補足」を出す）。同じ区分（報告全体／案件ブロック）の項目だけ選べます。</p>
+      <p class="note"><?= h_phrases('ほかの選択式の項目で、決めた値を選んだときだけ、この項目を出します（例: 進捗が「遅延あり」のときだけ「進捗の補足」を出す）。同じ区分（報告全体／案件ブロック）の項目だけ選べます。') ?></p>
       <label for="show_when_field">この項目が</label>
       <select id="show_when_field" name="show_when_field">
         <option value="">（条件なし。いつも出す）</option>

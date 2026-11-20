@@ -16,6 +16,15 @@ RESULTS = []
 CURRENT_SECTION = {"screen": "", "title": ""}
 
 
+PHRASE_SPAN_PATTERN = re.compile(r'<span class="phrase">([^<]*)</span>')
+
+
+def without_phrase_markup(html_text):
+    """画面の説明の文の区切りの印（h_phrases の <span class="phrase">・<wbr>。見た目だけのもの）を外す。
+    検証では、文言が HTML の中に文字どおりあるかを見るため"""
+    return PHRASE_SPAN_PATTERN.sub(lambda phrase_match: phrase_match.group(1), html_text).replace('<wbr>', '')
+
+
 def section(screen_code, title=""):
     """ここからの確かめが、どの画面（G-01〜G-25）・共通の単位（共通・DB・道具）のものかを決める"""
     CURRENT_SECTION["screen"] = screen_code
@@ -62,7 +71,7 @@ class Client:
         raw = resp.read()
         self.last_raw = raw
         self.last_headers = resp.headers
-        text = raw.decode("utf-8", "replace")
+        text = without_phrase_markup(raw.decode("utf-8", "replace"))
         status = getattr(resp, "status", None) or resp.code
         return status, resp.headers.get("Location", ""), text
 
@@ -87,7 +96,7 @@ class Client:
         raw_bytes = response.read()
         self.last_raw = raw_bytes
         status_code = getattr(response, "status", None) or response.code
-        return status_code, response.headers.get("Location", ""), raw_bytes.decode("utf-8", "replace")
+        return status_code, response.headers.get("Location", ""), without_phrase_markup(raw_bytes.decode("utf-8", "replace"))
 
     def get(self, path):
         return self.req("GET", path)

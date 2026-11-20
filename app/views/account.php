@@ -25,22 +25,22 @@ $full = $stage === 'full' && (int) $user['must_change_password'] !== 1;
     <?php if ($settingUp): ?>
       <h2>2 段階認証の設定</h2>
       <?php if ($stage === 'setup'): ?>
-        <p>はじめてのログインです。安全のため、2 段階認証を設定してください。設定が終わるまで、ほかの画面は使えません。</p>
+        <p><?= h_phrases('はじめてのログインです。安全のため、2 段階認証を設定してください。設定が終わるまで、ほかの画面は使えません。') ?></p>
       <?php endif; ?>
       <div class="setup-guide">
         <p><strong>スマートフォンを用意してください。</strong>2 段階認証では、ログインのたびにスマートフォンの認証アプリ（Google Authenticator・Microsoft Authenticator など。無料）に出る 6 桁の数字を入れます。先に、App Store または Google Play から認証アプリを入れてください。</p>
         <details class="authenticator-apps">
           <summary>使える認証アプリ</summary>
-          <p class="note">「時間ベース」の 6 桁のコードを出すアプリなら使えます。迷ったら、iPhone・Android のどちらでも同じ名前で入れられる Google Authenticator か Microsoft Authenticator を選んでください。</p>
+          <p class="note"><?= h_phrases('「時間ベース」の 6 桁のコードを出すアプリなら使えます。迷ったら、iPhone・Android のどちらでも同じ名前で入れられる Google Authenticator か Microsoft Authenticator を選んでください。') ?></p>
           <ul class="app-list">
             <li><strong>Google Authenticator</strong><span>iPhone・Android／無料</span></li>
-            <li><strong>Microsoft Authenticator</strong><span>iPhone・Android／無料。Microsoft のアカウントがなくても使える</span></li>
-            <li><strong>IIJ SmartKey</strong><span>iPhone・Android／無料。画面が日本語</span></li>
+            <li><strong>Microsoft Authenticator</strong><span><?= h_phrases('iPhone・Android／無料。Microsoft のアカウントがなくても使える') ?></span></li>
+            <li><strong>IIJ SmartKey</strong><span><?= h_phrases('iPhone・Android／無料。画面が日本語') ?></span></li>
             <li><strong>Authy</strong><span>iPhone・Android／無料</span></li>
-            <li><strong>iPhone の「パスワード」</strong><span>iPhone だけ／最初から入っている（iOS 18 以降。iOS 15〜17 は「設定」の「パスワード」）</span></li>
+            <li><strong>iPhone の「パスワード」</strong><span><?= h_phrases('iPhone だけ／最初から入っている（iOS 18 以降。iOS 15〜17 は「設定」の「パスワード」）') ?></span></li>
             <li><strong>Aegis</strong><span>Android だけ／無料</span></li>
           </ul>
-          <p class="note">SMS でコードを受け取る方式や、ボタンを押して承認するだけの方式には対応していません。</p>
+          <p class="note"><?= h_phrases('SMS でコードを受け取る方式や、ボタンを押して承認するだけの方式には対応していません。') ?></p>
         </details>
         <div class="setup-pc-hint">
           <p><strong>いまは PC で開いています。この設定は、スマートフォンで行うのがおすすめです。</strong>スマートフォンで開くと、ボタン 1 つで認証アプリに登録できます（PC では、32 文字をスマートフォンに手で打つことになります）。</p>
@@ -49,14 +49,14 @@ $full = $stage === 'full' && (int) $user['must_change_password'] !== 1;
             <li>同じログイン ID とパスワードでログインし、出てきた画面で設定します。</li>
             <li>設定が終わったら、PC でもう一度ログインしてください。</li>
           </ol>
-          <p class="note">スマートフォンからこのアドレスを開けないときは、このまま PC で下の手順に進んでください。</p>
+          <p class="note"><?= h_phrases('スマートフォンからこのアドレスを開けないときは、このまま PC で下の手順に進んでください。') ?></p>
         </div>
       </div>
       <ol class="steps">
         <li>スマートフォンに認証アプリ（Google Authenticator・Microsoft Authenticator など）を入れてください。</li>
         <li>下のボタンを押すと、認証アプリに登録されます。<br>
           <a class="button" href="<?= h($totpUri) ?>">認証アプリに登録する</a>
-          <p class="note">うまくいかないときは、認証アプリで「セットアップキーを入力」を選び、次の文字を入れます（時間ベース）。</p>
+          <p class="note"><?= h_phrases('うまくいかないときは、認証アプリで「セットアップキーを入力」を選び、次の文字を入れます（時間ベース）。') ?></p>
           <p class="secret"><?= h($secretDisplay) ?></p>
         </li>
         <li>認証アプリに表示された 6 桁の数字を入れてください。</li>
@@ -75,7 +75,7 @@ $full = $stage === 'full' && (int) $user['must_change_password'] !== 1;
       <form method="post" action="<?= h(url('/account.php?tab=totp')) ?>" class="form">
         <?= form_hidden(false) ?>
         <input type="hidden" name="action" value="totp_redo">
-        <p class="note">機種変更などで設定し直すときは、今のパスワードを入れてください。</p>
+        <p class="note"><?= h_phrases('機種変更などで設定し直すときは、今のパスワードを入れてください。') ?></p>
         <label for="current_password_t">今のパスワード</label>
         <input id="current_password_t" name="current_password" type="password" autocomplete="current-password" required>
         <button type="submit">設定し直す</button>
@@ -93,7 +93,7 @@ $full = $stage === 'full' && (int) $user['must_change_password'] !== 1;
         <button type="button" class="small copy-text" data-copy-from="backup-codes">予備のコードをコピー</button>
         <span class="copy-result" aria-live="polite"></span>
       </p>
-      <p class="note">コピーしたコードは、パスワードの管理アプリなど安全な場所に貼り付けて保管してください。メールやチャットに貼らないでください。</p>
+      <p class="note"><?= h_phrases('コピーしたコードは、パスワードの管理アプリなど安全な場所に貼り付けて保管してください。メールやチャットに貼らないでください。') ?></p>
       <?php if ($afterNext !== ''): ?>
         <a class="button primary" href="<?= h(url($afterNext)) ?>">保管しました</a>
       <?php endif; ?>
@@ -133,12 +133,12 @@ $full = $stage === 'full' && (int) $user['must_change_password'] !== 1;
       <input type="hidden" name="action" value="logout_all">
       <button type="submit" class="danger">すべての端末からログアウト</button>
     </form>
-    <p class="note">スマートフォンをなくしたときに使ってください。</p>
+    <p class="note"><?= h_phrases('スマートフォンをなくしたときに使ってください。') ?></p>
 
   <?php elseif ($tab === 'password'): ?>
     <h2>パスワードの変更</h2>
     <?php if ((int) $user['must_change_password'] === 1): ?>
-      <p>仮のパスワードでログインしています。新しいパスワードを決めてください。</p>
+      <p><?= h_phrases('仮のパスワードでログインしています。新しいパスワードを決めてください。') ?></p>
     <?php endif; ?>
     <form method="post" action="<?= h(url('/account.php?tab=password')) ?>" class="form">
       <?= form_hidden(false) ?>
@@ -164,7 +164,7 @@ $full = $stage === 'full' && (int) $user['must_change_password'] !== 1;
 
   <?php elseif ($tab === 'theme'): $currentThemeName = (string) ($user['ui_theme'] ?? 'auto'); /** @var array{base: string, accent: string, background: string} $customColors */ ?>
     <h2>画面のテーマ</h2>
-    <p class="note">画面の配色を選べます。変わるのは自分の画面だけです（ほかの人の画面は変わりません）。注意やエラーを表す色の意味は、どのテーマでも同じです。</p>
+    <p class="note"><?= h_phrases('画面の配色を選べます。変わるのは自分の画面だけです（ほかの人の画面は変わりません）。注意やエラーを表す色の意味は、どのテーマでも同じです。') ?></p>
     <form method="post" action="<?= h(url('/account.php?tab=theme')) ?>" class="form theme-form">
       <?= form_hidden(false) ?>
       <input type="hidden" name="action" value="theme_save">
@@ -178,8 +178,8 @@ $full = $stage === 'full' && (int) $user['must_change_password'] !== 1;
         <?php endforeach; ?>
       </div>
       <fieldset class="sub custom-colors" id="custom-colors">
-        <legend>自分の色（「自分の色」を選んだときに使います）</legend>
-        <p class="note">土台と、強調の色（ボタン・見出し・リンク）、背景の色を選べます。注意・エラー・状態の札の色は変わりません（意味が変わらないように）。文字が読みにくくなる組み合わせのときは注意を出します（保存はできます）。</p>
+        <legend><?= h_phrases('自分の色（「自分の色」を選んだときに使います）') ?></legend>
+        <p class="note"><?= h_phrases('土台と、強調の色（ボタン・見出し・リンク）、背景の色を選べます。注意・エラー・状態の札の色は変わりません（意味が変わらないように）。文字が読みにくくなる組み合わせのときは注意を出します（保存はできます）。') ?></p>
         <div class="choices">
           <label class="choice"><input type="radio" name="custom_base" value="light" <?= $customColors['base'] !== 'dark' ? 'checked' : '' ?>> 明るい土台（白い面・黒い文字）</label>
           <label class="choice"><input type="radio" name="custom_base" value="dark" <?= $customColors['base'] === 'dark' ? 'checked' : '' ?>> 暗い土台（黒い面・白い文字）</label>

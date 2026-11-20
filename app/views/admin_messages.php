@@ -54,7 +54,7 @@
 
   <?php if ($unusedOverrideRowList): ?>
     <h2>使われていない文言</h2>
-    <p class="note">プログラムの更新で既定の文言が変わったため、画面に出なくなった変更です。新しい文言で変え直してから消してください。</p>
+    <p class="note"><?= h_phrases('プログラムの更新で既定の文言が変わったため、画面に出なくなった変更です。新しい文言で変え直してから消してください。') ?></p>
     <ul class="message-list">
       <?php foreach ($unusedOverrideRowList as $unusedOverrideRow): ?>
         <li class="message-item">

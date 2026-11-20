@@ -7,7 +7,7 @@
 ?>
 <section class="card wide">
   <h1>更新のお知らせ</h1>
-  <p class="note">システムの改善や変更を、全員のホームに知らせます。出す期間の間だけ出ます。要望を出した人の名前や、要望の文はそのまま書かないでください（全員に出ます）。</p>
+  <p class="note"><?= h_phrases('システムの改善や変更を、全員のホームに知らせます。出す期間の間だけ出ます。要望を出した人の名前や、要望の文はそのまま書かないでください（全員に出ます）。') ?></p>
   <?php foreach ($errorTextList as $errorText): ?><div class="flash flash-error" role="alert"><?= h_lines($errorText) ?></div><?php endforeach; ?>
   <form method="post" action="<?= h(url('/admin/notices.php')) ?>" class="form">
     <?= form_hidden() ?>

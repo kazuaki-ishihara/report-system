@@ -10,9 +10,9 @@
 <section class="card">
   <h1>出力</h1>
   <?php if ($mobile): ?>
-    <div class="flash flash-error">出力は PC から行ってください（スマートフォンにファイルを残さないため）。</div>
+    <div class="flash flash-error"><?= h_phrases('出力は PC から行ってください（スマートフォンにファイルを残さないため）。') ?></div>
   <?php else: ?>
-  <p class="warn">この出力は記録されます。出力したファイルは社外秘として扱ってください。</p>
+  <p class="warn"><?= h_phrases('この出力は記録されます。出力したファイルは社外秘として扱ってください。') ?></p>
   <form method="post" action="<?= h(url('/export/index.php')) ?>" class="form" target="_blank">
     <?= form_hidden(false) ?>
     <label>対象</label>
@@ -36,7 +36,7 @@
     <fieldset class="sub">
       <legend>臨時の調査</legend>
       <select name="survey_id" aria-label="臨時の調査"><?php foreach ($surveys as $s): ?><option value="<?= (int) $s['id'] ?>" <?= $surveySel === (string) $s['id'] ? 'selected' : '' ?>><?= h($s['title']) ?></option><?php endforeach; ?></select>
-      <p class="note">「集計のみ」の調査は、集計だけを出力します。</p>
+      <p class="note"><?= h_phrases('「集計のみ」の調査は、集計だけを出力します。') ?></p>
     </fieldset>
     <label>形式</label>
     <div class="choices">

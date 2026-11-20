@@ -34,7 +34,7 @@ $faqQuestionText = static function (?int $faqId) use ($faqQuestionById): string 
 ?>
 <section class="card wide">
   <h1>よくある質問の記録</h1>
-  <p class="note">よくある質問のチャットで聞かれた質問と、返した答え・反応です。答えられなかった質問は「よくある質問に載せる」で載せ、解決しないが多い答えは文を直してください。記録は 1 年で消えます。聞いた人は、不適切な表現への対応のためだけに使ってください。</p>
+  <p class="note"><?= h_phrases('よくある質問のチャットで聞かれた質問と、返した答え・反応です。答えられなかった質問は「よくある質問に載せる」で載せ、解決しないが多い答えは文を直してください。記録は 1 年で消えます。聞いた人は、不適切な表現への対応のためだけに使ってください。') ?></p>
 
   <form method="get" action="<?= h(url('/admin/faq_logs.php')) ?>" class="filters">
     <select name="days" aria-label="期間">
@@ -65,8 +65,8 @@ $faqQuestionText = static function (?int $faqId) use ($faqQuestionById): string 
 
   <?php if ($canReceiveNotice): ?>
   <h2 id="distress">知らせる質問（<?= is_admin($user) ? '心の不調・退職・人への暴力・ID やパスワードを求める質問' : '人への暴力・ID やパスワードを求める質問' ?>）</h2>
-  <p class="note">ID やパスワードを求める質問は、なりすましで聞き出そうとしているおそれがあります。聞いた人に心当たりがあるか確かめ、パスワードは教えないでください。</p>
-  <p class="note">チャットに、命に関わる言葉や心配な言葉（つらい・限界・眠れない など）が入った文と、退職に関わる質問です。心の不調らしい文には、気づかいの言葉と「上司やシステム管理者に相談してください」を返しています。自分の退職の質問には、寄り添う言葉と「まず上司（課長）に相談してください」を返しています（手続きは示しません。部下の退職の手続きを聞く質問には、手続きの答えを返しています）。言葉だけで見分けているので、軽い言い方も入ります。内容を確かめ、必要なら本人の上司などと連携して対応し、「対応した」を押してください。健康に関わる情報なので、対応に必要な人の間だけで扱ってください。</p>
+  <p class="note"><?= h_phrases('ID やパスワードを求める質問は、なりすましで聞き出そうとしているおそれがあります。聞いた人に心当たりがあるか確かめ、パスワードは教えないでください。') ?></p>
+  <p class="note"><?= h_phrases('チャットに、命に関わる言葉や心配な言葉（つらい・限界・眠れない など）が入った文と、退職に関わる質問です。心の不調らしい文には、気づかいの言葉と「上司やシステム管理者に相談してください」を返しています。自分の退職の質問には、寄り添う言葉と「まず上司（課長）に相談してください」を返しています（手続きは示しません。部下の退職の手続きを聞く質問には、手続きの答えを返しています）。言葉だけで見分けているので、軽い言い方も入ります。内容を確かめ、必要なら本人の上司などと連携して対応し、「対応した」を押してください。健康に関わる情報なので、対応に必要な人の間だけで扱ってください。') ?></p>
   <?php if (!$distressLogRowList): ?>
     <p class="note">ありません。</p>
   <?php else: ?>
@@ -98,7 +98,7 @@ $faqQuestionText = static function (?int $faqId) use ($faqQuestionById): string 
   <?php endif; ?>
 
   <h2>答えられなかった質問（多い順）</h2>
-  <p class="note">見つからなかった質問と、「解決しない」「質問として送った」になった質問です。同じ文はまとめています。</p>
+  <p class="note"><?= h_phrases('見つからなかった質問と、「解決しない」「質問として送った」になった質問です。同じ文はまとめています。') ?></p>
   <?php if (!$unansweredGroupList): ?>
     <p class="note">ありません。</p>
   <?php else: ?>
@@ -118,7 +118,7 @@ $faqQuestionText = static function (?int $faqId) use ($faqQuestionById): string 
   <?php endif; ?>
 
   <h2>「解決しない」が多い答え</h2>
-  <p class="note">答えを読んで「解決した」「解決しない」を押した数です。解決しないが多い答えは、文を直す候補です。</p>
+  <p class="note"><?= h_phrases('答えを読んで「解決した」「解決しない」を押した数です。解決しないが多い答えは、文を直す候補です。') ?></p>
   <?php if (!$feedbackCountByFaqId): ?>
     <p class="note">ありません。</p>
   <?php else: ?>
@@ -138,7 +138,7 @@ $faqQuestionText = static function (?int $faqId) use ($faqQuestionById): string 
   <?php endif; ?>
 
   <h2>関係のない質問とした文（多い順）</h2>
-  <p class="note">システムの質問なのに、ここに出ているものがあれば、言葉が足りていません（開発担当にシステムの言葉の表へ足すよう伝えてください）。</p>
+  <p class="note"><?= h_phrases('システムの質問なのに、ここに出ているものがあれば、言葉が足りていません（開発担当にシステムの言葉の表へ足すよう伝えてください）。') ?></p>
   <?php if (!$unrelatedGroupList): ?>
     <p class="note">ありません。</p>
   <?php else: ?>
@@ -176,7 +176,7 @@ $faqQuestionText = static function (?int $faqId) use ($faqQuestionById): string 
   <p><a href="<?= h(url('/admin/faq_logs.php?days=' . (int) $periodDays)) ?>">← 新しい順の一覧に戻る</a></p>
   <?php else: ?>
   <h2>新しい順（<?= count($listedLogRowList) ?> 件<?= count($listedLogRowList) >= 300 ? '。最大 300 件' : '' ?>）</h2>
-  <p class="note">「会話」は、同じ人が 10 分以内に続けて入れた発言のまとまりです。押すと、その会話の発言を順に出します。</p>
+  <p class="note"><?= h_phrases('「会話」は、同じ人が 10 分以内に続けて入れた発言のまとまりです。押すと、その会話の発言を順に出します。') ?></p>
   <?php endif; ?>
   <?php if (!$listedLogRowList): ?>
     <p class="note">ありません。</p>

@@ -28,6 +28,6 @@
     <input id="new_password_confirm" name="new_password_confirm" type="password" autocomplete="new-password" maxlength="200" required>
     <button type="submit" class="primary">再設定する</button>
   </form>
-  <p class="note">認証アプリも予備のコードも使えないときは、管理者に連絡してください。</p>
+  <p class="note"><?= h_phrases('認証アプリも予備のコードも使えないときは、管理者に連絡してください。') ?></p>
   <p class="sub-link"><a href="<?= h(url('/login.php')) ?>">ログインへ戻る</a></p>
 </section>
