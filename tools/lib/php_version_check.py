@@ -61,6 +61,11 @@ HTTP_USER_AGENT = "php-version-check/1.0"
 HTTP_TIMEOUT_SECONDS = 30
 APPLY_BACKUP_FILE_NAME = "php_apply_backup.json"
 
+# さくらのレンタルサーバーで選べる PHP（系列 => 提供の版）。さくらのお知らせ n-2700（2026-11-09 更新。PHP2Shell の対応後）による。
+# 8.4 以降は選べない。さくらが新しい系列を出したら、ここを直す
+SAKURA_PROVIDED_VERSION_BY_BRANCH = {"8.3": "8.3.36", "8.2": "8.2.35", "8.1": "8.1.34", "8.0": "8.0.30", "7.4": "7.4.33"}
+SAKURA_NOTICE_URL = "https://help.sakura.ad.jp/notification/n-2700/"
+
 STATE_LABELS = {"stable": "積極的なサポート中", "security": "セキュリティの直しだけ", "eol": "サポート終了"}
 
 # 版と状態を PHP に聞く（1 行で返す）
@@ -204,14 +209,25 @@ def judge_version(label_text, version_text, status_by_branch, is_production=Fals
         else:
             line_list.append("    → python3 tools/lib/php_version_check.py --download %d.%d（取ってきて適用する）" % REQUIRED_MINIMUM_BRANCH)
     if branch_status is None:
-        line_list.append("  注意: %s 系は php.net の一覧に無い（とても古いか、まだ出ていない版）" % branch_text)
+        if version_tuple(version_text)[0] < 8:
+            line_list.append("  要更新: %s 系はサポート終了（7 系以前。セキュリティの直しも出ない）" % branch_text)
+        else:
+            line_list.append("  注意: %s 系は php.net の一覧に無い（まだ出ていない版）" % branch_text)
         return line_list
     if branch_status["state"] == "eol":
         line_list.append("  要更新: %s 系はサポート終了（セキュリティの直しも出ない）" % branch_text)
     if branch_status["latest_version"] and version_tuple(branch_status["latest_version"]) > version_tuple(version_text):
         if is_production:
-            line_list.append("  参考: %s 系の新しい版 %s が出ている（今 %s）。さくらの側の更新で上がる（自分では入れ替えられない）"
-                             % (branch_text, branch_status["latest_version"], version_text))
+            sakura_version_text = SAKURA_PROVIDED_VERSION_BY_BRANCH.get(branch_text, "")
+            if sakura_version_text and version_tuple(version_text) >= version_tuple(sakura_version_text):
+                line_list.append("  参考: %s はさくらが提供している %s 系の版（php.net の最新は %s。さくらの側の更新で上がる）"
+                                 % (version_text, branch_text, branch_status["latest_version"]))
+            else:
+                line_list.append("  参考: %s 系の新しい版 %s が出ている（今 %s）。さくらの側の更新で上がる（自分では入れ替えられない）"
+                                 % (branch_text, branch_status["latest_version"], version_text))
+        elif version_tuple(version_text) == version_tuple(SAKURA_PROVIDED_VERSION_BY_BRANCH.get(branch_text, "0")):
+            line_list.append("  問題なし: 本番（さくら）が提供している版 %s と同じ。php.net の最新は %s"
+                             "（上げるなら --download %s。上げると本番と版がずれる）" % (version_text, branch_status["latest_version"], branch_text))
         else:
             line_list.append("  ダウンロードをすすめる: %s 系の新しい版 %s が出ている（今 %s。セキュリティの直しを含む）"
                              % (branch_text, branch_status["latest_version"], version_text))
@@ -231,9 +247,18 @@ def newer_branch_line(php_info_list, status_by_branch):
                                key=version_tuple)
     if not newer_branch_list:
         return ""
+    sakura_newest_branch = max(SAKURA_PROVIDED_VERSION_BY_BRANCH, key=version_tuple)
     return (" 新しい系列: %s。互換の確認（tools/test/php_compat_check.py）に使うなら、取ってくるだけにする（--download 系列 --no-apply）。"
-            "開発の既定の PHP は本番に合わせたままにする"
-            % "、".join("%s（%s）" % (other_branch, status_by_branch[other_branch]["latest_version"]) for other_branch in newer_branch_list))
+            "開発の既定の PHP は本番に合わせたままにする（本番のさくらで選べるのは %s（%s）まで）"
+            % ("、".join("%s（%s）" % (other_branch, status_by_branch[other_branch]["latest_version"]) for other_branch in newer_branch_list),
+               sakura_newest_branch, SAKURA_PROVIDED_VERSION_BY_BRANCH[sakura_newest_branch]))
+
+
+def print_sakura_table():
+    say("さくらで選べる PHP（%s）: %s" % (SAKURA_NOTICE_URL, "、".join(
+        "%s（%s）" % (branch_text, SAKURA_PROVIDED_VERSION_BY_BRANCH[branch_text])
+        for branch_text in sorted(SAKURA_PROVIDED_VERSION_BY_BRANCH, key=version_tuple, reverse=True))))
+    say("  ほかに 5.6・5.4・5.3・5.2 も選べる。8.4 以降は選べない")
 
 
 def print_branch_table(status_by_branch):
@@ -523,6 +548,7 @@ def main():
         say("php.net に問い合わせられない（%s）。新しい版があるかは判定できない。" % error)
         return 1
     print_branch_table(status_by_branch)
+    print_sakura_table()
     say()
 
     say("判定:")
