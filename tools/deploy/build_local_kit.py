@@ -14,7 +14,9 @@
         1_起動.bat  2_テストデータを作り直す.bat  3_記録を書き出す.bat  （Windows）
         start.sh  reset_data.sh  export_log.sh      （Linux・macOS。PHP 8.3 以上が要る）
         php/        Windows 用の PHP（この端末の PHP を写したもの。インストール不要）
-        app/  public/  tools/test/dev_seed.php  tools/test/export_faq_chat_log.php  操作マニュアル.md
+        app/  public/  tools/test/dev_seed.php  tools/test/export_faq_chat_log.php
+        操作マニュアル.html  ブラウザーで画像付きで読む操作マニュアル（docs/operation_manual.md から作る）
+        操作マニュアル.md  manual/images/   操作マニュアルの文と画像
     report-system-local.zip
 
 入れないもの: DB・暗号の鍵・記録・バックアップ・この端末の config.local.php（設定はひな形から作る）。
@@ -39,6 +41,8 @@ KIT_NAME = "report-system-local"   # 英字にする（Windows で置き場所�
 
 # 一式に入れるもの（リポジトリの中の場所）
 INCLUDED_PREFIXES = ("app/", "public/")
+# 操作マニュアルの画像（docs/manual/images/ → 一式の manual/images/。操作マニュアル.md から同じ場所で見える）
+MANUAL_IMAGE_PREFIX = "docs/manual/images/"
 INCLUDED_FILES = {"tools/test/dev_seed.php": "tools/test/dev_seed.php", "tools/test/export_faq_chat_log.php": "tools/test/export_faq_chat_log.php",
                   "docs/operation_manual.md": "操作マニュアル.md"}
 # 一式に入れてはいけないもの（入っていたら作るのをやめる）
@@ -246,7 +250,8 @@ README = """月次報告システム ローカル検証環境
   - だれでも: メニューの「よくある質問」のチャットで質問する（「パスワードを忘れた」「使い方がわからない」など）
   - だれでも: アカウント設定の「表示」で画面のテーマを変える
   - 管理者（admin01）: ユーザーの追加、管理のトップ、よくある質問の記録
-  操作の説明は「操作マニュアル.md」（メモ帳などで開けます）と、各画面の「？ この画面の使い方」にあります。
+  操作の説明は「操作マニュアル.html」（ダブルクリックすると、ブラウザーで画面の画像付きで読めます）と、各画面の「？ この画面の使い方」にあります。
+  同じ文は「操作マニュアル.md」（メモ帳などで開けます。画像は manual/images/ にあります）にもあります。
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -300,9 +305,24 @@ def wanted_path(relative_path):
     """一式に入れるファイルか（入れるときは一式の中の場所を返す）"""
     if relative_path in INCLUDED_FILES:
         return INCLUDED_FILES[relative_path]
+    if relative_path.startswith(MANUAL_IMAGE_PREFIX) and relative_path.endswith(".png"):
+        return "manual/images/" + relative_path[len(MANUAL_IMAGE_PREFIX):]
     if relative_path.startswith(INCLUDED_PREFIXES) and relative_path != "app/config/config.local.php":
         return relative_path
     return None
+
+
+def add_manual_html(content_by_path):
+    """操作マニュアル.md から、ブラウザーで画像付きで読める 操作マニュアル.html を作って一式に足す"""
+    manual_text = content_by_path.get("操作マニュアル.md")
+    if manual_text is None:
+        return
+    sys.path.insert(0, os.path.join(ROOT, "tools", "lib"))
+    import mdview
+    renderer = mdview.Renderer()
+    body_html = renderer.render(manual_text.decode("utf-8"))
+    title_text = next((heading_text for level, _, heading_text in renderer.headings if level == 1), "操作マニュアル")
+    content_by_path["操作マニュアル.html"] = mdview.build_page(title_text, body_html, renderer.headings).encode("utf-8")
 
 
 def collect_files(use_worktree, ref):
@@ -413,6 +433,7 @@ def main():
     kit_directory = os.path.join(output_directory, KIT_NAME)
 
     content_by_path = collect_files(arguments.worktree, arguments.ref)
+    add_manual_html(content_by_path)
     for kit_path in content_by_path:
         if kit_path.endswith(FORBIDDEN_SUFFIXES) or kit_path.startswith(FORBIDDEN_DIRECTORIES):
             raise SystemExit("入れてはいけないファイルが入りそうです: " + kit_path)
