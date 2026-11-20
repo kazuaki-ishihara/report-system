@@ -818,3 +818,23 @@ form.wizard-active .sticky-actions button[value="submit"] { display: none; }
 .expense-list-table td { white-space: nowrap; }
 .expense-input-table { min-width: 960px; }
 .expense-delete-form { margin-top: 32px; padding-top: 12px; border-top: 1px solid var(--line); }
+/* ---- G-27 目標管理（K-064） ---- */
+.app-main:has(.goal-sheet), .app-main:has(.goal-list-table) { max-width: 1100px; }
+.goal-form fieldset { min-width: 0; margin-bottom: 16px; }
+.goal-head-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px 16px; }
+.goal-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 16px; margin: 8px 0; }
+@media (max-width: 700px) { .goal-pair { grid-template-columns: 1fr; } }
+.goal-pair textarea { width: 100%; box-sizing: border-box; }
+.goal-sheet .label-text { display: block; font-weight: 600; margin-bottom: 4px; }
+.goal-grade-line .label-text { display: inline; margin-right: 6px; }
+.goal-grade-line select { width: auto; margin-right: 16px; }
+.goal-readonly { border: 1px dashed var(--line); border-radius: var(--radius); padding: 6px 10px; min-height: 2.2em; background: var(--bg); }
+.goal-choice-value { display: inline-block; min-width: 3em; font-weight: 600; margin-right: 16px; }
+.goal-competency-table .goal-guide { min-width: 18em; font-size: 0.9rem; }
+.goal-competency-table select { width: auto; }
+.goal-score-table .number, .goal-competency-table .number { text-align: right; }
+.goal-list-table td { white-space: nowrap; }
+.goal-comment { border-top: 1px solid var(--line); padding: 8px 0; }
+.goal-comment-head { margin: 0 0 4px; }
+.goal-reply { margin: 8px 0 0 24px; padding-left: 12px; border-left: 3px solid var(--line); }
+.goal-reply-form { margin: 6px 0 0 24px; }

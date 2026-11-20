@@ -499,6 +499,43 @@ function schema_ensure(PDO $pdo): array
             updated_at TEXT NOT NULL
         )",
         "CREATE INDEX IF NOT EXISTS ix_expense_sheets_user ON expense_sheets (user_id, id)",
+        // 目標管理（G-27。K-064）。見られるのは本人・その課の課長・課長代理（一般・主任の分）。中身・コメント・面談の記録は暗号化
+        "CREATE TABLE IF NOT EXISTS goal_sheets (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL REFERENCES users(id),
+            fiscal_year INTEGER NOT NULL,
+            kind TEXT NOT NULL CHECK (kind IN ('general', 'leader', 'manager', 'sales', 'indirect')),
+            data_enc TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            UNIQUE (user_id, fiscal_year)
+        )",
+        "CREATE TABLE IF NOT EXISTS goal_sheet_comments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            sheet_id INTEGER NOT NULL REFERENCES goal_sheets(id),
+            user_id INTEGER NOT NULL REFERENCES users(id),
+            parent_id INTEGER REFERENCES goal_sheet_comments(id),
+            body_enc TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        )",
+        "CREATE INDEX IF NOT EXISTS ix_goal_sheet_comments_sheet ON goal_sheet_comments (sheet_id, id)",
+        "CREATE TABLE IF NOT EXISTS goal_sheet_meetings (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            sheet_id INTEGER NOT NULL REFERENCES goal_sheets(id),
+            held_on TEXT NOT NULL,
+            note_enc TEXT NOT NULL,
+            created_by INTEGER NOT NULL REFERENCES users(id),
+            created_at TEXT NOT NULL
+        )",
+        "CREATE INDEX IF NOT EXISTS ix_goal_sheet_meetings_sheet ON goal_sheet_meetings (sheet_id, held_on)",
+        "CREATE TABLE IF NOT EXISTS goal_sheet_history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            sheet_id INTEGER NOT NULL REFERENCES goal_sheets(id),
+            user_id INTEGER NOT NULL REFERENCES users(id),
+            action TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        )",
+        "CREATE INDEX IF NOT EXISTS ix_goal_sheet_history_sheet ON goal_sheet_history (sheet_id, id)",
     ];
     foreach ($statements as $sql) {
         $pdo->exec($sql);

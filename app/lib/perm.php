@@ -376,6 +376,7 @@ function menu_items(array $user): array
     if ($firstAdminItemIndex !== null) {
         array_splice($items, $firstAdminItemIndex, 0, [['/admin/index.php', '管理のトップ', '管理']]);
     }
+    $items[] = ['/goals/index.php', '目標管理シート', '目標管理'];   // G-27（全員。本人・課長・課長代理だけが見る。K-064）
     $items[] = ['/expenses/index.php', '通勤定期代の精算', '精算'];   // G-26（全員。月次報告とは別。自分の精算書だけ。通勤定期だけ。K-063）
     $items[] = ['/faq.php', 'よくある質問', 'アカウント'];   // 便利機能 J（全員）
     $items[] = ['/account.php', 'アカウント設定', 'アカウント'];

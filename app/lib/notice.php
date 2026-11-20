@@ -101,6 +101,9 @@ function screen_help_text(string $templateName): string
             return msg('臨時の調査に答えます。期限までは答えを直せます。');
         case 'export_index':
             return msg('報告・臨時の調査を CSV や印刷用に出力します。出力したファイルは社外秘です。出力は PC から行い、記録に残ります。');
+        case 'goal_list':
+        case 'goal_edit':
+            return msg('目標管理評価シートを書いて、会社の様式の Excel（.xlsx）で受け取ります。本人は目標・報告・本人評価を、課長は配点と上長評価を入れます。見られるのは本人と、その課の課長・課長代理だけです。コメントと面談の記録は、あとから直したり消したりできません。');
         case 'expense_list':
         case 'expense_edit':
             return msg('通勤定期代の精算書を作って、総務の様式の Excel（.xlsx）で受け取ります。精算書を見られるのは自分だけです（課長・管理者も見られません）。月次報告とは別の機能で、承認の流れはありません。受け付けるのは通勤定期だけで、通勤実費・業務交通費などは別のシステムで申請します。');

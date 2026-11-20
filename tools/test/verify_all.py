@@ -296,6 +296,7 @@ STEP_TABLE = [
     {"key": "conveniences", "name": "便利機能 A〜J（お知らせ・定型文・予定・CSV・メンテナンス・予約・バックアップ・使い方・よくある質問）", "script": "smoke_conveniences.py", "screen": "G-25"},
     {"key": "additions", "name": "あとから足した機能（コメントを直す・調査の見本・提出のお知らせ・チャットの通信の失敗）", "script": "smoke_additions.py", "screen": "G-08"},
     {"key": "expenses", "name": "通勤定期代の精算（本人だけ・通勤定期だけ・様式の xlsx）", "script": "smoke_expenses.py", "screen": "G-26", "secrets": True},
+    {"key": "goals", "name": "目標管理（本人・課長・課長代理だけ・様式の xlsx）", "script": "smoke_goals.py", "screen": "G-27", "secrets": True},
 ]
 STEP_KEYS = [step["key"] for step in STEP_TABLE] + ["ui", "retention", "units", "office"]
 
@@ -407,6 +408,8 @@ def main():
         step_repo(r)
         r.run("メッセージの一覧が最新", [sys.executable, "-I", os.path.join(ROOT, "tools", "lib", "msg_catalog.py"), "--check"], default_screen="コード")
         # 操作マニュアル（docs/operation_manual.md）が使う画面の画像がそろい、使っていない画像がない（tools/lib/manual_capture.py）
+        # 目標管理の様式（app/templates/goal_*.xlsx）から作った定数（app/lib/goal_templates.php）が様式と合っている
+        r.run("目標管理の様式の定数が最新", [sys.executable, "-I", os.path.join(ROOT, "tools", "lib", "goal_template_gen.py"), "--check"], default_screen="G-27")
         r.run("操作マニュアルの画像がそろっている", [sys.executable, "-I", os.path.join(ROOT, "tools", "lib", "manual_capture.py"), "--check"], default_screen="共通")
         # よくある質問のチャットの判定（システムに寄る・グレーゾーン・明確にアウトの入力。tools/test/faq_input_cases.tsv）。サーバー・DB は使わない
         r.run("よくある質問の自動入力検証", [php, os.path.join("tools", "test", "faq_input_check.php")], default_screen="G-25")
