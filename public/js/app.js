@@ -1141,4 +1141,28 @@
     });
     scrollToEnd();
   })();
+
+  // ---- 交通費の精算（G-26）: 金額を入れると、小計と合計（小計 − 仮払い）をその場で出す。保存のときはサーバーでも計算する ----
+  (function () {
+    var expenseForm = document.querySelector('form.expense-form');
+    if (!expenseForm) { return; }
+    var subtotalElement = expenseForm.querySelector('.expense-subtotal');
+    var totalElement = expenseForm.querySelector('.expense-total');
+    var advanceInput = expenseForm.querySelector('.expense-advance');
+    function amountOf(amountText) {
+      var normalizedText = String(amountText || '').replace(/[０-９]/g, function (digitText) { return String.fromCharCode(digitText.charCodeAt(0) - 0xFEE0); })
+        .replace(/[,，円\s　]/g, '');
+      return /^\d+$/.test(normalizedText) ? parseInt(normalizedText, 10) : 0;
+    }
+    function updateTotals() {
+      var subtotalAmount = 0;
+      expenseForm.querySelectorAll('.expense-amount').forEach(function (amountInput) { subtotalAmount += amountOf(amountInput.value); });
+      var totalAmount = subtotalAmount - amountOf(advanceInput ? advanceInput.value : '');
+      if (subtotalElement) { subtotalElement.textContent = subtotalAmount.toLocaleString('ja-JP'); }
+      if (totalElement) { totalElement.textContent = totalAmount.toLocaleString('ja-JP'); }
+    }
+    expenseForm.addEventListener('input', function (inputEvent) {
+      if (inputEvent.target.classList.contains('expense-amount') || inputEvent.target.classList.contains('expense-advance')) { updateTotals(); }
+    });
+  })();
 })();

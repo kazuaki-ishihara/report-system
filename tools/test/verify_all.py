@@ -295,6 +295,7 @@ STEP_TABLE = [
     {"key": "ledger", "name": "案件台帳の道具・案件の一覧の CSV 出力", "script": "smoke_project_ledger.py", "screen": "G-13"},
     {"key": "conveniences", "name": "便利機能 A〜J（お知らせ・定型文・予定・CSV・メンテナンス・予約・バックアップ・使い方・よくある質問）", "script": "smoke_conveniences.py", "screen": "G-25"},
     {"key": "additions", "name": "あとから足した機能（コメントを直す・調査の見本・提出のお知らせ・チャットの通信の失敗）", "script": "smoke_additions.py", "screen": "G-08"},
+    {"key": "expenses", "name": "通勤定期代の精算（本人だけ・通勤定期だけ・様式の xlsx）", "script": "smoke_expenses.py", "screen": "G-26", "secrets": True},
 ]
 STEP_KEYS = [step["key"] for step in STEP_TABLE] + ["ui", "retention", "units", "office"]
 

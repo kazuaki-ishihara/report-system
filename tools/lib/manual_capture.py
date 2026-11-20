@@ -539,6 +539,41 @@ def capture_all(camera, php_path, environment, database_path):
             camera.shoot(image_name, [mark(".tabs a.active, a.active", label=1, nth=0)], scroll="top")
     run_scene(camera, "10 章 アカウント設定", chapter_account)
 
+    # ---- 13 章 通勤定期代の精算（G-26。本人だけ。通勤定期だけ） ----
+    def chapter_expenses():
+        camera.use_width("pc")
+        camera.login("ippan_a1")
+        browser.click(".app-menu summary")
+        time.sleep(0.2)
+        camera.shoot("m13_01_menu", [mark(".app-menu a", text="通勤定期代の精算", label=1)], scroll="top")
+        browser.click(".app-menu summary")
+        camera.goto("/expenses/index.php")
+        camera.shoot("m13_02_list_empty", [mark(".flash-info", label=1), mark("a.button", text="新しく作る", label=2)], scroll="top")
+        camera.goto("/expenses/edit.php")
+        browser.fill("#employee_number", "999")
+        browser.fill("#office", "大阪")
+        camera.shoot("m13_03_edit_head", [mark('input[name="payment_method"]', label=1, up=".expense-head-grid > div"), mark("#submitted_on", label=2),
+                                          mark("#employee_number", label=3), mark("#office", label=4), mark("#department_name", label=5), mark("#full_name", label=6)])
+        browser.fill('input[name="rows[0][start_date]"]', "2026-11-01")
+        browser.fill('input[name="rows[0][end_date]"]', "2027-04-30")
+        browser.fill('input[name="rows[0][purpose]"]', "通勤（本社）")
+        browser.fill('select[name="rows[0][transport]"]', "私鉄・地下鉄")
+        browser.fill('input[name="rows[0][route]"]', "門真南～(谷町六丁目)～天王寺")
+        browser.fill('select[name="rows[0][trip]"]', "往復")
+        browser.fill('input[name="rows[0][amount]"]', "61830")
+        camera.shoot("m13_04_edit_rows", [mark('input[name="rows[0][start_date]"]', label=1), mark('input[name="rows[0][end_date]"]', label=2),
+                                          mark(".expense-fixed-kind", label=3), mark('select[name="rows[0][transport]"]', label=4),
+                                          mark('input[name="rows[0][route]"]', label=5), mark('select[name="rows[0][trip]"]', label=6),
+                                          mark('input[name="rows[0][amount]"]', label=7)])
+        camera.shoot("m13_05_edit_totals", [mark(".expense-subtotal", label=1), mark("#advance_amount", label=2), mark(".expense-total", label=3),
+                                            mark('button[value="save"]', label=4)])
+        browser.click('button[value="save"]', navigate=True)
+        camera.shoot("m13_06_saved", [mark("a.button", text="Excel を受け取る", label=1)], scroll="top")
+        camera.goto("/expenses/index.php")
+        camera.shoot("m13_07_list", [mark("a.button", text="開く", label=1), mark("a.button", text="Excel", label=2),
+                                     mark("a.button", text="写して新しく作る", label=3)], scroll="top")
+    run_scene(camera, "13 章 通勤定期代の精算", chapter_expenses)
+
 
 def referenced_image_names():
     text = open(MANUAL_PATH, encoding="utf-8").read()

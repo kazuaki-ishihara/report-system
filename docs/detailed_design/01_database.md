@@ -70,6 +70,7 @@ SQLite 3。テーブルは `app/lib/schema.php` の `schema_ensure()` で作る�
 | | `faq_chat_logs` | よくある質問のチャットの記録（G-25 §2.7。質問の文は暗号化。1 年で消す） |
 （`faq_chat_logs.conversation_id`: 会話の番号。同じ人が 10 分以内に続けて入れた発言で同じ値。前の記録は空。G-25 §2.14）
 | | `org_schedules` | 組織の改訂の予約（G-14 §6.10。取り込んだ CSV を持つ） |
+| 精算 | `expense_sheets` | 通勤定期代の精算書（G-26。本人だけが見る。中身はまとめて暗号化。記録・削除データ・保管期限の対象にしない） |
 | 移行 | `legacy_reports`・`legacy_comments` | 移行前の `reports`・`comments` の名前を変えて残したもの（§6。`schema_ensure()` では作らない） |
 
 ---
@@ -402,6 +403,16 @@ CREATE TABLE IF NOT EXISTS report_reminders (
     created_at    TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS ix_report_reminders_user ON report_reminders (user_id, period);
+
+-- G-26 通勤定期代の精算書（K-063）。中身（上の欄・明細・仮払い）は JSON にして暗号化（付加データ「expense_sheets:<user_id>」）
+CREATE TABLE IF NOT EXISTS expense_sheets (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users(id),
+    data_enc TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS ix_expense_sheets_user ON expense_sheets (user_id, id);
 ```
 
 ### 3.7 臨時の調査

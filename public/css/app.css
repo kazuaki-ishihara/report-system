@@ -798,3 +798,23 @@ form.wizard-active .sticky-actions button[value="submit"] { display: none; }
 /* 押せるところの枠（キーボードで選んだとき）をはっきり */
 :root[data-theme="cud"] :focus-visible { outline: 3px solid #f6aa00; outline-offset: 2px; }
 :root[data-theme="cud"] .card { border-color: #b5b5b5; }
+/* ---- G-26 通勤定期代の精算（K-063） ---- */
+.expense-head-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 8px 16px; }
+.expense-head-grid .label-text { display: block; font-weight: 600; margin-bottom: 4px; }
+.expense-head-grid .choice { display: inline-flex; margin-right: 12px; }
+.expense-input-table input, .expense-input-table select { width: 100%; min-width: 6em; box-sizing: border-box; }
+.expense-input-table td { padding: 2px 4px; }
+.expense-input-table .row-number { color: var(--muted); text-align: right; }
+.expense-input-table .expense-fixed-kind { white-space: nowrap; }
+.expense-input-table .expense-amount, .expense-advance { text-align: right; }
+.expense-list-table .number { text-align: right; white-space: nowrap; }
+.expense-list-table .actions { white-space: nowrap; }
+.expense-totals strong { font-size: 1.2rem; }
+.form-actions { margin-top: 12px; }
+.table-wrap { overflow-x: auto; }
+.expense-form fieldset { min-width: 0; }
+/* 精算書の明細は列が多いので、PC では画面を広く使う（狭い画面では表を横に動かす） */
+.app-main:has(.expense-form), .app-main:has(.expense-list-table) { max-width: 1200px; }
+.expense-list-table td { white-space: nowrap; }
+.expense-input-table { min-width: 960px; }
+.expense-delete-form { margin-top: 32px; padding-top: 12px; border-top: 1px solid var(--line); }

@@ -490,6 +490,15 @@ function schema_ensure(PDO $pdo): array
             created_at TEXT NOT NULL
         )",
         "CREATE INDEX IF NOT EXISTS ix_report_reminders_user ON report_reminders (user_id, period)",
+        // 交通費の精算書（G-26。K-063）。見られるのは作った本人だけ。中身（提出日・明細・金額など）はまとめて暗号化して data_enc に入れる
+        "CREATE TABLE IF NOT EXISTS expense_sheets (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL REFERENCES users(id),
+            data_enc TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )",
+        "CREATE INDEX IF NOT EXISTS ix_expense_sheets_user ON expense_sheets (user_id, id)",
     ];
     foreach ($statements as $sql) {
         $pdo->exec($sql);
