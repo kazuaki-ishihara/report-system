@@ -95,6 +95,12 @@ def main():
     check("一般の人には、一般の様式を選んでいる（コンピテンシー 16 項目）", 'name="kind" value="general"' in page_html
           and len(re.findall(r'name="competency_self\[\d+\]"', page_html)) == GENERAL_ITEM_COUNT, status_code)
     check("本人の画面では、配点・上長評価は入れられない", 'name="goals[0][difficulty]"' not in page_html and 'name="overall_boss"' not in page_html)
+    check("一般の人には様式を選ぶ欄を出さない（様式は役職で決まる）", 'id="goal-kind"' not in page_html and "様式は役職で決まります" in page_html)
+    _, _, other_kind_html = owner.get("/goals/edit.php?year=%d&kind=manager" % fiscal_year)
+    check("一般の人が URL で別の様式を指定しても、一般の様式のまま", 'name="kind" value="general"' in other_kind_html)
+    forged_status, _, _ = owner.post("/goals/edit.php?year=%d" % fiscal_year, owner_form(other_kind_html, kind="manager"))
+    check("一般の人が別の様式を送っても受け付けない（403）", forged_status == 403, forged_status)
+    _, _, page_html = owner.get("/goals/edit.php?year=%d" % fiscal_year)
     status_code, _, error_html = owner.post("/goals/edit.php?year=%d" % fiscal_year, owner_form(page_html, **{"goals[0][goal]": "あ" * 300}))
     check("様式の欄に収まらない長さは保存しない（行の数を出す）", status_code == 200 and "長すぎます" in error_html and "7 行" in error_html, status_code)
     status_code, location, _ = owner.post("/goals/edit.php?year=%d" % fiscal_year, owner_form(
@@ -175,6 +181,8 @@ def main():
     other_status, _, _ = client_of("leader_a").get("/goals/edit.php?id=%d" % deputy_sheet_id)
     check("課長代理のシートは課長が見られる（主任は見られない）", deputy_sheet_id > 0 and view_status == 200 and other_status == 404, (deputy_sheet_id, view_status, other_status))
     _, _, page_html = client_of("kacho_a").get("/goals/edit.php?year=%d&kind=manager" % fiscal_year)
+    check("課長は、課長以上・営業・間接部門から様式を選べる（一般・リーダーは選べない）", 'id="goal-kind"' in page_html
+          and all('value="%s"' % kind_code in page_html for kind_code in ("manager", "sales", "indirect")) and '<option value="general"' not in page_html)
     status_code, location, _ = client_of("kacho_a").post("/goals/edit.php?year=%d&kind=manager" % fiscal_year, dict(owner_form(page_html), full_name="A課長", position="課長"))
     manager_sheet_id = int(re.search(r"id=(\d+)", location).group(1)) if "id=" in location else 0
     deputy_view_status, _, _ = client_of("dairi_a").get("/goals/edit.php?id=%d" % manager_sheet_id)

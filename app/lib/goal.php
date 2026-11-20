@@ -50,17 +50,28 @@ function goal_creatable_years(): array
     return [$currentYear, $currentYear + 1];
 }
 
-/** 役職から選ぶ様式の種類（本人が作るときに変えられる） */
-function goal_default_kind(array $user): string
+/**
+ * 役職で選べる様式の種類（1 つ目が既定）。一般は一般だけ、主任・課長代理はリーダー・課長代理だけで、選び直せない。
+ * 課長・部長は、課長以上・営業・間接部門から選ぶ（営業・間接部門の様式は、課長以上の様式のファイルにだけあるため）
+ *
+ * @return string[]
+ */
+function goal_selectable_kinds(array $user): array
 {
     $roleTitle = (string) ($user['role_title'] ?? '');
     if ($roleTitle === '課長' || $roleTitle === '部長') {
-        return 'manager';
+        return ['manager', 'sales', 'indirect'];
     }
     if ($roleTitle === '課長代理' || $roleTitle === '主任') {
-        return 'leader';
+        return ['leader'];
     }
-    return 'general';
+    return ['general'];
+}
+
+/** 役職から決まる既定の様式の種類 */
+function goal_default_kind(array $user): string
+{
+    return goal_selectable_kinds($user)[0];
 }
 
 /** 空の目標 1 つ */

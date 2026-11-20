@@ -34,7 +34,7 @@ if (isset($_GET['id']) || isset($_POST['sheet_id'])) {
         error_page(404);
     }
     $requestedKind = (string) ($_POST['kind'] ?? ($_GET['kind'] ?? goal_default_kind($user)));
-    $kindCode = isset(GOAL_TEMPLATE_KINDS[$requestedKind]) ? $requestedKind : goal_default_kind($user);
+    $kindCode = in_array($requestedKind, goal_selectable_kinds($user), true) ? $requestedKind : goal_default_kind($user);   // 役職で選べない様式は使わない
     $sheet = ['id' => null, 'user_id' => $userId, 'fiscal_year' => $fiscalYear, 'kind' => $kindCode, 'created_at' => '', 'updated_at' => '',
               'data' => goal_new_sheet_data($user, $kindCode), 'unreadable' => false];
     $viewerRole = 'owner';
@@ -56,7 +56,10 @@ if (is_post()) {
         $kindCode = $sheet['kind'];
         if ($action === 'save_owner' && $sheet['id'] === null) {
             $postedKind = post_str('kind');
-            $kindCode = isset(GOAL_TEMPLATE_KINDS[$postedKind]) ? $postedKind : $kindCode;
+            if (!in_array($postedKind, goal_selectable_kinds($user), true)) {
+                error_page(403, msg('この様式は選べません（様式は役職で決まります）。'));
+            }
+            $kindCode = $postedKind;
             $postedData = goal_normalize($postedData, $kindCode);
         }
         $errorTextList = goal_validate($postedData);

@@ -582,7 +582,7 @@ def capture_all(camera, php_path, environment, database_path):
         camera.goto("/goals/index.php")
         camera.shoot("m14_01_list", [mark("a.button", text="年度のシートを作る", label=1)], scroll="top")
         camera.goto("/goals/edit.php?year=%d" % fiscal_year)
-        camera.shoot("m14_02_new_kind", [mark("#goal-kind", label=1), mark("button", text="様式を切り替える", label=2), mark("#department_name", label=3)], scroll="top")
+        camera.shoot("m14_02_new_kind", [mark("p.note", text="様式は役職で決まります", label=1), mark("#department_name", label=2)], scroll="top")
         browser.fill("#goal-theme-1", "障害の件数を減らす")
         browser.fill('textarea[name="goals[0][goal]"]', "担当システムの障害の件数を、前年の半分にする。\n毎月の振り返りで原因を分類し、再発防止策を決めて実行する。")
         browser.fill('textarea[name="goals[0][progress]"]', "上期の障害は 6 件（前年同期 11 件）。")

@@ -59,16 +59,19 @@ $roleNoteByViewerRole = [
   <?php if (!$isNewSheet && !$isMobile): ?>
     <p><a class="button" href="<?= h(url('/goals/download.php?id=' . $sheet['id'])) ?>">会社の様式の Excel を受け取る（.xlsx）</a></p>
   <?php endif; ?>
-  <?php if ($isNewSheet): ?>
+  <?php $selectableKindList = goal_selectable_kinds($user); ?>
+  <?php if ($isNewSheet && count($selectableKindList) > 1): ?>
     <form method="get" action="<?= h(url('/goals/edit.php')) ?>" class="filters">
       <input type="hidden" name="year" value="<?= (int) $sheet['fiscal_year'] ?>">
       <label for="goal-kind">様式</label>
       <select id="goal-kind" name="kind">
-        <?php foreach (GOAL_TEMPLATE_KINDS as $kindCode => $kindItem): ?><option value="<?= h($kindCode) ?>" <?= $kindCode === $sheet['kind'] ? 'selected' : '' ?>><?= h($kindItem['label']) ?></option><?php endforeach; ?>
+        <?php foreach ($selectableKindList as $kindCode): ?><option value="<?= h($kindCode) ?>" <?= $kindCode === $sheet['kind'] ? 'selected' : '' ?>><?= h(GOAL_TEMPLATE_KINDS[$kindCode]['label']) ?></option><?php endforeach; ?>
       </select>
       <button type="submit">様式を切り替える</button>
-      <span class="note"><?= h(msg('役職に合った様式を選んでいます。営業・間接部門の人は切り替えてください（コンピテンシーの項目が変わります）。')) ?></span>
+      <span class="note"><?= h(msg('課長以上の様式を選んでいます。営業・間接部門の人は切り替えてください（コンピテンシーの項目が変わります）。')) ?></span>
     </form>
+  <?php elseif ($isNewSheet): ?>
+    <p class="note"><?= h(msg('様式は役職で決まります（{kind}）。', ['kind' => GOAL_TEMPLATE_KINDS[$sheet['kind']]['label']])) ?></p>
   <?php endif; ?>
 
   <form method="post" action="<?= h(url($sheetPath)) ?>" class="form goal-form"<?= ($isOwner || $isBoss) ? ' data-leave-warn="1"' : '' ?>>
