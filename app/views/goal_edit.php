@@ -57,7 +57,7 @@ $roleNoteByViewerRole = [
   <?php if ($sheet['unreadable']): ?><div class="flash flash-error" role="alert"><?= h(msg('このシートは読めません（暗号の鍵が変わった可能性があります）。システム管理者に連絡してください。')) ?></div><?php endif; ?>
   <?php foreach ($errorTextList as $errorText): ?><div class="flash flash-error" role="alert"><?= h_lines($errorText) ?></div><?php endforeach; ?>
   <?php if (!$isNewSheet && !$isMobile): ?>
-    <p><a class="button" href="<?= h(url('/goals/download.php?id=' . $sheet['id'])) ?>">会社の様式の Excel を受け取る（.xlsx）</a></p>
+    <p><a class="button" href="<?= h(url('/goals/download.php?id=' . $sheet['id'])) ?>">目標管理評価シートの Excel を受け取る（.xlsx）</a></p>
   <?php endif; ?>
   <?php $selectableKindList = goal_selectable_kinds($user); ?>
   <?php if ($isNewSheet && count($selectableKindList) > 1): ?>
