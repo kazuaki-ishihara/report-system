@@ -127,7 +127,8 @@ def main():
     status_code, _, _ = owner.get("/expenses/download.php?id=%d" % sheet_id)
     workbook_bytes = owner.last_raw
     content_disposition = owner.last_headers.get("Content-Disposition", "")
-    check("PC からは xlsx を受け取れる（ファイル名に提出日）", status_code == 200 and workbook_bytes[:2] == b"PK" and "2026-11-20" in content_disposition, status_code)
+    check("PC からは xlsx を受け取れる（ファイル名は社員番号_交通費通勤定期代精算書_提出日）", status_code == 200 and workbook_bytes[:2] == b"PK"
+          and "filename*=UTF-8''999_%E4%BA%A4%E9%80%9A%E8%B2%BB" in content_disposition and "2026-11-20.xlsx" in content_disposition, (status_code, content_disposition))
     workbook_zip = zipfile.ZipFile(io.BytesIO(workbook_bytes))
     check("xlsx の zip が壊れていない（CRC）", workbook_zip.testzip() is None)
     template_zip = zipfile.ZipFile(os.path.join(repository_root, "app", "templates", "expense_sheet.xlsx"))

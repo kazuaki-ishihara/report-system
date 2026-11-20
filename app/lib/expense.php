@@ -455,8 +455,13 @@ function expense_xlsx(array $sheetData): string
     return zip_store($entryByName);
 }
 
-/** ダウンロードのファイル名（例: 交通費通勤定期代精算書_2026-11-20.xlsx） */
+/**
+ * ダウンロードのファイル名。頭に社員番号を付ける（例: 999_交通費通勤定期代精算書_2026-11-20.xlsx）。
+ * 社員番号のうち、ファイル名に使えない文字（\ / : * ? " < > | と空白・制御文字）は取り除く
+ */
 function expense_xlsx_file_name(array $sheetData): string
 {
-    return '交通費通勤定期代精算書_' . ($sheetData['submitted_on'] !== '' ? $sheetData['submitted_on'] : date('Y-m-d')) . '.xlsx';
+    $employeeNumberText = (string) preg_replace('/[\\\\\/:*?"<>|\s\x00-\x1F\x7F]+/u', '', $sheetData['employee_number']);
+    return ($employeeNumberText !== '' ? $employeeNumberText . '_' : '') . '交通費通勤定期代精算書_'
+        . ($sheetData['submitted_on'] !== '' ? $sheetData['submitted_on'] : date('Y-m-d')) . '.xlsx';
 }
