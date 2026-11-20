@@ -401,6 +401,7 @@ th,td{border:1px solid var(--border);padding:6px 12px;vertical-align:top}
 th{background:var(--th-bg);text-align:left}
 tbody tr:nth-child(2n){background:var(--row-alt)}
 img{max-width:100%}
+main img{border:1px solid var(--border);border-radius:4px}
 .listing li{margin:4px 0}
 .listing .dir>a{font-weight:700}
 .footer{margin-top:48px;color:var(--muted);font-size:12px}
