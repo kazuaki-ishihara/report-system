@@ -170,7 +170,7 @@ def main():
                                                                        "sheet_id": str(sheet_id), "comment_id": comment_id})
     check("コメントを消す操作はない（403）", status_code == 403, status_code)
     _, _, page_html = owner.get("/goals/edit.php?id=%d" % sheet_id)
-    check("更新の履歴に、作成・課長の評価・コメント・返信・面談が残る", all(text in page_html for text in ("作成", "課長が評価を保存", "コメント", "返信", "面談の記録")))
+    check("更新の履歴に、作成・課長の評価・コメント・返信・面談が残る", all(text in page_html for text in ("作成", "課長が評価を保存", "コメント", "返信", "面談の結果")))
 
     section("G-27", "目標管理: 課長代理・課長のシート")
     _, _, page_html = client_of("dairi_a").get("/goals/edit.php?year=%d" % fiscal_year)
@@ -247,6 +247,49 @@ def main():
         check("%s は、A課のシートをまとめて受け取れない（403）" % login_id, bulk_status == 403, bulk_status)
     _, _, history_html = owner.get("/goals/edit.php?id=%d" % sheet_id)
     check("まとめて受け取ったことも、シートの更新の履歴に残る", history_html.count("Excel を受け取った") >= 2)
+    section("G-27", "目標管理: 面談の結果は、課長・課長代理の一人ずつの欄に書く")
+    meeting_block_pattern = r'<div class="goal-meeting-block" data-reviewer-id="(\d+)">(.*?)(?=<div class="goal-meeting-block"|</section>)'
+
+    def meeting_blocks(page_html):
+        return {int(reviewer_id): block_html for reviewer_id, block_html in re.findall(meeting_block_pattern, page_html, re.S)}
+
+    boss_user_id = user_info_by_login_id["kacho_a"]["id"]
+    deputy_user_id = user_info_by_login_id["dairi_a"]["id"]
+    second_deputy_user_id = user_info_by_login_id["leader_a"]["id"]
+    _, _, page_html = owner.get("/goals/edit.php?id=%d" % sheet_id)
+    block_by_reviewer_id = meeting_blocks(page_html)
+    check("本人の画面に、課長と課長代理の欄が分かれて出る（課長が先）", list(block_by_reviewer_id) == [boss_user_id, deputy_user_id], list(block_by_reviewer_id))
+    check("課長代理の面談の結果は、課長代理の欄に出る（課長の欄には出ない）",
+          "目標2の指標を件数に直すと決めた" in block_by_reviewer_id.get(deputy_user_id, "") and "目標2の指標を件数に直すと決めた" not in block_by_reviewer_id.get(boss_user_id, ""))
+    _, _, page_html = boss.get("/goals/edit.php?id=%d" % sheet_id)
+    block_by_reviewer_id = meeting_blocks(page_html)
+    check("課長の画面では、書く欄は課長の欄にだけ出る", 'value="meeting"' in block_by_reviewer_id.get(boss_user_id, "") and 'value="meeting"' not in block_by_reviewer_id.get(deputy_user_id, ""))
+    status_code, _, _ = boss.post("/goals/edit.php?id=%d" % sheet_id, {"csrf_token": csrf(page_html), "request_key": rkey(page_html), "action": "meeting",
+                                                                      "sheet_id": str(sheet_id), "held_on": datetime.date.today().isoformat(), "note": "課長の面談: 下期は設計の指摘の件数で見る"})
+    _, _, page_html = owner.get("/goals/edit.php?id=%d" % sheet_id)
+    block_by_reviewer_id = meeting_blocks(page_html)
+    check("課長の面談の結果は、課長の欄に出る", status_code in (302, 303) and "課長の面談: 下期は設計の指摘の件数で見る" in block_by_reviewer_id.get(boss_user_id, "")
+          and "課長の面談" not in block_by_reviewer_id.get(deputy_user_id, ""), status_code)
+    # 課長代理が 2 人いるとき（主任を課長代理にして確かめ、あとで戻す）
+    database.execute("UPDATE users SET role_title = '課長代理' WHERE id = ?", (second_deputy_user_id,))
+    try:
+        _, _, page_html = owner.get("/goals/edit.php?id=%d" % sheet_id)
+        block_by_reviewer_id = meeting_blocks(page_html)
+        check("課長代理が 2 人いると、課長と課長代理 2 人の 3 つの欄が出る", list(block_by_reviewer_id) == [boss_user_id, deputy_user_id, second_deputy_user_id], list(block_by_reviewer_id))
+        second_deputy = login(arguments.base, "leader_a", user_info_by_login_id["leader_a"])
+        _, _, page_html = second_deputy.get("/goals/edit.php?id=%d" % sheet_id)
+        status_code, _, _ = second_deputy.post("/goals/edit.php?id=%d" % sheet_id, {"csrf_token": csrf(page_html), "request_key": rkey(page_html), "action": "meeting",
+                                                                                     "sheet_id": str(sheet_id), "held_on": datetime.date.today().isoformat(), "note": "2 人目の課長代理の面談"})
+        _, _, page_html = owner.get("/goals/edit.php?id=%d" % sheet_id)
+        block_by_reviewer_id = meeting_blocks(page_html)
+        check("2 人目の課長代理の面談の結果は、その人の欄に出る（ほかの 2 人の欄には出ない）", status_code in (302, 303)
+              and "2 人目の課長代理の面談" in block_by_reviewer_id.get(second_deputy_user_id, "")
+              and all("2 人目の課長代理の面談" not in block_by_reviewer_id.get(reviewer_id, "") for reviewer_id in (boss_user_id, deputy_user_id)), status_code)
+    finally:
+        database.execute("UPDATE users SET role_title = '主任' WHERE id = ?", (second_deputy_user_id,))
+    _, _, page_html = owner.get("/goals/edit.php?id=%d" % sheet_id)
+    check("主任に戻すと、その人の欄は消え、書いた面談の結果は「以前の担当」の欄に残る",
+          second_deputy_user_id not in meeting_blocks(page_html) and "以前の担当の面談の結果" in page_html and "2 人目の課長代理の面談" in page_html)
     owner.headers["User-Agent"] = MOBILE_USER_AGENT
     status_code, _, _ = owner.get("/goals/download.php?id=%d" % sheet_id)
     check("スマートフォンでは受け取れない（PC から）", status_code == 403, status_code)

@@ -839,3 +839,8 @@ form.wizard-active .sticky-actions button[value="submit"] { display: none; }
 .goal-reply { margin: 8px 0 0 24px; padding-left: 12px; border-left: 3px solid var(--line); }
 .goal-reply-form { margin: 6px 0 0 24px; }
 .use-backup-code { margin: 4px 0 8px; }
+.goal-meeting-block { border-top: 1px solid var(--line); padding-top: 8px; margin-top: 12px; }
+.goal-meeting-block h3 { margin: 0 0 6px; font-size: 1rem; }
+.goal-criteria-table { border-collapse: collapse; font-size: 0.85rem; min-width: 900px; }
+.goal-criteria-table td { border: 1px solid var(--line); padding: 4px 6px; vertical-align: top; min-width: 4em; }
+.app-main:has(.goal-criteria) { max-width: 1400px; }

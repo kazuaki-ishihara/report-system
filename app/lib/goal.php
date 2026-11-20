@@ -414,7 +414,7 @@ function goal_add_history(int $sheetId, int $actorUserId, string $historyAction)
 /** 履歴の操作の表示名 */
 const GOAL_HISTORY_LABELS = [
     'create' => '作成', 'save_owner' => '本人が保存', 'save_boss' => '課長が評価を保存', 'comment' => 'コメント', 'reply' => '返信',
-    'meeting' => '面談の記録', 'download' => 'Excel を受け取った',
+    'meeting' => '面談の結果', 'download' => 'Excel を受け取った',
 ];
 
 /**
@@ -443,16 +443,48 @@ function goal_comments(int $sheetId): array
 }
 
 /**
+ * そのシートの面談をする人（面談の結果の欄を持つ人）: その課の課長と、そのシートを見る課長代理（複数いれば全員）。
+ * 持ち主の今の所属の課で決める（goal_viewer_role() と同じ決まり）。課長のシートは本人だけなので、面談をする人はいない
+ *
+ * @return array<int, array{user_id: int, name: string, role_label: string}>
+ */
+function goal_meeting_reviewers(int $ownerUserId): array
+{
+    $owner = db_one('SELECT id, department_id FROM users WHERE id = ?', [$ownerUserId]);
+    if ($owner === null || empty($owner['department_id'])) {
+        return [];
+    }
+    $reviewerList = [];
+    $candidateRowList = db_all(
+        "SELECT u.id, u.display_name, u.role_title, u.department_id,
+                (SELECT 1 FROM department_reviewers dr WHERE dr.user_id = u.id AND dr.department_id = ? AND dr.is_final = 1) AS is_final
+           FROM users u
+          WHERE u.is_active = 1 AND u.id <> ?
+            AND (u.id IN (SELECT user_id FROM department_reviewers WHERE department_id = ? AND is_final = 1) OR (u.role_title = '課長代理' AND u.department_id = ?))
+          ORDER BY is_final DESC, u.id",
+        [(int) $owner['department_id'], $ownerUserId, (int) $owner['department_id'], (int) $owner['department_id']]
+    );
+    foreach ($candidateRowList as $candidateRow) {
+        $viewerRole = goal_viewer_role(['id' => (int) $candidateRow['id'], 'role_title' => (string) $candidateRow['role_title'], 'department_id' => $candidateRow['department_id']], $ownerUserId);
+        if ($viewerRole === 'boss' || $viewerRole === 'deputy') {
+            $reviewerList[] = ['user_id' => (int) $candidateRow['id'], 'name' => (string) $candidateRow['display_name'], 'role_label' => $viewerRole === 'boss' ? '課長' : '課長代理'];
+        }
+    }
+    return $reviewerList;
+}
+
+/**
  * 面談の記録（新しい順）
  *
- * @return array<int, array{id: int, held_on: string, note: string, user_name: string, created_at: string}>
+ * @return array<int, array{id: int, held_on: string, note: string, user_name: string, created_by: int, created_at: string}>
  */
 function goal_meetings(int $sheetId): array
 {
     $meetingList = [];
-    foreach (db_all('SELECT m.id, m.held_on, m.note_enc, m.created_at, u.display_name FROM goal_sheet_meetings m JOIN users u ON u.id = m.created_by WHERE m.sheet_id = ? ORDER BY m.held_on DESC, m.id DESC', [$sheetId]) as $meetingRow) {
+    foreach (db_all('SELECT m.id, m.held_on, m.note_enc, m.created_at, m.created_by, u.display_name FROM goal_sheet_meetings m JOIN users u ON u.id = m.created_by WHERE m.sheet_id = ? ORDER BY m.held_on DESC, m.id DESC', [$sheetId]) as $meetingRow) {
         $meetingList[] = [
             'id' => (int) $meetingRow['id'], 'held_on' => (string) $meetingRow['held_on'], 'user_name' => (string) $meetingRow['display_name'],
+            'created_by' => (int) $meetingRow['created_by'],
             'note' => dec((string) $meetingRow['note_enc'], 'goal_sheet_meetings:' . $sheetId) ?? msg('（この内容は表示できません）'),
             'created_at' => (string) $meetingRow['created_at'],
         ];

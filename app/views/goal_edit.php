@@ -7,13 +7,13 @@
 /** @var array<string, mixed> $scores */
 /** @var array<int, array<string, mixed>> $comments */
 /** @var array<int, array<string, mixed>> $meetings */
+/** @var array<int, array{user_id: int, name: string, role_label: string}> $meetingReviewers 面談の結果の欄を持つ人（課長・課長代理） */
 /** @var array<int, array<string, mixed>> $history */
 /** @var string[] $errorTextList */
 /** @var bool $isMobile */
 $sheetData = $sheet['data'];
 $isOwner = $viewerRole === 'owner';
 $isBoss = $viewerRole === 'boss';
-$canWriteMeeting = in_array($viewerRole, ['boss', 'deputy'], true);
 $isNewSheet = $sheet['id'] === null;
 $formatScore = function (float $scoreValue): string { return rtrim(rtrim(number_format($scoreValue, 1), '0'), '.'); };
 // 文の欄: 書ける人には入力欄、ほかの人には文だけ
@@ -220,25 +220,46 @@ $roleNoteByViewerRole = [
 </section>
 
 <section class="card goal-meetings" id="meetings">
-  <h2>面談の記録</h2>
-  <p class="note"><?= h_lines(msg('個別の面談で話したこと（直すこと・確かめたこと）を、課長・課長代理が残します。本人も読めます。あとから直したり消したりできません。')) ?></p>
-  <?php if (!$meetings): ?><p class="note"><?= h(msg('面談の記録はまだありません。')) ?></p><?php endif; ?>
-  <?php foreach ($meetings as $meetingItem): ?>
-    <div class="goal-comment">
-      <p class="goal-comment-head"><strong><?= h($meetingItem['held_on']) ?> の面談</strong> <span class="note"><?= h($meetingItem['user_name']) ?>（<?= h(display_datetime($meetingItem['created_at'])) ?> に記録）</span></p>
-      <div><?= h_lines($meetingItem['note']) ?></div>
+  <h2>面談の結果</h2>
+  <p class="note"><?= h_lines(msg('個別の面談の結果（直すこと・確かめたこと）を、課長と課長代理が、それぞれ自分の欄に残します。課長代理の面談の結果は、なくてもかまいません（任意）。本人も読めます。あとから直したり消したりできません。')) ?></p>
+  <?php
+  $reviewerUserIdList = array_column($meetingReviewers, 'user_id');
+  $formerMeetingList = array_values(array_filter($meetings, function (array $meetingItem) use ($reviewerUserIdList): bool { return !in_array($meetingItem['created_by'], $reviewerUserIdList, true); }));
+  ?>
+  <?php if (!$meetingReviewers): ?><p class="note"><?= h(msg('このシートには、面談の結果を書く人（課長・課長代理）がいません。')) ?></p><?php endif; ?>
+  <?php foreach ($meetingReviewers as $reviewerItem): $reviewerMeetingList = array_values(array_filter($meetings, function (array $meetingItem) use ($reviewerItem): bool { return $meetingItem['created_by'] === $reviewerItem['user_id']; })); ?>
+    <div class="goal-meeting-block" data-reviewer-id="<?= (int) $reviewerItem['user_id'] ?>">
+      <h3><?= h($reviewerItem['role_label']) ?> <?= h($reviewerItem['name']) ?> の面談の結果<?= $reviewerItem['role_label'] === '課長代理' ? '（任意）' : '' ?></h3>
+      <?php if (!$reviewerMeetingList): ?><p class="note"><?= h($reviewerItem['role_label'] === '課長代理' ? msg('まだありません（課長代理の面談の結果は、なくてもかまいません）。') : msg('まだありません。')) ?></p><?php endif; ?>
+      <?php foreach ($reviewerMeetingList as $meetingItem): ?>
+        <div class="goal-comment">
+          <p class="goal-comment-head"><strong><?= h($meetingItem['held_on']) ?> の面談</strong> <span class="note"><?= h(display_datetime($meetingItem['created_at'])) ?> に記録</span></p>
+          <div><?= h_lines($meetingItem['note']) ?></div>
+        </div>
+      <?php endforeach; ?>
+      <?php if ($reviewerItem['user_id'] === (int) $user['id']): ?>
+        <form method="post" action="<?= h(url($sheetPath)) ?>" class="form">
+          <?= form_hidden() ?>
+          <input type="hidden" name="sheet_id" value="<?= (int) $sheet['id'] ?>">
+          <label for="goal-meeting-date">面談の日</label>
+          <input id="goal-meeting-date" name="held_on" type="date" value="<?= h(date('Y-m-d')) ?>" max="<?= h(date('Y-m-d')) ?>">
+          <label for="goal-meeting-note">面談の結果（2,000 文字まで）</label>
+          <textarea id="goal-meeting-note" name="note" maxlength="2000" rows="4"></textarea>
+          <button type="submit" name="action" value="meeting">面談の結果を残す</button>
+        </form>
+      <?php endif; ?>
     </div>
   <?php endforeach; ?>
-  <?php if ($canWriteMeeting): ?>
-    <form method="post" action="<?= h(url($sheetPath)) ?>" class="form">
-      <?= form_hidden() ?>
-      <input type="hidden" name="sheet_id" value="<?= (int) $sheet['id'] ?>">
-      <label for="goal-meeting-date">面談の日</label>
-      <input id="goal-meeting-date" name="held_on" type="date" value="<?= h(date('Y-m-d')) ?>" max="<?= h(date('Y-m-d')) ?>">
-      <label for="goal-meeting-note">記録（2,000 文字まで）</label>
-      <textarea id="goal-meeting-note" name="note" maxlength="2000" rows="4"></textarea>
-      <button type="submit" name="action" value="meeting">面談の記録を残す</button>
-    </form>
+  <?php if ($formerMeetingList): ?>
+    <div class="goal-meeting-block">
+      <h3>以前の担当の面談の結果</h3>
+      <?php foreach ($formerMeetingList as $meetingItem): ?>
+        <div class="goal-comment">
+          <p class="goal-comment-head"><strong><?= h($meetingItem['held_on']) ?> の面談</strong> <span class="note"><?= h($meetingItem['user_name']) ?>（<?= h(display_datetime($meetingItem['created_at'])) ?> に記録）</span></p>
+          <div><?= h_lines($meetingItem['note']) ?></div>
+        </div>
+      <?php endforeach; ?>
+    </div>
   <?php endif; ?>
 </section>
 

@@ -91,6 +91,10 @@ if (is_post()) {
         }
         rk_cancel();
     } else {
+        // 面談の結果は、自分の欄にだけ書く（課長・そのシートを見る課長代理。goal_meeting_reviewers()）
+        if (!in_array($userId, array_column(goal_meeting_reviewers($sheet['user_id']), 'user_id'), true)) {
+            error_page(403);
+        }
         $heldOnText = post_str('held_on');
         $meetingNoteText = trim(str_replace(["\r\n", "\r"], "\n", post_str('note', false)));
         if (!expense_is_valid_date($heldOnText) || $heldOnText > date('Y-m-d')) {
@@ -101,7 +105,7 @@ if (is_post()) {
             db_exec('INSERT INTO goal_sheet_meetings (sheet_id, held_on, note_enc, created_by, created_at) VALUES (?, ?, ?, ?, ?)',
                 [$sheet['id'], $heldOnText, enc($meetingNoteText, 'goal_sheet_meetings:' . $sheet['id']), $userId, now()]);
             goal_add_history((int) $sheet['id'], $userId, 'meeting');
-            flash('success', msg('面談の記録を残しました'));
+            flash('success', msg('面談の結果を残しました'));
             rk_done($sheetPath . '#meetings');
         }
         rk_cancel();
@@ -120,6 +124,7 @@ render('goal_edit', [
     'scores'        => goal_scores($sheet['data'], $sheet['kind']),
     'comments'      => $sheet['id'] !== null ? goal_comments((int) $sheet['id']) : [],
     'meetings'      => $sheet['id'] !== null ? goal_meetings((int) $sheet['id']) : [],
+    'meetingReviewers' => $sheet['id'] !== null ? goal_meeting_reviewers($sheet['user_id']) : [],
     'history'       => $sheet['id'] !== null ? goal_history((int) $sheet['id']) : [],
     'errorTextList' => $errorTextList,
     'isMobile'      => is_mobile_request(),
