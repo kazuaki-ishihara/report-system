@@ -225,6 +225,28 @@ def main():
     client_of("kacho_a").get("/goals/download.php?id=%d" % manager_sheet_id)
     manager_sheet_xml = zipfile.ZipFile(io.BytesIO(client_of("kacho_a").last_raw)).read("xl/worksheets/sheet4.xml").decode("utf-8")
     check("業績目標（計画 1,000・実績 1,100 → 達成率 1.1・評点 4）", (cell_value(manager_sheet_xml, "B8"), cell_value(manager_sheet_xml, "C8"), cell_value(manager_sheet_xml, "D8"), cell_value(manager_sheet_xml, "E8")) == ("1000", "1100", "1.1", "4"))
+    section("G-27", "目標管理: 課長が一覧から受け取る（1 人ずつ・まとめて）")
+    department_a_id = json.load(open(os.path.join(test_dir, "output_dev_users.json"), encoding="utf-8"))["dept_a"]
+    _, _, boss_list_html = client_of("kacho_a").get("/goals/index.php?year=%d" % fiscal_year)
+    check("課長の一覧に、1 人ずつの Excel（シートのある 2 人）と、まとめて受け取るボタンが出る",
+          boss_list_html.count("goal-download-one") == 2 and "/goals/download.php?id=%d" % sheet_id in boss_list_html
+          and "/goals/download_all.php?year=%d&amp;dept=%d" % (fiscal_year, department_a_id) in boss_list_html)
+    _, _, deputy_list_html = client_of("dairi_a").get("/goals/index.php?year=%d" % fiscal_year)
+    check("課長代理の一覧には、Excel もまとめて受け取るボタンも出ない", "goal-download-one" not in deputy_list_html and "goal-download-all" not in deputy_list_html)
+    status_code, _, _ = client_of("kacho_a").get("/goals/download_all.php?year=%d&dept=%d" % (fiscal_year, department_a_id))
+    bulk_zip = zipfile.ZipFile(io.BytesIO(client_of("kacho_a").last_raw)) if status_code == 200 else None
+    entry_names = sorted(bulk_zip.namelist()) if bulk_zip else []
+    check("課長がまとめて受け取ると、課の人のシートが 1 人 1 つの xlsx で zip に入る（課長自身のシートは入らない）",
+          status_code == 200 and len(entry_names) == 2 and any("A一般1" in name for name in entry_names) and any("A代理" in name for name in entry_names)
+          and not any("A課長" in name for name in entry_names), (status_code, entry_names))
+    check("zip の中の xlsx は、それぞれ開ける（中の zip が壊れていない）",
+          bool(entry_names) and all(zipfile.ZipFile(io.BytesIO(bulk_zip.read(name))).testzip() is None for name in entry_names))
+    check("zip のファイル名に年度と課の名前", "%d%%E5%%B9%%B4%%E5%%BA%%A6_A%%E8%%AA%%B2.zip" % fiscal_year in client_of("kacho_a").last_headers.get("Content-Disposition", ""))
+    for login_id in ("dairi_a", "kacho_b", "admin01", "ippan_a1"):
+        bulk_status, _, _ = client_of(login_id).get("/goals/download_all.php?year=%d&dept=%d" % (fiscal_year, department_a_id))
+        check("%s は、A課のシートをまとめて受け取れない（403）" % login_id, bulk_status == 403, bulk_status)
+    _, _, history_html = owner.get("/goals/edit.php?id=%d" % sheet_id)
+    check("まとめて受け取ったことも、シートの更新の履歴に残る", history_html.count("Excel を受け取った") >= 2)
     owner.headers["User-Agent"] = MOBILE_USER_AGENT
     status_code, _, _ = owner.get("/goals/download.php?id=%d" % sheet_id)
     check("スマートフォンでは受け取れない（PC から）", status_code == 403, status_code)

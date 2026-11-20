@@ -30,4 +30,5 @@ render('goal_list', [
     'selectedYear'      => $selectedYear,
     'yearOptionList'    => array_values(array_unique(array_merge($creatableYearList, $existingYearList, [$selectedYear]))),
     'memberOverview'    => goal_member_overview($user, $selectedYear),
+    'isMobile'          => is_mobile_request(),
 ]);

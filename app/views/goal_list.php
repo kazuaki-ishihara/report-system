@@ -3,7 +3,8 @@
 /** @var int[] $newYearList まだ作っていない、作れる年度 */
 /** @var int $selectedYear 課長・課長代理の一覧で見る年度 */
 /** @var int[] $yearOptionList */
-/** @var array<int, array{department_name: string, members: array<int, array<string, mixed>>}> $memberOverview */
+/** @var array<int, array{department_id: int, department_name: string, is_boss: bool, members: array<int, array<string, mixed>>}> $memberOverview */
+/** @var bool $isMobile */
 $progressLabel = function (?array $progressFlags): string {
     if ($progressFlags === null) {
         return '';
@@ -55,23 +56,29 @@ $progressLabel = function (?array $progressFlags): string {
     </form>
     <?php foreach ($memberOverview as $departmentOverview): ?>
       <h3><?= h($departmentOverview['department_name']) ?>（<?= (int) $selectedYear ?> 年度）</h3>
+      <?php $canDownloadMembers = $departmentOverview['is_boss'] && !$isMobile; ?>
+      <?php if ($canDownloadMembers && array_filter(array_column($departmentOverview['members'], 'sheet'))): ?>
+        <p><a class="button goal-download-all" href="<?= h(url('/goals/download_all.php?year=' . $selectedYear . '&dept=' . $departmentOverview['department_id'])) ?>">この課のシートをまとめて受け取る（zip）</a>
+          <span class="note"><?= h(msg('課の人の、この年度のシートを、会社の様式の Excel（1 人 1 ファイル）にして zip でまとめます。')) ?></span></p>
+      <?php endif; ?>
       <?php if (!$departmentOverview['members']): ?>
         <p class="note"><?= h(msg('見られる人がいません。')) ?></p>
       <?php else: ?>
         <div class="table-wrap">
         <table class="table goal-list-table">
-          <thead><tr><th>氏名</th><th>役職</th><th>様式</th><th>評価の進み具合</th><th>最後に保存</th></tr></thead>
+          <thead><tr><th>氏名</th><th>役職</th><th>様式</th><th>評価の進み具合</th><th>最後に保存</th><?php if ($canDownloadMembers): ?><th>Excel</th><?php endif; ?></tr></thead>
           <tbody>
             <?php foreach ($departmentOverview['members'] as $memberItem): ?>
               <tr>
                 <td><?php if ($memberItem['sheet'] !== null): ?><a href="<?= h(url('/goals/edit.php?id=' . $memberItem['sheet']['id'])) ?>"><?= h($memberItem['name']) ?></a><?php else: ?><?= h($memberItem['name']) ?><?php endif; ?></td>
                 <td><?= h($memberItem['role']) ?></td>
                 <?php if ($memberItem['sheet'] === null): ?>
-                  <td colspan="3"><span class="badge">未作成</span></td>
+                  <td colspan="<?= $canDownloadMembers ? 4 : 3 ?>"><span class="badge">未作成</span></td>
                 <?php else: ?>
                   <td><?= h(GOAL_TEMPLATE_KINDS[$memberItem['sheet']['kind']]['label']) ?></td>
                   <td><?= h($progressLabel($memberItem['progress'])) ?></td>
                   <td><?= h(display_datetime($memberItem['sheet']['updated_at'])) ?></td>
+                  <?php if ($canDownloadMembers): ?><td><a class="button small goal-download-one" href="<?= h(url('/goals/download.php?id=' . $memberItem['sheet']['id'])) ?>">Excel</a></td><?php endif; ?>
                 <?php endif; ?>
               </tr>
             <?php endforeach; ?>

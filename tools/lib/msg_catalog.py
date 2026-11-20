@@ -45,7 +45,7 @@ SCREEN_NAME_BY_FILE_NAME = {
     "admin_notices.php": "G-24 更新のお知らせ", "faq.php": "G-25 よくある質問",
     "expense.php": "G-26 通勤定期代の精算", "expense_list.php": "G-26 通勤定期代の精算", "expense_edit.php": "G-26 通勤定期代の精算",
     "expense_download.php": "G-26 通勤定期代の精算",
-    "goal.php": "G-27 目標管理", "goal_list.php": "G-27 目標管理", "goal_edit.php": "G-27 目標管理", "goal_download.php": "G-27 目標管理",
+    "goal.php": "G-27 目標管理", "goal_list.php": "G-27 目標管理", "goal_edit.php": "G-27 目標管理", "goal_download.php": "G-27 目標管理", "goal_download_all.php": "G-27 目標管理",
     "notice.php": "共通（画面ごとの使い方）", "maintenance.php": "共通（メンテナンス）", "backup.php": "G-21 管理のトップ",
     "support_request_list.php": "G-22 要望・依頼", "support_request_view.php": "G-22 要望・依頼", "support_request.php": "G-22 要望・依頼",
     "form.php": "共通（入力の確認）",

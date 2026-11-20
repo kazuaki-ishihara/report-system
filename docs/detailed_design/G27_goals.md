@@ -2,7 +2,7 @@
 
 | 項目 | 内容 |
 |---|---|
-| URL | `/goals/index.php`（一覧。`?year=<年度>` で課の人の年度を選ぶ）、`/goals/edit.php`（GET: `?id=<ID>` で開く、`?year=<年度>&kind=<種類>` で自分のシートを作る。POST: `action` = `save_owner`・`save_boss`・`comment`・`reply`・`meeting`）、`/goals/download.php?id=<ID>`（様式の xlsx） |
+| URL | `/goals/index.php`（一覧。`?year=<年度>` で課の人の年度を選ぶ）、`/goals/edit.php`（GET: `?id=<ID>` で開く、`?year=<年度>&kind=<種類>` で自分のシートを作る。POST: `action` = `save_owner`・`save_boss`・`comment`・`reply`・`meeting`）、`/goals/download.php?id=<ID>`（様式の xlsx）、`/goals/download_all.php?year=<年度>&dept=<課 ID>`（課長が課の人のシートをまとめて受け取る zip） |
 | ファイル | `app/pages/goal_list.php`・`goal_edit.php`・`goal_download.php`、`app/views/goal_list.php`・`goal_edit.php`、`app/lib/goal.php`、`app/lib/goal_templates.php`（様式から作る定数。`tools/lib/goal_template_gen.py`）、`app/templates/goal_general.xlsx`・`goal_leader.xlsx`・`goal_manager.xlsx`（会社の様式） |
 | 利用者 | 全員（自分のシート）、課長・課長代理（課の人のシート） |
 | 主な端末 | PC |
@@ -31,6 +31,7 @@
 - 課は、シートの持ち主の今の所属の課（異動すると、新しい課の課長・課長代理が見る）。
 - 課長のシートは本人だけが見る（課長の上長はこのシステムにいないため）。課長代理のシートは課長が見る（課長代理どうしは見ない）。
 - 一覧（`/goals/index.php`）: 自分のシート（年度・様式・評価の進み具合・最後に保存）と、今の年度・次の年度のシートを作るボタン。課長・課長代理には、見られる人の一覧（その年度のシートの有無・評価の進み具合）。
+- 課長（その課の最終確認者）の一覧には、人ごとの「Excel」（その人の xlsx）と「この課のシートをまとめて受け取る（zip）」を出す（PC だけ）。zip には、その年度の、課長が評価する人のシートを 1 人 1 つの xlsx（ファイル名は 3.4 と同じ。同じ氏名なら利用者の番号を足す）で入れる。課長自身・ほかの課長のシートは入れない。課長代理・ほかの課の課長・管理者がまとめて受け取ろうとしたら 403。シートが 1 つも無ければ、その旨を出して一覧に戻す。受け取ったことは、それぞれのシートの更新の履歴に残す。
 
 ## 3. シート
 
@@ -109,4 +110,5 @@
 - 様式の欄に収まらない長さ、同じ年度のシートは 1 つ、面談の日
 - 様式は役職で決まる（一般には選ぶ欄を出さない・URL で別の様式を指定しても変わらない・送っても 403。課長は 3 つから選べる）
 - コメント・返信・面談の記録、消す操作がない、更新の履歴、暗号化
+- 課長の一覧から 1 人ずつ・まとめて（zip）受け取れる。課長代理には出さない。課長代理・ほかの課の課長・管理者・本人はまとめて受け取れない（403）
 - 評点の計算、xlsx（値の入るセル・行に分けた文・目標 2 の位置・式の値・業績目標・開くシート・様式のほかの部分がそのまま）、スマートフォンでは受け取れない

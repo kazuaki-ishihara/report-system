@@ -180,7 +180,7 @@ function goal_viewer_role(array $viewer, int $ownerUserId): ?string
 /**
  * 課長・課長代理として見られる人（課ごと）。その年度のシートの有無と、評価の進み具合も付ける
  *
- * @return array<int, array{department_name: string, members: array<int, array<string, mixed>>}>
+ * @return array<int, array{department_id: int, department_name: string, is_boss: bool, members: array<int, array<string, mixed>>}>
  */
 function goal_member_overview(array $viewer, int $fiscalYear): array
 {
@@ -208,7 +208,12 @@ function goal_member_overview(array $viewer, int $fiscalYear): array
                 'progress' => $memberSheet !== null ? goal_progress($memberSheet) : null,
             ];
         }
-        $overviewList[] = ['department_name' => (string) db_val('SELECT name FROM departments WHERE id = ?', [$departmentId]), 'members' => $memberList];
+        $overviewList[] = [
+            'department_id'   => (int) $departmentId,
+            'department_name' => (string) db_val('SELECT name FROM departments WHERE id = ?', [$departmentId]),
+            'is_boss'         => is_final_reviewer_of((int) $viewer['id'], (int) $departmentId),   // 課長なら、一覧から受け取れる
+            'members'         => $memberList,
+        ];
     }
     return $overviewList;
 }
@@ -618,6 +623,28 @@ function goal_xlsx(array $sheet): string
     $workbookXml = (string) preg_replace('/<workbookView\b/', '<workbookView activeTab="' . $sheetIndex . '"', $workbookXml, 1);
     $entryByName['xl/workbook.xml'] = (string) preg_replace('/<calcPr\b(?![^>]*fullCalcOnLoad)/', '<calcPr fullCalcOnLoad="1"', $workbookXml, 1);
     return zip_store($entryByName);
+}
+
+/**
+ * 課長が、課の人のその年度のシートをまとめて受け取る（zip の中に 1 人 1 つの xlsx）。課長自身・ほかの課長のシートは入れない。
+ * 受け取ったことは、それぞれのシートの更新の履歴に残す。シートが 1 つも無ければ null
+ */
+function goal_department_zip(array $viewer, int $departmentId, int $fiscalYear): ?string
+{
+    $entryByName = [];
+    foreach (db_all('SELECT s.id FROM goal_sheets s JOIN users u ON u.id = s.user_id WHERE u.department_id = ? AND s.fiscal_year = ? ORDER BY u.id', [$departmentId, $fiscalYear]) as $sheetRow) {
+        $memberSheet = goal_sheet((int) $sheetRow['id']);
+        if ($memberSheet === null || $memberSheet['unreadable'] || goal_viewer_role($viewer, $memberSheet['user_id']) !== 'boss') {
+            continue;
+        }
+        $entryName = goal_xlsx_file_name($memberSheet);
+        if (isset($entryByName[$entryName])) {
+            $entryName = substr($entryName, 0, -5) . '_' . $memberSheet['user_id'] . '.xlsx';   // 同じ氏名の人がいたら、利用者の番号で分ける
+        }
+        $entryByName[$entryName] = goal_xlsx($memberSheet);
+        goal_add_history($memberSheet['id'], (int) $viewer['id'], 'download');
+    }
+    return $entryByName ? zip_store($entryByName) : null;
 }
 
 /** ダウンロードのファイル名（例: 目標管理評価シート_2026年度_A一般1.xlsx） */
