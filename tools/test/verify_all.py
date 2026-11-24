@@ -315,9 +315,10 @@ STEP_TABLE = [
     {"key": "inputs", "name": "すべての入力部品と、取り下げ・削除・絞り込み・個人の回答の出力", "script": "smoke_inputs.py", "screen": "G-04", "secrets": True},
     {"key": "refusals", "name": "断る処理（誤った入力・無い番号・権限・状態。DB が変わらないこと）", "script": "smoke_refusals.py", "screen": "共通", "secrets": True},
     {"key": "rest", "name": "残りの画面・状態（一覧の中身・件数・組織の CSV・ロック・チャット・古い DB・コマンドの誤り）", "script": "smoke_rest.py", "screen": "共通", "secrets": True},
+    {"key": "limits", "name": "時間切れ・同時の保存・上限・壊れたデータ・DB の障害", "script": "smoke_limits.py", "screen": "共通", "secrets": True},
     {"key": "cli", "name": "コマンド（移行・バックアップ・予約の反映・取り込み）", "script": "smoke_cli.py", "screen": "DB"},
 ]
-STEP_KEYS = [step["key"] for step in STEP_TABLE] + ["ui", "ui_session", "ui_chat", "retention", "units", "office"]
+STEP_KEYS = [step["key"] for step in STEP_TABLE] + ["ui", "ui_session", "ui_chat", "ui_misc", "retention", "units", "office"]
 
 
 def selected_steps(skip_keys, only_values, with_ui):
@@ -328,6 +329,7 @@ def selected_steps(skip_keys, only_values, with_ui):
         candidate_list.append({"key": "ui", "name": "画面の自動操作", "script": "ui_check.py", "screen": "共通"})
         candidate_list.append({"key": "ui_session", "name": "自動保存・ログイン切れ・画面の中の送信（実際に届いたか）", "script": "ui_session.py", "screen": "共通"})
         candidate_list.append({"key": "ui_chat", "name": "チャットの返し分け・通信の失敗・代わりの処理（画面）", "script": "ui_chat.py", "screen": "G-25"})
+        candidate_list.append({"key": "ui_misc", "name": "画面の補助の残り（コピー・照合・項目の編集・部品が無いとき）", "script": "ui_misc.py", "screen": "共通"})
     candidate_list.append({"key": "retention", "name": "保管期限による削除", "script": "", "screen": "DB"})
     for step in candidate_list:
         step["screens"] = sorted(set(script_screens(step["script"]) if step["script"] else []) | {step["screen"]}, key=screen_sort_key)
@@ -473,7 +475,7 @@ def main():
                         command.append("--show")
                     if a.browser_port:
                         command += ["--browser-port", str(a.browser_port)]
-                elif step["key"] in ("edges", "cli", "rest"):
+                elif step["key"] in ("edges", "cli", "rest", "limits"):
                     # 同時の新規作成で、同じ DB のサーバーをもう 1 本立てるので PHP を渡す
                     command = [py, "-I", os.path.join(HERE, step["script"]), "--base", base, "--db", db, "--php", php]
                 else:

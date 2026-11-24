@@ -6,13 +6,6 @@ declare(strict_types=1);
 // 管理画面の共通の処理
 // ====================================================================
 
-function require_admin(array $user): void
-{
-    if (!has_admin_authority($user)) {
-        error_page(403);
-    }
-}
-
 /** システム全体の管理の画面（管理者と補佐）。補佐は画面ごとに、個々の情報を出さない */
 function require_system_manager(array $user): void
 {
