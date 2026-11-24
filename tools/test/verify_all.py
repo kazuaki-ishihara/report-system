@@ -311,8 +311,13 @@ STEP_TABLE = [
     {"key": "ledger", "name": "案件台帳の道具・案件の一覧の CSV 出力", "script": "smoke_project_ledger.py", "screen": "G-13"},
     {"key": "conveniences", "name": "便利機能 A〜J（お知らせ・定型文・予定・CSV・メンテナンス・予約・バックアップ・使い方・よくある質問）", "script": "smoke_conveniences.py", "screen": "G-25"},
     {"key": "additions", "name": "あとから足した機能（コメントを直す・調査の見本・提出のお知らせ・チャットの通信の失敗）", "script": "smoke_additions.py", "screen": "G-08"},
+    {"key": "actions", "name": "検証に無かった操作（取り消し・再開・締め切り・複製・戻す・並べ替え・自動保存の応答）", "script": "smoke_actions.py", "screen": "共通", "secrets": True},
+    {"key": "inputs", "name": "すべての入力部品と、取り下げ・削除・絞り込み・個人の回答の出力", "script": "smoke_inputs.py", "screen": "G-04", "secrets": True},
+    {"key": "refusals", "name": "断る処理（誤った入力・無い番号・権限・状態。DB が変わらないこと）", "script": "smoke_refusals.py", "screen": "共通", "secrets": True},
+    {"key": "rest", "name": "残りの画面・状態（一覧の中身・件数・組織の CSV・ロック・チャット・古い DB・コマンドの誤り）", "script": "smoke_rest.py", "screen": "共通", "secrets": True},
+    {"key": "cli", "name": "コマンド（移行・バックアップ・予約の反映・取り込み）", "script": "smoke_cli.py", "screen": "DB"},
 ]
-STEP_KEYS = [step["key"] for step in STEP_TABLE] + ["ui", "retention", "units", "office"]
+STEP_KEYS = [step["key"] for step in STEP_TABLE] + ["ui", "ui_session", "ui_chat", "retention", "units", "office"]
 
 
 def selected_steps(skip_keys, only_values, with_ui):
@@ -321,6 +326,8 @@ def selected_steps(skip_keys, only_values, with_ui):
     candidate_list = [dict(step) for step in STEP_TABLE]
     if with_ui:
         candidate_list.append({"key": "ui", "name": "画面の自動操作", "script": "ui_check.py", "screen": "共通"})
+        candidate_list.append({"key": "ui_session", "name": "自動保存・ログイン切れ・画面の中の送信（実際に届いたか）", "script": "ui_session.py", "screen": "共通"})
+        candidate_list.append({"key": "ui_chat", "name": "チャットの返し分け・通信の失敗・代わりの処理（画面）", "script": "ui_chat.py", "screen": "G-25"})
     candidate_list.append({"key": "retention", "name": "保管期限による削除", "script": "", "screen": "DB"})
     for step in candidate_list:
         step["screens"] = sorted(set(script_screens(step["script"]) if step["script"] else []) | {step["screen"]}, key=screen_sort_key)
@@ -424,11 +431,14 @@ def main():
         # 操作マニュアル（docs/operation_manual.md）が使う画面の画像がそろい、使っていない画像がない（tools/lib/manual_capture.py）
         # 入力の確かめの正規表現は、文字列全体の先頭・末尾（\A・\z）で書く（^・$ は改行を混ぜた値を通すおそれ）
         r.run("正規表現は文字列全体で確かめる", [sys.executable, "-I", os.path.join(HERE, "check_regex_anchors.py")], default_screen="コード")
+        # 画面の操作（action・app.js の補助）が検証に入っているか。入れ忘れを NG にする
+        r.run("操作が自動検証に入っている", [sys.executable, "-I", os.path.join(HERE, "check_action_coverage.py")], default_screen="コード")
         r.run("操作マニュアルの画像がそろっている", [sys.executable, "-I", os.path.join(ROOT, "tools", "lib", "manual_capture.py"), "--check"], default_screen="共通")
         # よくある質問のチャットの判定（システムに寄る・グレーゾーン・明確にアウトの入力。tools/test/faq_input_cases.tsv）。サーバー・DB は使わない
         r.run("よくある質問の自動入力検証", [php, os.path.join("tools", "test", "faq_input_check.php")], default_screen="G-25")
         # 部品（前置き・たとえ・中心の言葉・語尾）のすべての組み合わせ（tools/test/faq_combo_cases.txt）。言い方を変えても判定が崩れないか
         r.run("よくある質問の組み合わせ入力検証", [php, os.path.join("tools", "test", "faq_combo_check.php")], default_screen="G-25")
+        r.run("ライブラリの関数の誤り・異常系", [php, os.path.join("tools", "test", "check_libs.php")], default_screen="共通")
         if "units" not in skip and (not only or only & {"units", "G-10", "G-03", "共通"}):
             # 画面を通さずに確かめる決まり（検証の印・対象月の切り替え・出力の数式・XML）。サーバー・検証の DB は使わない
             r.run("関数の確かめ（検証の印・対象月・出力の数式・XML）", [php, os.path.join("tools", "test", "check_units.php")], default_screen="G-10")
@@ -463,7 +473,7 @@ def main():
                         command.append("--show")
                     if a.browser_port:
                         command += ["--browser-port", str(a.browser_port)]
-                elif step["key"] == "edges":
+                elif step["key"] in ("edges", "cli", "rest"):
                     # 同時の新規作成で、同じ DB のサーバーをもう 1 本立てるので PHP を渡す
                     command = [py, "-I", os.path.join(HERE, step["script"]), "--base", base, "--db", db, "--php", php]
                 else:
