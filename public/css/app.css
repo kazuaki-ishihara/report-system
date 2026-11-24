@@ -92,6 +92,7 @@ button.danger { color: var(--danger); border-color: var(--danger); background: v
 .flash-success { background: var(--ok-bg); }
 .flash-info { background: var(--info-bg); }
 .flash-error { background: var(--err-bg); border-color: var(--danger); }
+.flash-warning .inline-form { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 8px; }
 .warn { color: var(--danger); font-weight: 600; }
 .note { color: var(--muted); font-size: 0.9rem; }
 .sub-link { margin-top: 16px; }
