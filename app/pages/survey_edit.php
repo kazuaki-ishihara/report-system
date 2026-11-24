@@ -133,7 +133,33 @@ if (is_post()) {
         if (in_array($action, $needDraft, true) && !$editable) {
             error_page(400, msg('公開後は質問を変えられません。'));
         }
-        if ($action === 'add_source') {
+        if ($action === 'save_viewers') {
+            // 全課共通の調査の「結果を見られる人」（依頼元の担当など。公開の前後に関係なく変えられる。K-067）
+            if (!$isAllDepartments) {
+                error_page(400);
+            }
+            $viewerIdTextList = $_POST['viewers'] ?? [];
+            if (!is_array($viewerIdTextList)) {
+                error_page(400);
+            }
+            $candidateIdList = array_map(function (array $candidate): int { return (int) $candidate['id']; }, survey_viewer_candidates());
+            $viewerIdList = [];
+            foreach ($viewerIdTextList as $viewerIdText) {
+                if (!is_string($viewerIdText) || !in_array((int) $viewerIdText, $candidateIdList, true)) {
+                    error_page(400);
+                }
+                $viewerIdList[] = (int) $viewerIdText;
+            }
+            tx(function () use ($rid, $viewerIdList): void {
+                db_exec('DELETE FROM adhoc_request_viewers WHERE request_id = ?', [$rid]);
+                foreach (array_unique($viewerIdList) as $viewerId) {
+                    db_exec('INSERT INTO adhoc_request_viewers (request_id, user_id) VALUES (?, ?)', [$rid, $viewerId]);
+                }
+            });
+            audit_log('admin', 'survey:' . $rid . ':viewers;count=' . count(array_unique($viewerIdList)));
+            flash('success', msg('結果を見られる人を保存しました'));
+            rk_done($back($rid) . '#survey-viewers');
+        } elseif ($action === 'add_source') {
             $fid = input_id('field_id', 'POST');
             if ($isAllDepartments) {
                 error_page(400);   // 全課共通の調査は、月次の項目を使わない（K-066）
@@ -283,6 +309,8 @@ render('survey_edit', [
     'depts'     => $depts,
     'canCreateAllDepartments' => $canCreateAllDepartments,
     'isAllDepartments' => $isAllDepartments,
+    'viewerCandidates' => $isAllDepartments ? survey_viewer_candidates() : [],
+    'viewerIds' => $isAllDepartments ? array_map(function ($row) { return (int) $row['user_id']; }, db_all('SELECT user_id FROM adhoc_request_viewers WHERE request_id = ?', [(int) $req['id']])) : [],
     'editable'  => $editable,
     'errors'    => $errors,
     'questions' => $req === null ? [] : survey_fields((int) $req['id']),

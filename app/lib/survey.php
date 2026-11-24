@@ -34,6 +34,63 @@ function survey_can_manage(array $user, array $req): bool
     return is_final_reviewer_of((int) $user['id'], (int) $req['department_id']);
 }
 
+/** 部長以上か（すべての全課共通の調査の結果を見られる印。K-067） */
+function is_executive(array $user): bool
+{
+    return (int) ($user['is_executive'] ?? 0) === 1;
+}
+
+/**
+ * 全課共通の調査の結果（全課の集計・課ごとのまとめ・出力）を見られるか（K-067）。
+ * 結果を見るのは依頼元と部長以上。管理者・補佐は作成と集計を代行する。個人の回答と名前は、だれにも出さない。
+ * 見られる人: 管理者・補佐（管理する人）、部長以上の印の人（すべての調査）、調査ごとに指定された人（依頼元の担当など）
+ */
+function survey_can_view_all_departments_result(array $user, array $req): bool
+{
+    if (!survey_is_all_departments($req)) {
+        return false;
+    }
+    if (survey_can_manage($user, $req) || is_executive($user)) {
+        return true;
+    }
+    return db_val('SELECT 1 FROM adhoc_request_viewers WHERE request_id = ? AND user_id = ?', [(int) $req['id'], (int) $user['id']]) !== null;
+}
+
+/** 結果を見られる全課共通の調査（公開したもの。新しい順）。管理者・補佐でない人の「調査の結果」の画面に出す */
+function survey_viewable_all_departments_requests(array $user): array
+{
+    $viewerCondition = is_executive($user) ? '1 = 1' : 'q.id IN (SELECT request_id FROM adhoc_request_viewers WHERE user_id = ?)';
+    return db_all(
+        "SELECT q.*,
+                (SELECT COUNT(*) FROM adhoc_request_targets t WHERE t.request_id = q.id) AS targets,
+                (SELECT COUNT(*) FROM adhoc_responses a WHERE a.request_id = q.id AND a.submitted_at IS NOT NULL) AS answered
+           FROM adhoc_requests q
+          WHERE q.department_id IS NULL AND q.deleted_at IS NULL AND q.is_template = 0 AND q.status IN ('open', 'closed') AND " . $viewerCondition . '
+          ORDER BY q.created_at DESC',
+        is_executive($user) ? [] : [(int) $user['id']]
+    );
+}
+
+/** メニューに「調査の結果」を出すか（管理者・補佐は「臨時の調査」から見るので出さない） */
+function survey_has_result_viewing_menu(array $user): bool
+{
+    if (can_manage_system($user)) {
+        return false;
+    }
+    return is_executive($user) || (bool) survey_viewable_all_departments_requests($user);
+}
+
+/** 結果を見られる人に指定できる候補: 有効な利用者全員（課に所属しない部長・依頼元の担当も選べる）。課の無い人を先に */
+function survey_viewer_candidates(): array
+{
+    return db_all(
+        "SELECT u.id, u.display_name, u.login_id, u.role_title, COALESCE(d.name, '') AS department_name, u.is_executive
+           FROM users u LEFT JOIN departments d ON d.id = u.department_id
+          WHERE u.is_active = 1
+          ORDER BY (u.department_id IS NOT NULL), d.sort_order, d.id, u.display_name"
+    );
+}
+
 /** 臨時の調査の画面（一覧・作成）を使えるか: どこかの課の課長、またはシステム管理者・補佐（全課共通の調査） */
 function survey_can_use_manage_screens(array $user): bool
 {
@@ -283,6 +340,8 @@ function survey_copy(array $req, int $userId, bool $asTemplate): int
          SELECT ?, source_field_id, label, field_type, confidentiality, is_required, help_text, settings_json, options_json, sort_order FROM adhoc_request_fields WHERE request_id = ?',
         [$newId, (int) $req['id']]
     );
+    // 全課共通の調査の「結果を見られる人」も写す（同じ依頼元のことが多いため）
+    db_exec('INSERT INTO adhoc_request_viewers (request_id, user_id) SELECT ?, user_id FROM adhoc_request_viewers WHERE request_id = ?', [$newId, (int) $req['id']]);
     return $newId;
 }
 

@@ -42,6 +42,8 @@ if (is_post()) {
             $isAdminDeputy = 0;
         }
         $isActive = ($_POST['is_active'] ?? '') === '1' ? 1 : 0;
+        // 部長以上: 全課共通の調査の結果（集計だけ）を見られる印。管理の権限ではないので、補佐も付けられる（K-067）
+        $isExecutive = ($_POST['is_executive'] ?? '') === '1' ? 1 : 0;
         $isAdminDeputyLead = (!$isOperatorDeputy && $isAdminDeputy === 1 && ($_POST['is_admin_deputy_lead'] ?? '') === '1') ? 1 : 0;
         validate_text($display, '表示名', 20, true, $errors);
         if (!in_array($roleTitle, $roleTitles, true)) {
@@ -94,9 +96,9 @@ if (is_post()) {
             if ($target === null) {
                 $temp = make_temp_password();
                 db_exec(
-                    'INSERT INTO users (username, password_hash, role_title, is_admin, is_admin_deputy, is_admin_deputy_lead, created_at, login_id, display_name, department_id, team_id, must_change_password, updated_at)
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)',
-                    [$loginId, password_hash($temp, PASSWORD_DEFAULT), $roleTitle, $isAdmin, $isAdminDeputy, $isAdminDeputyLead, now(), $loginId, $display, $deptId, $teamId, now()]
+                    'INSERT INTO users (username, password_hash, role_title, is_admin, is_admin_deputy, is_admin_deputy_lead, is_executive, created_at, login_id, display_name, department_id, team_id, must_change_password, updated_at)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)',
+                    [$loginId, password_hash($temp, PASSWORD_DEFAULT), $roleTitle, $isAdmin, $isAdminDeputy, $isAdminDeputyLead, $isExecutive, now(), $loginId, $display, $deptId, $teamId, now()]
                 );
                 $newId = (int) db()->lastInsertId();
                 audit_log('admin', 'user:' . $newId . ':create');
@@ -105,6 +107,9 @@ if (is_post()) {
                 }
                 if ($isAdminDeputyLead === 1) {
                     audit_log('admin', 'user:' . $newId . ':deputy_lead_on');
+                }
+                if ($isExecutive === 1) {
+                    audit_log('admin', 'user:' . $newId . ':executive_on');
                 }
                 $_SESSION['show_temp_password'] = ['id' => $newId, 'password' => $temp];
                 rk_done('/admin/user_edit.php?id=' . $newId);
@@ -120,10 +125,10 @@ if (is_post()) {
                     $removedRoleTextList[] = $removedRoleRow['name'] . '（' . msg('項目管理者') . '）';
                 }
             }
-            tx(function () use ($tid, $display, $roleTitle, $deptId, $teamId, $isAdmin, $isAdminDeputy, $isAdminDeputyLead, $isActive, $target) {
+            tx(function () use ($tid, $display, $roleTitle, $deptId, $teamId, $isAdmin, $isAdminDeputy, $isAdminDeputyLead, $isExecutive, $isActive, $target) {
                 db_exec(
-                    'UPDATE users SET display_name = ?, role_title = ?, department_id = ?, team_id = ?, is_admin = ?, is_admin_deputy = ?, is_admin_deputy_lead = ?, is_active = ?, updated_at = ? WHERE id = ?',
-                    [$display, $roleTitle, $deptId, $teamId, $isAdmin, $isAdminDeputy, $isAdminDeputyLead, $isActive, now(), $tid]
+                    'UPDATE users SET display_name = ?, role_title = ?, department_id = ?, team_id = ?, is_admin = ?, is_admin_deputy = ?, is_admin_deputy_lead = ?, is_executive = ?, is_active = ?, updated_at = ? WHERE id = ?',
+                    [$display, $roleTitle, $deptId, $teamId, $isAdmin, $isAdminDeputy, $isAdminDeputyLead, $isExecutive, $isActive, now(), $tid]
                 );
                 if ((int) $target['is_admin_deputy'] !== $isAdminDeputy || (int) $target['is_admin'] !== $isAdmin
                     || (int) ($target['is_admin_deputy_lead'] ?? 0) !== $isAdminDeputyLead) {
@@ -148,6 +153,9 @@ if (is_post()) {
             }
             if ((int) ($target['is_admin_deputy_lead'] ?? 0) !== $isAdminDeputyLead) {
                 audit_log('admin', 'user:' . $tid . ':' . ($isAdminDeputyLead === 1 ? 'deputy_lead_on' : 'deputy_lead_off'));
+            }
+            if ((int) ($target['is_executive'] ?? 0) !== $isExecutive) {
+                audit_log('admin', 'user:' . $tid . ':' . ($isExecutive === 1 ? 'executive_on' : 'executive_off'));
             }
             audit_log('admin', 'user:' . $tid . ':' . ($isActive === 0 && (int) $target['is_active'] === 1 ? 'deactivate' : 'update'));
             flash('success', msg('保存しました'));

@@ -7,6 +7,7 @@ declare(strict_types=1);
 //   php tools/test/dev_seed.php --yes --with-faq
 //   php tools/test/trial_seed.php --yes            （お試し課。なくてもよい）
 //   php tools/test/org_seed.php --yes
+// 部長以上（課に所属しない。「部長以上」の印）4 人と、依頼元（人財管理部）の担当 1 人も作る（結果を見る人。K-067）。
 // 課の単位は仮設定 K-022 の 7 つ（システム 1 部の 1・2 課、2 部の 1・2・3 課、3 部、営業課）。
 // 課長代理ごとに班を作り、課は「班ごと」の管理にする。リーダーは班の確認者（主任）。営業課は課長と課員だけ。
 // そのうえで、全課共通の臨時の調査「AI利用状況（全社）」を作り、対象者の全員が回答した状態にする（全員回答のシミュレーション）。
@@ -52,6 +53,14 @@ const ORG_FAMILY_NAME_LIST = ['佐藤', '鈴木', '高橋', '田中', '伊藤', 
     '井上', '木村', '林', '斎藤', '清水', '山崎', '阿部', '森田', '池田', '橋本', '石川', '前田', '小川', '後藤', '岡田'];
 const ORG_GIVEN_NAME_LIST = ['大翔', '陽菜', '蓮', '結衣', '湊', '葵', '悠真', '凛', '樹', '美桜', '颯太', '紬', '陸', '芽依', '奏太', '心春',
     '海斗', '咲良', '翼', '彩花', '拓真', '日向', '健太', '優奈', '直樹', '真由', '和也', '綾乃', '慎吾', '千尋'];
+
+/** 部長以上（課に所属しない）: [ログイン ID, 表示名]。組織図のシステム事業統括と部長 */
+const ORG_EXECUTIVE_LIST = [
+    ['exec.toukatsu', '統括 太郎'],
+    ['exec.s1', '一部 部長'],
+    ['exec.s2', '二部 部長'],
+    ['exec.eigyo', '営業 部長'],
+];
 
 mt_srand(20261124);
 $organizationResult = tx(function (): array {
@@ -100,12 +109,20 @@ $organizationResult = tx(function (): array {
         }
     }
 
+    // 部長以上（課に所属しない。「部長以上」の印で、すべての全課共通の調査の結果を見る。K-067）と、依頼元（人財管理部）の担当
+    foreach (ORG_EXECUTIVE_LIST as [$executiveLoginId, $executiveDisplayName]) {
+        $executiveUserId = seed_create_user($executiveLoginId, $executiveDisplayName, '部長', null);
+        db_exec('UPDATE users SET is_executive = 1 WHERE id = ?', [$executiveUserId]);
+    }
+    $requesterStaffUserId = seed_create_user('jinzai.tanto', '人財 担当', '一般', null);
+
     // 全課共通の調査（K-066）: 有効な課に所属する全員が対象（ほかのテスト用の課・お試し課の人も入る）。全員が回答する
     $adminUserId = (int) db_val("SELECT id FROM users WHERE login_id = 'admin01'");
     $targetUserIdList = array_map(function (array $member): int { return (int) $member['id']; }, survey_all_departments_members());
     $questionSpecList = seed_ai_question_spec_list();
     $questionSpecList[] = ['生成 AI の社内研修を受けたいですか', 'checkbox', []];
     $requestId = seed_create_open_survey(null, 'AI利用状況（全社）', '人財管理部', '全社の AI の利用状況を知り、研修の計画に使うため', $adminUserId, $questionSpecList, $targetUserIdList);
+    db_exec('INSERT INTO adhoc_request_viewers (request_id, user_id) VALUES (?, ?)', [$requestId, $requesterStaffUserId]);   // 依頼元の担当に結果を見せる
     foreach ($targetUserIdList as $targetUserId) {
         $answer = seed_ai_answer($usageWeightListByUserId[$targetUserId] ?? [3, 4, 3]);
         $answer[] = mt_rand(1, 100) <= ($answer[0] === 3 ? 30 : 60);   // 研修を受けたい（使っていない人は少なめ）
@@ -116,3 +133,4 @@ $organizationResult = tx(function (): array {
 
 echo '組織図のデータを足しました: 課 ' . $organizationResult['department_count'] . ' つ・' . $organizationResult['user_count'] . ' 人（ID の例: s11.kacho・s11.dairi1・s11.leader1・s11.m01。パスワードは pass-<ID>-1234）' . "\n";
 echo '全課共通の調査「AI利用状況（全社）」(id=' . $organizationResult['request_id'] . ')に、対象者 ' . $organizationResult['respondent_count'] . " 人の全員が回答しました\n";
+echo "結果を見る人: 部長以上 exec.toukatsu・exec.s1・exec.s2・exec.eigyo（すべての全課共通の調査）、依頼元の担当 jinzai.tanto（この調査だけ）\n";

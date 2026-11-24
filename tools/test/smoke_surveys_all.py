@@ -135,6 +135,46 @@ def main():
     status_code, _, _ = admin_client.post("/surveys/result.php?id=%d" % survey_id, {"csrf_token": csrf(result_html), "request_key": rkey(result_html), "format": "pdf"})
     check("知らない形式は 400", status_code == 400, status_code)
 
+    section("G-11", "全課共通の調査の結果を見られる人（依頼元の担当・部長以上。K-067）")
+    other_client = login(arguments.base, "ippan_a2", user_info_by_login_id["ippan_a2"])
+    check("指定されていない人は、結果も一覧も開けない（403）",
+          other_client.get("/surveys/result.php?id=%d" % survey_id)[0] == 403 and other_client.get("/surveys/results.php")[0] == 403)
+    viewer_user_id = user_info_by_login_id["kacho_b"]["id"]
+    status_code, location, _ = post_edit({"action": "save_viewers", "viewers[]": [str(viewer_user_id)]})
+    viewer_row_list = database.execute("SELECT user_id FROM adhoc_request_viewers WHERE request_id = ?", (survey_id,)).fetchall()
+    check("管理者が「結果を見られる人」を指定できる（公開の後でも）", status_code == 303 and viewer_row_list == [(viewer_user_id,)], (status_code, viewer_row_list))
+    status_code, _, _ = post_edit({"action": "save_viewers", "viewers[]": ["999999"]})
+    check("候補にない人は指定できない（400）", status_code == 400, status_code)
+    viewer_client = login(arguments.base, "kacho_b", user_info_by_login_id["kacho_b"])
+    _, _, viewer_home_html = viewer_client.get("/index.php")
+    check("指定された人のメニューに「調査の結果」が出る", "/surveys/results.php" in viewer_home_html)
+    status_code, _, results_html = viewer_client.get("/surveys/results.php")
+    check("指定された人の「調査の結果」に、その調査が出る", status_code == 200 and "全社 AI 利用状況" in results_html, status_code)
+    status_code, _, viewer_result_html = viewer_client.get("/surveys/result.php?id=%d" % survey_id)
+    check("指定された人は結果を開け、名前は出ない・設定へのリンクは出ない",
+          status_code == 200 and "課ごとの回答の状況" in viewer_result_html and "A一般1" not in viewer_result_html and "/surveys/survey_edit.php" not in viewer_result_html, status_code)
+    check("指定された人でも、調査の設定は開けない（403）", viewer_client.get("/surveys/survey_edit.php?id=%d" % survey_id)[0] == 403)
+    viewer_client.post("/surveys/result.php?id=%d" % survey_id, {"csrf_token": csrf(viewer_result_html), "request_key": rkey(viewer_result_html), "format": "csv"})
+    check("指定された人も CSV を出力できる", "全課" in viewer_client.last_raw.decode("utf-8-sig", "replace"))
+
+    executive_login_id = "leader_a"
+    executive_user_id = user_info_by_login_id[executive_login_id]["id"]
+    executive_client = login(arguments.base, executive_login_id, user_info_by_login_id[executive_login_id])
+    check("印を付ける前の人は結果を開けない（403）", executive_client.get("/surveys/result.php?id=%d" % survey_id)[0] == 403)
+    _, _, user_edit_html = admin_client.get("/admin/user_edit.php?id=%d" % executive_user_id)
+    check("ユーザーの編集に「部長以上」の印がある", 'name="is_executive"' in user_edit_html)
+    department_a_id = database.execute("SELECT department_id FROM users WHERE id = ?", (executive_user_id,)).fetchone()[0]
+    status_code, _, _ = admin_client.post("/admin/user_edit.php?id=%d" % executive_user_id, {
+        "csrf_token": csrf(user_edit_html), "request_key": rkey(user_edit_html), "action": "save", "display_name": "Aリーダー", "role_title": "主任",
+        "department_id": str(department_a_id), "is_active": "1", "is_executive": "1"})
+    executive_flag = database.execute("SELECT is_executive FROM users WHERE id = ?", (executive_user_id,)).fetchone()[0]
+    check("管理者が「部長以上」の印を付けられ、記録に残る",
+          status_code == 303 and executive_flag == 1
+          and database.execute("SELECT COUNT(*) FROM access_logs WHERE target = ?", ("user:%d:executive_on" % executive_user_id,)).fetchone()[0] == 1, (status_code, executive_flag))
+    status_code, _, executive_results_html = executive_client.get("/surveys/results.php")
+    check("部長以上の人は、指定されていなくても「調査の結果」に出て、結果を開ける",
+          status_code == 200 and "全社 AI 利用状況" in executive_results_html and executive_client.get("/surveys/result.php?id=%d" % survey_id)[0] == 200, status_code)
+
     return summary()
 
 

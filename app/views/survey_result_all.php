@@ -6,9 +6,14 @@
 /** @var array $departmentBreakdownList */
 /** @var string $responseRateText */
 /** @var bool $isMobile */
+/** @var bool $canManage 管理する人（管理者・補佐）。部長以上・依頼元の担当は false */
 ?>
 <section class="card wide">
+  <?php if ($canManage): ?>
   <p><a href="<?= h(url('/surveys/survey_edit.php?id=' . (int) $req['id'])) ?>">← 調査の設定</a></p>
+  <?php else: ?>
+  <p><a href="<?= h(url('/surveys/results.php')) ?>">← 調査の結果</a></p>
+  <?php endif; ?>
   <h1><?= h($req['title']) ?>（結果） <span class="tag">全課共通</span></h1>
   <p><strong><?= h($responseRateText) ?></strong></p>
   <p class="note"><?= h_phrases('割合は回答者数に対する % です。複数回答の質問は、足すと 100% を超えます。全課共通の調査は集計だけで、個人の回答と未回答の人の名前は出しません。') ?></p>

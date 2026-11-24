@@ -343,6 +343,9 @@ function menu_items(array $user): array
     if ($isFinalReviewer) {
         $items[] = ['/export/index.php', '出力', '確認'];
     }
+    if (survey_has_result_viewing_menu($user)) {
+        $items[] = ['/surveys/results.php', '調査の結果', '確認'];   // 部長以上・依頼元の担当が、全課共通の調査の集計を見る（K-067）
+    }
     if ($isFinalReviewer) {
         $items[] = ['/admin/department.php', '課の管理', '管理'];   // 課長が自分の課を管理する（G-23。K-042）
     }
