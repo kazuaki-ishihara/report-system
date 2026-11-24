@@ -164,6 +164,11 @@ def main():
     s, _, _ = kacho.post("/export/index.php", {"csrf_token": csrf(eb), "type": "survey", "survey_id": str(sid), "format": "csv"})
     st = kacho.last_raw.decode("utf-8-sig", "replace")
     check("集計のみの調査は集計だけを出力", "AI を業務で使っていますか" in st and "A一般1" not in st, st[:200])
+    check("調査の出力の見出しに回答の状況（対象・回答・回答率）を出す", re.search(r"対象 \d+ 人・回答 1 人（回答率 \d+%）", st) is not None, st[:300])
+    s, _, print_html = kacho.post("/export/index.php", {"csrf_token": csrf(eb), "type": "survey", "survey_id": str(sid), "format": "print"})
+    check("調査の印刷は質問ごとの表と横棒のグラフ", s == 200 and 'class="survey-tally"' in print_html and 'class="survey-bar"' in print_html and "回答率" in print_html, s)
+    s, _, result_html = kacho.get("/surveys/result.php?id=%d" % sid)
+    check("結果の画面に回答率と横棒のグラフを出す", "回答率" in result_html and 'class="survey-bar"' in result_html, s)
     n = db.execute("SELECT COUNT(*) FROM access_logs WHERE action = 'export'").fetchone()[0]
     check("出力が記録される", n >= 4, n)
 

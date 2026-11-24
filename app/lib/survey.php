@@ -59,6 +59,75 @@ function survey_answers(int $requestId): array
     return $out;
 }
 
+/** 集計する質問の型（選択式とチェック） */
+const SURVEY_TALLY_TYPES = ['select', 'radio', 'multi_check', 'checkbox'];
+
+/**
+ * 選択式の質問ごとの集計（G-10 の出力と G-11 の結果で同じものを使う）。
+ * 割合は回答者数に対する整数の %（回答者が 0 人なら null）。複数選べる質問（multi_check）は、足すと 100% を超える。
+ * 未回答は、回答を出した人のうち、その質問を空にした人の数。
+ *
+ * @param array<int, array<string, mixed>> $questionList survey_fields() の質問
+ * @param array<int, array<string, mixed>> $responseList 提出済みの回答（id を持つ）
+ * @param array<int, array<int, string|null>> $answerByResponseId survey_answers() の値
+ * @return array<int, array{question: array<string, mixed>, is_multiple: bool, option_tally_list: array<int, array{label: string, count: int, percent: int|null}>, unanswered_count: int}>
+ */
+function survey_tally(array $questionList, array $responseList, array $answerByResponseId): array
+{
+    $respondentCount = count($responseList);
+    $tallyList = [];
+    foreach ($questionList as $question) {
+        if (!in_array($question['type'], SURVEY_TALLY_TYPES, true)) {
+            continue;
+        }
+        $isMultiple = $question['type'] === 'multi_check';
+        $countByCode = [];
+        $unansweredCount = 0;
+        foreach ($responseList as $response) {
+            $valueText = (string) ($answerByResponseId[(int) $response['id']][$question['id']] ?? '');
+            $codeList = $valueText === '' ? [] : ($isMultiple ? array_map('strval', (array) json_decode($valueText, true)) : [$valueText]);
+            if (!$codeList) {
+                $unansweredCount++;
+                continue;
+            }
+            foreach (array_unique($codeList) as $code) {
+                $countByCode[$code] = ($countByCode[$code] ?? 0) + 1;
+            }
+        }
+        $optionList = $question['type'] === 'checkbox' ? [['code' => '1', 'label' => 'はい']] : $question['options'];
+        $optionTallyList = [];
+        foreach ($optionList as $option) {
+            $count = (int) ($countByCode[(string) $option['code']] ?? 0);
+            $optionTallyList[] = [
+                'label'   => (string) $option['label'],
+                'count'   => $count,
+                'percent' => $respondentCount > 0 ? (int) round($count * 100 / $respondentCount) : null,
+            ];
+        }
+        $tallyList[] = ['question' => $question, 'is_multiple' => $isMultiple, 'option_tally_list' => $optionTallyList, 'unanswered_count' => $unansweredCount];
+    }
+    return $tallyList;
+}
+
+/** 回答の状況の 1 行（例: 「対象 10 人・回答 6 人（回答率 60%）」） */
+function survey_response_rate_text(int $targetCount, int $respondentCount): string
+{
+    return '対象 ' . $targetCount . ' 人・回答 ' . $respondentCount . ' 人'
+        . ($targetCount > 0 ? '（回答率 ' . (int) round($respondentCount * 100 / $targetCount) . '%）' : '');
+}
+
+/**
+ * 割合の横棒（SVG）。CSP で style 属性を使えないため、幅は SVG の属性で決める。色は CSS（.survey-bar-*）。
+ */
+function survey_bar_svg(?int $percent): string
+{
+    $width = max(0, min(100, (int) $percent));
+    return '<svg class="survey-bar" viewBox="0 0 100 10" preserveAspectRatio="none" aria-hidden="true" focusable="false">'
+        . '<rect class="survey-bar-track" width="100" height="10"/>'
+        . ($width > 0 ? '<rect class="survey-bar-fill" width="' . $width . '" height="10"/>' : '')
+        . '</svg>';
+}
+
 /** 期限を過ぎた公開中の依頼を締め切る */
 function survey_close_expired(): void
 {
