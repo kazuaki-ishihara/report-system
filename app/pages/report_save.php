@@ -220,6 +220,10 @@ if ($newBlockRawValues !== null) {
     // 案件を選ばずに入れた値は保存できない。知らせて、入力をその欄に残して戻す（案件がない人は「案件なし（社内待機・研修など）」を選ぶ）
     $errors['b' . count($stateBlocks) . '_project'] = msg('案件を選んでください。案件がないとき（社内待機・研修など）は「案件なし」を選んでください');
     $newBlockValues = $parseGroup($blockFields, $newBlockRawValues, 'bnew_', []);
+} elseif ($checkRequired && !$blocks && array_filter($fields, function ($f) { return $f['type'] === 'project'; })) {
+    // 提出（提出後の保存・変更なしで提出を含む）は、案件を 1 つ以上にする。案件が 0 件だと、案件ごとの必須の確かめが働かず、
+    // 中身の無い報告が提出済みになる（前月から写した案件をすべて外したときも）。案件がない人は「案件なし」を選ぶ
+    $errors['b0_project'] = msg('案件を選んでください。案件がないとき（社内待機・研修など）は「案件なし」を選んでください');
 }
 $reportVals = $parseGroup($reportFields, $rawReport, 'r_', $oldValues[0] ?? []);
 

@@ -7,6 +7,11 @@
 /** @var array|null $departmentBreakdownList 全課共通の調査のとき survey_department_breakdown() の結果（課ごとのまとめも出す。K-066） */
 $surveyTallyList = $surveyTallyList ?? null;
 $departmentBreakdownList = $departmentBreakdownList ?? null;
+/** @var bool[] $nowrapColumnList 列ごとに、折り返さないか（月次報告。短い値の「2026-/09」「P-/0004」のような途中の折り返しを防ぐ） */
+$nowrapColumnList = $nowrapColumnList ?? [];
+$nowrapClass = function (int $columnIndex) use ($nowrapColumnList): string {
+    return !empty($nowrapColumnList[$columnIndex]) ? ' class="print-nowrap"' : '';
+};
 ?>
 <section class="print-page">
   <div class="print-head">
@@ -41,7 +46,7 @@ $departmentBreakdownList = $departmentBreakdownList ?? null;
   <?php elseif ($rows): ?>
   <table class="table print-table">
     <thead><tr><?php foreach ($header as $hd): ?><th><?= h($hd) ?></th><?php endforeach; ?></tr></thead>
-    <tbody><?php foreach ($rows as $r): ?><tr><?php foreach ($r as $c): ?><td><?= nl2br(h((string) $c)) ?></td><?php endforeach; ?></tr><?php endforeach; ?></tbody>
+    <tbody><?php foreach ($rows as $r): ?><tr><?php foreach (array_values($r) as $columnIndex => $c): ?><td<?= $nowrapClass($columnIndex) ?>><?= nl2br(h((string) $c)) ?></td><?php endforeach; ?></tr><?php endforeach; ?></tbody>
   </table>
   <?php endif; ?>
   <?php if ($summaryRows): ?>

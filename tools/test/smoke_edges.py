@@ -274,7 +274,7 @@ def main():
     manager_client.post("/reports/act.php", {"csrf_token": csrf(manager_view_html), "request_key": rkey(manager_view_html), "action": "confirm", "report_id": report_id})
     check("回答待ちがあっても、課長は確認完了にできる", report_row("ippan_a1", previous_period)[1] == "confirmed")
 
-    save_report(leader_client, previous_period, "submit", [], report_values={"trouble_note": "特になし"})
+    save_report(leader_client, previous_period, "submit", [("案件なし", {"progress": "on_track", "continuation": "continuing"})], report_values={"trouble_note": "特になし"})
     leader_report = report_row("leader_a", previous_period)
     check("リーダー（確認者）の自分の報告を提出（前提）", leader_report is not None and leader_report[1] == "submitted", leader_report)
     _status_code, _location, own_view_html = leader_client.get("/reports/view.php?id=%d" % (leader_report[0] if leader_report else 0))

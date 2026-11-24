@@ -31,7 +31,7 @@ $check = function (string $screenCode, string $name, bool $isOk) use (&$ngCount)
 $check('共通', '検証の印（verify_mode）は、MR_VERIFY_DB が無ければ false（報告の保存の待ちが働かない）', cfg('verify_mode') === false);
 
 // ---- G-10 CSV: 数式として動かない ----
-$formulaValueList = ['=1+1', '+1+1', '-1+1', '@SUM(A1)', "\t=1", "=HYPERLINK(\"http://example.com\")"];
+$formulaValueList = ['=1+1', '+1+1', '-1+1', '@SUM(A1)', '＝1+1', '＋1+1', '－1+1', '＠SUM(A1)', "\t=1", "=HYPERLINK(\"http://example.com\")"];
 $csvText = export_csv(['社外秘'], ['値'], array_map(static function (string $value): array { return [$value]; }, $formulaValueList));
 $allQuoted = true;
 foreach ($formulaValueList as $formulaValue) {
@@ -39,7 +39,7 @@ foreach ($formulaValueList as $formulaValue) {
         $allQuoted = false;
     }
 }
-$check('G-10', 'CSV で = + - @ タブで始まる値は、先頭に \' を付けて数式として動かない', $allQuoted);
+$check('G-10', 'CSV で = + - @ タブ（全角の ＝ ＋ － ＠ も）で始まる値は、先頭に \' を付けて数式として動かない', $allQuoted);
 $check('G-10', 'CSV でふつうの値は、そのまま出る', strpos(export_csv([], ['値'], [['在庫の引当処理']]), '"在庫の引当処理"') !== false);
 $check('G-10', 'CSV の「"」は 2 つに重ねる', strpos(export_csv([], ['値'], [['a"b']]), '"a""b"') !== false);
 

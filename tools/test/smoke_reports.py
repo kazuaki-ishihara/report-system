@@ -80,8 +80,17 @@ def main():
     st = db.execute("SELECT status FROM report_records WHERE id = ?", (rid,)).fetchone()[0]
     check("提出されていない", st == "draft", st)
 
+    # 案件をすべて外して（案件が 0 件で）提出 → 戻される（中身の無い報告を提出済みにしない）
+    no_block_form = {"csrf_token": csrf(body2), "request_key": rkey(body2), "period": prev, "action": "submit",
+                     "b[0][project]": str(P["P-0001"]), "b[0][remove]": "1"}
+    s, loc, body3 = a1.post("/reports/save.php", no_block_form)
+    st = db.execute("SELECT status FROM report_records WHERE id = ?", (rid,)).fetchone()[0]
+    blocks_left = db.execute("SELECT COUNT(*) FROM report_projects WHERE report_id = ?", (rid,)).fetchone()[0]
+    check("案件が 0 件なら提出できない（「案件なし」を選ぶよう知らせる。下書きの案件も消えない）",
+          s == 200 and "「案件なし」を選んでください" in body3 and st == "draft" and blocks_left == 1, (s, st, blocks_left))
+
     form.update(blockdata(0, "P-0001", progress="on_track", continuation="continuing"))
-    form["request_key"] = rkey(body2)
+    form["request_key"] = rkey(body3)
     s, loc, _ = a1.post("/reports/save.php", form)
     check("提出できる", s == 303 and "view.php?id=%d" % rid in loc, (s, loc))
 

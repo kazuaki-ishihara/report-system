@@ -105,7 +105,7 @@ python tools\test\verify_all.py --list   # 工程と、工程ごとの画面の�
 ```
 
 - 結果は `tools/test/output/検証記録/<日時>/結果.md`（工程ごと・画面ごとの数）と `検証項目一覧.md`（画面ごとの確かめの一覧）、一覧は `tools/test/output/検証記録/一覧.csv`（リポジトリ外）。すべての工程を `--ui` 付きで流して成功したときは、`docs/verification_items.md`（検証項目一覧）も書き直す。
-- 確かめの一つ一つには、画面の番号（G-01〜G-25）か共通の単位（コード・共通・DB・道具）を付ける（検証のスクリプトの `section("G-xx", "見出し")`。そのあとの `check()` の行が `OK  [G-xx] 名前` になる）。確かめを足すときは、設計書の「検証の観点」と突き合わせ、合う画面の `section()` の下に置く。設計書の観点のうち、ほかで確かめていなかったものは `smoke_screens.py`・`smoke_viewpoints.py`、設計書で「まだ試していない」とされていたもの（時間に頼るもの・同時の新規作成・境目・二重送信など）は `smoke_edges.py`、関数の出力だけで確かめられるもの（検証の印・対象月・出力の数式と XML）は `check_units.php`、出力を Excel（あれば LibreOffice）で開くのは `check_office.py`。確かめられなかったもの（ソフトが無いなど）は、結果に「未実施」として出る。
+- 確かめの一つ一つには、画面の番号（G-01〜G-25）か共通の単位（コード・共通・DB・道具）を付ける（検証のスクリプトの `section("G-xx", "見出し")`。そのあとの `check()` の行が `OK  [G-xx] 名前` になる）。確かめを足すときは、設計書の「検証の観点」と突き合わせ、合う画面の `section()` の下に置く。設計書の観点のうち、ほかで確かめていなかったものは `smoke_screens.py`・`smoke_viewpoints.py`、設計書で「まだ試していない」とされていたもの（時間に頼るもの・同時の新規作成・境目・二重送信など）は `smoke_edges.py`、関数の出力だけで確かめられるもの（検証の印・対象月・出力の数式と XML）は `check_units.php`、出力を Excel（あれば LibreOffice）で開くのは `check_office.py`。動いている検証環境（ポート 8100）の出力をまとめて取り出し、件数を DB と突き合わせるのは `check_outputs.py`（`--prepare` で課のある全員の報告・精算書・目標管理・要望を足す。印刷用の画面は PDF にして `--out` に置く。`verify_all.py` には入れていない）。確かめられなかったもの（ソフトが無いなど）は、結果に「未実施」として出る。
 - 同時の新規作成は、検証の印（`app/config/config.php` の `verify_mode`。MR_VERIFY_DB のときだけ true。本番では常に false）のあるサーバーだけが見る見出し `X-Verify-Pause` で、報告の保存を待たせて再現する。
 - 見学の道具（`tools/lib/ui_watch.py`）は既定で `app/data/watch.sqlite` を作り直す。見る用の環境のチャットの記録を残したいときは `--db app/data/watch_check.sqlite` のように別の DB を指定する。
 - 途中で止めた（Ctrl+C・止める操作・サーバーが止まった）ときは、残りの工程を流さず、判定を「中断」として残す。

@@ -153,10 +153,15 @@ def main():
     empty_report_form = {"csrf_token": csrf(edit_html), "request_key": rkey(edit_html), "period": current_period, "action": "submit",
                          "r[%d]" % field_id_by_code["trouble_note"]: "特になし"}
     submit_status, submit_location, submit_html = member_client.post("/reports/save.php", empty_report_form)
-    submitted_row = database.execute("SELECT status FROM report_records WHERE user_id = ? AND period = ? AND deleted_at IS NULL",
+    check("案件 0 件では提出できない（「案件なし」を選ぶよう知らせる）", submit_status == 200 and "「案件なし」を選んでください" in submit_html, submit_status)
+    # 決まりを足す前に提出された案件 0 件の報告が残っていても、画面が崩れないことを見る（下書きで保存し、DB で提出済みにする）
+    _status_code, _location, edit_html = member_client.get("/reports/edit.php?period=" + current_period)
+    member_client.post("/reports/save.php", dict(empty_report_form, csrf_token=csrf(edit_html), request_key=rkey(edit_html), action="draft"))
+    database.execute("UPDATE report_records SET status = 'submitted', submitted_at = datetime('now', 'localtime') WHERE user_id = ? AND period = ? AND deleted_at IS NULL",
+                     (user_info_by_login_id["ippan_a1"]["id"], current_period))
+    submitted_row = database.execute("SELECT status, (SELECT COUNT(*) FROM report_projects p WHERE p.report_id = r.id) FROM report_records r WHERE user_id = ? AND period = ? AND deleted_at IS NULL",
                                      (user_info_by_login_id["ippan_a1"]["id"], current_period)).fetchone()
-    check("案件 0 件で、前月の報告がない人が提出できる（前提）", submitted_row is not None and submitted_row[0] == "submitted",
-          (submit_status, submit_location, re.findall(r'flash-error[^>]*>([^<]+)', submit_html)[:2]))
+    check("案件 0 件の提出済みの報告（以前のデータ）がある（前提）", submitted_row is not None and submitted_row == ("submitted", 0), submitted_row)
     compare_status, _location, compare_html = leader_client.get("/status/compare.php?period=" + current_period)
     check("案件 0 件・前月の報告がない人がいても、横並びの画面が崩れない（200・PHP のエラーなし・その人が出る）",
           compare_status == 200 and "A一般1" in compare_html and "Warning" not in compare_html and "Fatal" not in compare_html, compare_status)

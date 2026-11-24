@@ -25,7 +25,7 @@ putenv('MR_VERIFY_DB');
 require 'app/bootstrap.php';
 require_once APP_DIR . '/lib/export.php';
 $outputDir = $argv[1];
-$rows = [['P-0001', '在庫の引当処理'], ['P-0002', '=1+1'], ['P-0003', '<script>&"記号"']];
+$rows = [['P-0001', '在庫の引当処理'], ['P-0002', '=1+1'], ['P-0003', '<script>&"記号"'], ['P-0004', '＝1+1']];
 file_put_contents($outputDir . '/office_check.xlsx', export_xlsx('報告', ['社外秘 出力者: 検証'], ['案件', '業務内容'], $rows));
 file_put_contents($outputDir . '/office_check.csv', export_csv(['社外秘 出力者: 検証'], ['案件', '業務内容'], $rows));
 echo "ok";
@@ -77,8 +77,9 @@ def check_cell_lines(software_name, file_label, cell_line_list):
     joined_text = "\n".join(cell_line_list)
     check("%s で %s が開ける" % (software_name, file_label), len(cell_line_list) >= 4, cell_line_list[:2])
     check("%s で %s の見出し（社外秘）と、ふつうの値が読める" % (software_name, file_label), "社外秘" in joined_text and "在庫の引当処理" in joined_text, cell_line_list[:3])
-    check("%s で %s の「=1+1」は計算されず、文字のまま（2 にならない）" % (software_name, file_label),
-          any(line.endswith("=1+1") or line.endswith("'=1+1") for line in cell_line_list) and not any(line.split("\t")[-1] == "2" for line in cell_line_list), cell_line_list)
+    check("%s で %s の「=1+1」「＝1+1」（全角）は計算されず、文字のまま（2 にならない）" % (software_name, file_label),
+          any(line.endswith("=1+1") or line.endswith("'=1+1") for line in cell_line_list)
+          and any(line.endswith("＝1+1") for line in cell_line_list) and not any(line.split("\t")[-1] == "2" for line in cell_line_list), cell_line_list)
     check("%s で %s の記号（< & \"）が文字のまま読める" % (software_name, file_label), '<script>&"記号"' in joined_text, cell_line_list)
 
 
