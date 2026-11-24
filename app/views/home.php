@@ -61,9 +61,10 @@ $editUrl = url('/reports/edit.php?period=' . rawurlencode($period));
 </section>
 <?php endif; ?>
 
-<?php if ($user['department_id'] === null && can_manage_system($user)): ?>
+<?php if ($user['department_id'] === null && (can_manage_system($user) || survey_has_result_viewing_menu($user))): ?>
+<?php // 課のない管理者・補佐と、課のない部長以上・依頼元の担当（全課共通の調査の結果を見る人。K-067）は、エラーではなく入口を出す ?>
 <section class="card">
-  <h2>管理</h2>
+  <h2><?= can_manage_system($user) ? '管理' : '見られるもの' ?></h2>
   <p class="note"><?= h_phrases('所属の課がないため、報告の欄は出していません。') ?></p>
   <ul class="shortcut-list">
     <?php foreach (menu_items($user) as $menuItem): if (!in_array($menuItem[2], ['確認', '管理'], true)) { continue; } ?>
