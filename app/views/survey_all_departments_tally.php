@@ -30,7 +30,7 @@ $headingTag = $headingTag ?? 'h3';
         <td class="num"><?= $optionTally['percent'] === null ? '—' : (int) $optionTally['percent'] . '%' ?></td>
         <td class="survey-bar-cell"><?= survey_bar_svg($optionTally['percent']) ?></td></tr>
     <?php endforeach; ?>
-      <tr class="muted"><td>未回答</td><td class="num"><?= (int) $tally['unanswered_count'] ?></td><td></td><td></td></tr>
+      <?php if ($tally['unanswered_count'] !== null): ?><tr class="muted"><td>未回答</td><td class="num"><?= (int) $tally['unanswered_count'] ?></td><td></td><td></td></tr><?php endif; ?>
     </tbody>
   </table>
   <div class="table-input">

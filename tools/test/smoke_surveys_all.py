@@ -67,6 +67,7 @@ def main():
     check("全課共通の調査には月次の項目を使えない（400）", status_code == 400, status_code)
     post_edit({"action": "add_custom", "q_label": "AI を業務で使っていますか", "q_type": "radio", "q_options": "毎日\nときどき\n使わない", "q_conf": "internal", "q_required": "1"})
     post_edit({"action": "add_custom", "q_label": "何を使っていますか", "q_type": "multi_check", "q_options": "GPT\nGemini\nClaude", "q_conf": "internal"})
+    post_edit({"action": "add_custom", "q_label": "研修を受けたい", "q_type": "checkbox", "q_options": "", "q_conf": "internal"})
     _, _, edit_html = admin_client.get("/surveys/survey_edit.php?id=%d" % survey_id)
     check("選択式の質問は足せる（2 問）", edit_html.count("<li>") >= 2 and "全課共通" in edit_html)
     check("全課共通の調査の画面には、月次の項目を使う欄と「限定」を出さない", "月次報告の項目を使う" not in edit_html and 'value="restricted"' not in edit_html)
@@ -94,6 +95,8 @@ def main():
         form_values = {"csrf_token": csrf(answer_html), "request_key": rkey(answer_html), "id": str(survey_id), "q[%d]" % question_id_list[0]: radio_code}
         if check_code_list:
             form_values["q[%d][]" % question_id_list[1]] = check_code_list
+        if login_id == "ippan_a1":
+            form_values["q[%d]" % question_id_list[2]] = "1"   # チェックは ippan_a1 だけ
         status_code, _, _ = answer_client.post("/surveys/answer.php?id=%d" % survey_id, form_values)
         check("%s のホームに出て、答えられる" % login_id, "全社 AI 利用状況" in answer_home_html and status_code == 303, status_code)
 
@@ -120,6 +123,9 @@ def main():
           ["全課", "AI を業務で使っていますか", "毎日", "2", "50%"] in csv_row_list and ["A課", "何を使っていますか（複数回答）", "Claude", "3", "100%"] in csv_row_list
           and ["B課", "（回答者が 3 人より少ないため、内訳を出しません）", "", "", ""] in csv_row_list and ["A課", "5", "3", "60%"] in csv_row_list
           and "回答率 57%" in csv_text and "A一般1" not in csv_text, csv_row_list[:8])
+    check("チェックの質問は「はい」と「チェックなし」で数える（未回答にしない）",
+          ["全課", "研修を受けたい", "はい", "1", "25%"] in csv_row_list and ["全課", "研修を受けたい", "チェックなし", "3", "75%"] in csv_row_list,
+          [row for row in csv_row_list if len(row) > 1 and row[1] == "研修を受けたい"])
     _, _, result_html = admin_client.get("/surveys/result.php?id=%d" % survey_id)
     status_code, _, print_html = admin_client.post("/surveys/result.php?id=%d" % survey_id, {"csrf_token": csrf(result_html), "request_key": rkey(result_html), "format": "print"})
     check("印刷用の画面に全課の集計と課ごとのまとめが出る", status_code == 200 and "課ごとの回答の状況" in print_html and "社外秘" in print_html, status_code)
