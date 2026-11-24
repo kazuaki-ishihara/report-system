@@ -16,9 +16,6 @@ function survey_find(int $id): ?array
 /** 全課共通の調査で使える答え方（選択式とチェックだけ。だれも個人の回答を見ないため、集計できるものに限る。K-066） */
 const SURVEY_ALL_DEPARTMENTS_TYPES = ['select', 'radio', 'multi_check', 'checkbox'];
 
-/** 課ごとの内訳を出す最少の回答者数（これより少ない課は、選択肢ごとの件数を出さない。個人が分からないように。K-066） */
-const SURVEY_DEPARTMENT_BREAKDOWN_MIN_RESPONDENTS = 3;
-
 /** 全課共通の調査か（department_id が NULL。システム管理者・補佐が作る。K-066） */
 function survey_is_all_departments(array $req): bool
 {
@@ -162,7 +159,7 @@ function survey_tally(array $questionList, array $responseList, array $answerByR
 /**
  * 全課共通の調査の、課ごとのまとめ（G-11 の結果・出力。K-066）。
  * 課は回答した時点ではなく、今の所属で数える（異動した人は今の課。所属がなくなった人は「所属なし」）。
- * 回答者が SURVEY_DEPARTMENT_BREAKDOWN_MIN_RESPONDENTS 人より少ない課は、選択肢ごとの集計を null にする（個人が分からないように）。
+ * 課ごとの内訳は、回答者の人数にかかわらず出す（数字を知るための機能のため。名前は出さない）。回答者が 0 人の課だけ null（「回答なし」）。
  *
  * @param array<int, array<string, mixed>> $questionList survey_fields() の質問
  * @param array<int, array<int, string|null>> $answerByResponseId survey_answers() の値
@@ -199,7 +196,7 @@ function survey_department_breakdown(int $requestId, array $questionList, array 
         }
     }
     foreach ($departmentSummaryByKey as $departmentKey => $departmentSummary) {
-        if ($departmentSummary['respondent_count'] < SURVEY_DEPARTMENT_BREAKDOWN_MIN_RESPONDENTS) {
+        if ($departmentSummary['respondent_count'] === 0) {
             continue;
         }
         $tallyByQuestionId = [];
@@ -237,7 +234,7 @@ function survey_all_departments_export_table(array $overallTallyList, array $dep
             $departmentBreakdown['target_count'] > 0 ? (int) round($departmentBreakdown['respondent_count'] * 100 / $departmentBreakdown['target_count']) . '%' : '',
         ];
         if ($departmentBreakdown['tally_by_question_id'] === null) {
-            $rowList[] = [$departmentBreakdown['department_name'], '（回答者が ' . SURVEY_DEPARTMENT_BREAKDOWN_MIN_RESPONDENTS . ' 人より少ないため、内訳を出しません）', '', '', ''];
+            $rowList[] = [$departmentBreakdown['department_name'], '（回答なし）', '', '', ''];
             continue;
         }
         foreach ($tallyRowList($departmentBreakdown['department_name'], array_values($departmentBreakdown['tally_by_question_id'])) as $departmentRow) {

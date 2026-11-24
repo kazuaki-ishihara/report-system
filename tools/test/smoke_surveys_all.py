@@ -110,7 +110,7 @@ def main():
     a_row = re.search(r"A課<span class=\"note\">（回答 3 人）</span></td>(.*?)</tr>", result_html, re.S)
     check("回答が 3 人の課（A課）は選択肢ごとの内訳を出す（毎日 2）", a_row is not None and ">2<span" in a_row.group(1), a_row.group(1)[:200] if a_row else None)
     b_row = re.search(r"B課<span class=\"note\">（回答 1 人）</span></td>(.*?)</tr>", result_html, re.S)
-    check("回答が 3 人より少ない課（B課）は内訳を出さない", b_row is not None and "内訳は出しません" in b_row.group(1))
+    check("回答が少ない課（B課・1 人）も内訳を出す（使わない 1・100%）", b_row is not None and ">1<span" in b_row.group(1) and "100%" in b_row.group(1), b_row.group(1)[:200] if b_row else None)
     status_code, _, detail_html = admin_client.get("/surveys/result.php?id=%d&detail=1" % survey_id)
     check("detail=1 でも個人の回答を出さない", "A一般1" not in detail_html)
 
@@ -121,7 +121,7 @@ def main():
     csv_row_list = [row for row in csv.reader(io.StringIO(csv_text))]
     check("CSV に全課と課ごとの行・回答の状況が入り、名前は入らない",
           ["全課", "AI を業務で使っていますか", "毎日", "2", "50%"] in csv_row_list and ["A課", "何を使っていますか（複数回答）", "Claude", "3", "100%"] in csv_row_list
-          and ["B課", "（回答者が 3 人より少ないため、内訳を出しません）", "", "", ""] in csv_row_list and ["A課", "5", "3", "60%"] in csv_row_list
+          and ["B課", "AI を業務で使っていますか", "使わない", "1", "100%"] in csv_row_list and ["A課", "5", "3", "60%"] in csv_row_list
           and "回答率 57%" in csv_text and "A一般1" not in csv_text, csv_row_list[:8])
     check("チェックの質問は「はい」と「チェックなし」で数える（未回答にしない）",
           ["全課", "研修を受けたい", "はい", "1", "25%"] in csv_row_list and ["全課", "研修を受けたい", "チェックなし", "3", "75%"] in csv_row_list,
