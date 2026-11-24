@@ -174,6 +174,13 @@ def main():
     status_code, _, executive_results_html = executive_client.get("/surveys/results.php")
     check("部長以上の人は、指定されていなくても「調査の結果」に出て、結果を開ける",
           status_code == 200 and "全社 AI 利用状況" in executive_results_html and executive_client.get("/surveys/result.php?id=%d" % survey_id)[0] == 200, status_code)
+    # 課に所属しない部長以上（ふつうは課がない）: ホームに「所属の課が設定されていません」のエラーを出さず、入口を出す
+    writable_database = sqlite3.connect(arguments.db, timeout=10, isolation_level=None)
+    writable_database.execute("UPDATE users SET department_id = NULL, team_id = NULL WHERE id = ?", (executive_user_id,))
+    writable_database.close()
+    _, _, executive_home_html = executive_client.get("/index.php")
+    check("課のない部長以上のホームは、エラーではなく「見られるもの」と「調査の結果」の入口",
+          "所属の課が設定されていません" not in executive_home_html and "見られるもの" in executive_home_html and "/surveys/results.php" in executive_home_html)
 
     return summary()
 
