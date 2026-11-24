@@ -64,6 +64,13 @@ $parsedSheet = $sheetXml !== '' ? simplexml_load_string($sheetXml) : false;
 $check('G-10', 'xlsx のシートは XML として正しい', $parsedSheet !== false);
 $check('G-10', 'xlsx に < & " を文字として入れる（タグにならない）', strpos($sheetXml, '&lt;script&gt;&amp;&quot;') !== false && strpos($sheetXml, '<script>') === false);
 $check('G-10', 'xlsx の値は文字列として入れる（数式の欄 <f> を作らない）', strpos($sheetXml, '<f>') === false && strpos($sheetXml, 't="inlineStr"') !== false);
+$check('G-10', 'xlsx の列の幅に使う文字の幅（半角 1・全角 2・半角カナ 1・改行はいちばん長い行）',
+    xlsx_text_width('abc') === 3 && xlsx_text_width('あいう') === 6 && xlsx_text_width('ｱｲ') === 2 && xlsx_text_width("あ\nabcd") === 4 && xlsx_text_width('') === 0);
+$columnWidthXml = export_xlsx('報告', ['社外秘 とても長い見出しの行は列の幅に数えない'], ['案件', '担当内容'], [['P-0001', str_repeat('あ', 30)], ['P-0002', str_repeat('い', 200)]]);
+$check('G-10', 'xlsx の列の幅を、見出しと値のいちばん長いものに合わせる（全角 30 字 → 65、上限 255。上の見出しの行は数えない）',
+    strpos($columnWidthXml, '<col min="1" max="1" width="9" customWidth="1"/>') !== false
+    && strpos($columnWidthXml, '<col min="2" max="2" width="255" customWidth="1"/>') !== false
+    && strpos(export_xlsx('報告', ['社外秘'], ['担当内容'], [[str_repeat('あ', 30)]]), '<col min="1" max="1" width="65" customWidth="1"/>') !== false);
 
 // ---- G-03 対象月: 締め日の前後で切り替わる（日付を渡して確かめる。使い捨ての DB） ----
 $temporaryDatabasePath = sys_get_temp_dir() . '/mr_units_' . getmypid() . '.sqlite';
