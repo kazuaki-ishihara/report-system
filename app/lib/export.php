@@ -215,6 +215,28 @@ function zip_store(array $files): string
     return $data . $central . $end;
 }
 
+/**
+ * xlsx の列の幅に使う、文字の幅（半角 1・全角 2。改行があればいちばん長い行）。mbstring が無くても動くように正規表現で数える
+ */
+function xlsx_text_width(string $text): int
+{
+    $maxWidth = 0;
+    foreach (explode("\n", str_replace("\r", '', $text)) as $line) {
+        $characterList = preg_split('//u', $line, -1, PREG_SPLIT_NO_EMPTY);
+        if ($characterList === false) {
+            $maxWidth = max($maxWidth, strlen($line));
+            continue;
+        }
+        $lineWidth = 0;
+        foreach ($characterList as $character) {
+            // 半角（ASCII と半角カナ）は 1、ほかは 2
+            $lineWidth += (strlen($character) === 1 || preg_match('/\A[\x{FF61}-\x{FF9F}]\z/u', $character) === 1) ? 1 : 2;
+        }
+        $maxWidth = max($maxWidth, $lineWidth);
+    }
+    return $maxWidth;
+}
+
 function xlsx_col(int $i): string
 {
     $s = '';
@@ -240,6 +262,18 @@ function export_xlsx(string $sheetName, array $headerLines, array $header, array
     }
     $all[] = ['cells' => [], 'style' => 0];
     $all[] = ['cells' => $header, 'style' => 2];
+    // 列の幅: 表の見出しと値のいちばん長いもの（改行があればいちばん長い行）に合わせ、折り返さずに読めるようにする。
+    // 上の 3〜4 行（社外秘・題名・出力者・回答の状況）は A 列から右へはみ出して見せるので数えない。全角は半角 2 つより少し広いので 5% 足す（Excel の自動調整と比べた）。上限は 255
+    $columnWidthList = [];
+    foreach (array_merge([$header], $rows) as $cellList) {
+        foreach (array_values($cellList) as $columnIndex => $cellValue) {
+            $columnWidthList[$columnIndex] = max($columnWidthList[$columnIndex] ?? 0, xlsx_text_width((string) $cellValue));
+        }
+    }
+    $columnXml = '';
+    foreach ($columnWidthList as $columnIndex => $textWidth) {
+        $columnXml .= '<col min="' . ($columnIndex + 1) . '" max="' . ($columnIndex + 1) . '" width="' . min(255, max(6, (int) ceil($textWidth * 1.05) + 2)) . '" customWidth="1"/>';
+    }
     foreach ($rows as $r) {
         $all[] = ['cells' => $r, 'style' => 0];
     }
@@ -287,6 +321,7 @@ function export_xlsx(string $sheetName, array $headerLines, array $header, array
             . '</styleSheet>',
         'xl/worksheets/sheet1.xml' => '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
             . '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+            . ($columnXml !== '' ? '<cols>' . $columnXml . '</cols>' : '')
             . '<sheetData>' . $sheetRows . '</sheetData>'
             . '<pageSetup orientation="landscape" paperSize="9"/>' . $headerFooter . '</worksheet>',
     ];
