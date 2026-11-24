@@ -110,11 +110,12 @@ const SURVEY_TALLY_TYPES = ['select', 'radio', 'multi_check', 'checkbox'];
  * 選択式の質問ごとの集計（G-10 の出力と G-11 の結果で同じものを使う）。
  * 割合は回答者数に対する整数の %（回答者が 0 人なら null）。複数選べる質問（multi_check）は、足すと 100% を超える。
  * 未回答は、回答を出した人のうち、その質問を空にした人の数。
+ * チェック（checkbox）は、チェックしないことも答えなので、「はい」と「チェックなし」の 2 行にし、未回答は null（未回答の行を出さない）。
  *
  * @param array<int, array<string, mixed>> $questionList survey_fields() の質問
  * @param array<int, array<string, mixed>> $responseList 提出済みの回答（id を持つ）
  * @param array<int, array<int, string|null>> $answerByResponseId survey_answers() の値
- * @return array<int, array{question: array<string, mixed>, is_multiple: bool, option_tally_list: array<int, array{label: string, count: int, percent: int|null}>, unanswered_count: int}>
+ * @return array<int, array{question: array<string, mixed>, is_multiple: bool, option_tally_list: array<int, array{label: string, count: int, percent: int|null}>, unanswered_count: int|null}>
  */
 function survey_tally(array $questionList, array $responseList, array $answerByResponseId): array
 {
@@ -138,7 +139,12 @@ function survey_tally(array $questionList, array $responseList, array $answerByR
                 $countByCode[$code] = ($countByCode[$code] ?? 0) + 1;
             }
         }
-        $optionList = $question['type'] === 'checkbox' ? [['code' => '1', 'label' => 'はい']] : $question['options'];
+        $isCheckbox = $question['type'] === 'checkbox';
+        if ($isCheckbox) {
+            // チェックしなかった人（値が空・「1」以外）を「チェックなし」として数える
+            $countByCode['__unchecked'] = $respondentCount - (int) ($countByCode['1'] ?? 0);
+        }
+        $optionList = $isCheckbox ? [['code' => '1', 'label' => 'はい'], ['code' => '__unchecked', 'label' => 'チェックなし']] : $question['options'];
         $optionTallyList = [];
         foreach ($optionList as $option) {
             $count = (int) ($countByCode[(string) $option['code']] ?? 0);
@@ -148,7 +154,7 @@ function survey_tally(array $questionList, array $responseList, array $answerByR
                 'percent' => $respondentCount > 0 ? (int) round($count * 100 / $respondentCount) : null,
             ];
         }
-        $tallyList[] = ['question' => $question, 'is_multiple' => $isMultiple, 'option_tally_list' => $optionTallyList, 'unanswered_count' => $unansweredCount];
+        $tallyList[] = ['question' => $question, 'is_multiple' => $isMultiple, 'option_tally_list' => $optionTallyList, 'unanswered_count' => $isCheckbox ? null : $unansweredCount];
     }
     return $tallyList;
 }
