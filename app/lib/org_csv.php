@@ -56,7 +56,7 @@ function org_csv_current_rows(): array
  */
 function org_csv_plan(string $csvText, int $operatorUserId): array
 {
-    $plan = ['errorTextList' => [], 'changeList' => [], 'newTeamList' => [], 'planByUserId' => []];
+    $plan = ['errorTextList' => [], 'warningTextList' => [], 'changeList' => [], 'newTeamList' => [], 'planByUserId' => []];
     // 補佐が取り込むときは、管理者・補佐の利用者を変えられない（K-043）
     // 補佐（開発担当。K-059）は管理者と同じに扱う
     $isOperatorDeputy = (int) db_val('SELECT is_admin_deputy FROM users WHERE id = ? AND is_admin_deputy_lead = 0', [$operatorUserId]) === 1;
@@ -153,6 +153,12 @@ function org_csv_plan(string $csvText, int $operatorUserId): array
         }
         if ($roleCode === 'final' && $isActive) {
             $finalUserIdListByDepartmentId[$departmentId][] = $userId;
+            // 役職が課長・部長でない人を新しく課長にするときは知らせる（止めはしない。K-069）
+            $finalCandidateRow = db_one('SELECT display_name, role_title FROM users WHERE id = ?', [$userId]);
+            if ($finalCandidateRow !== null && !role_title_fits_final((string) $finalCandidateRow['role_title']) && !is_final_reviewer_of($userId, $departmentId)) {
+                $plan['warningTextList'][] = msg('{line} 行目: {name} さんの役職は「{title}」です（課長・部長ではありません）。役職と異なる役割をお任せする場合のみ、このまま反映してください。',
+                    ['line' => $lineNumber, 'name' => (string) $finalCandidateRow['display_name'], 'title' => (string) $finalCandidateRow['role_title']]);
+            }
         }
         $plan['planByUserId'][$userId] = [
             'departmentId' => $departmentId, 'teamName' => $cells['班'], 'roleCode' => $isActive ? $roleCode : '',

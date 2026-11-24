@@ -239,6 +239,32 @@ def main():
     status_code, _location, home_html = client_of("ippan_a1").get("/index.php")
     check("管理者でない人のホームには出さない", "課長がいない課があります" not in home_html)
 
+    # ---- K-069 役職が課長・部長でない人を課長にするときの確かめ ----
+    section("G-14", "K-069 役職が課長・部長でない人を課長にするときの確かめ")
+    org_edit_path_b_final = "/admin/org.php?tab=departments&edit=%d" % department_b_id
+    final_count_b = lambda: database.execute("SELECT COUNT(*) FROM department_reviewers WHERE department_id = ? AND is_final = 1", (department_b_id,)).fetchone()[0]
+    status_code, location, _page_html = post_org(org_edit_path_b_final, {"action": "final_save", "dept_id": str(department_b_id), "final_user_id": str(user_id_of("ippan_b1"))})
+    check("役職が「一般」の人を選ぶと、保存せずに確かめの画面へ戻す", status_code == 303 and "final_check=%d" % user_id_of("ippan_b1") in location and final_count_b() == 0, (status_code, location))
+    status_code, _location, check_html = admin_client.get(location)
+    check("確かめの画面に、役職と、課長にすると見られるもの・できること、丁寧な案内とボタンを出す",
+          "さんの役職は「一般」です" in check_html and "役職と異なる役割をお任せする場合のみ" in check_html
+          and "課長として保存する" in check_html and "保存せずに戻る" in check_html and 'name="role_mismatch_ok" value="1"' in check_html)
+    status_code, _location, _page_html = post_org(org_edit_path_b_final, {"action": "final_save", "dept_id": str(department_b_id), "final_user_id": str(user_id_of("ippan_b1")), "role_mismatch_ok": "1"})
+    check("「課長として保存する」で保存できる（課長の代わり・お試しなどで任せられる）",
+          database.execute("SELECT user_id FROM department_reviewers WHERE department_id = ? AND is_final = 1", (department_b_id,)).fetchone() == (user_id_of("ippan_b1"),))
+    check("役職と異なる課長にしたことが記録に残る", database.execute(
+        "SELECT 1 FROM access_logs WHERE target = ?", ("department:%d:final;role_title_mismatch" % department_b_id,)).fetchone() is not None)
+    status_code, _location, users_html = admin_client.get("/admin/org.php?tab=users")
+    ippan_b1_row = next((row_html for row_html in users_html.split("<tr") if ">ippan_b1<" in row_html), "")
+    kacho_a_row = next((row_html for row_html in users_html.split("<tr") if ">kacho_a<" in row_html), "")
+    check("ユーザーの一覧で、役職と役割が異なる人に印を出す（役職が課長の課長には出さない）",
+          "役職と役割が異なる" in ippan_b1_row and "役職と役割が異なる" not in kacho_a_row)
+    status_code, location, _page_html = post_org(org_edit_path_b_final, {"action": "final_save", "dept_id": str(department_b_id), "final_user_id": str(user_id_of("kacho_b"))})
+    check("役職が「課長」の人は、確かめなしで保存する", status_code == 303 and "final_check" not in location
+          and database.execute("SELECT user_id FROM department_reviewers WHERE department_id = ? AND is_final = 1", (department_b_id,)).fetchone() == (user_id_of("kacho_b"),), (status_code, location))
+    post_org(org_edit_path_b_final, {"action": "final_save", "dept_id": str(department_b_id), "final_user_id": ""})
+    check("（後の確かめのため、B課の課長を外した状態に戻す）", final_count_b() == 0)
+
     # ================================================================
     # K-034 組織の一括の入れ替え（CSV）
     # ================================================================
@@ -274,7 +300,12 @@ def main():
                                                                [["no_such_user", "x", "A課", "", "", "", "", "1"]]))
     check("誤りがあれば知らせ、反映のボタンを出さない（登録されていない ID・課長が 2 人）",
           status_code == 200 and "登録されていないログイン ID" in preview_html and "課長が 2 人以上" in preview_html and 'value="bulk_apply"' not in preview_html, status_code)
+    status_code, _location, preview_html = upload_csv(make_csv({"ippan_b1": {4: "課長"}}))
+    check("CSV で役職が課長・部長でない人を課長にするときは、丁寧に知らせる（止めはしない。K-069）",
+          "さんの役職は「一般」です（課長・部長ではありません）。役職と異なる役割をお任せする場合のみ、このまま反映してください。" in preview_html
+          and 'value="bulk_apply"' in preview_html, status_code)
     status_code, _location, preview_html = upload_csv(make_csv({"kacho_b": {2: "B課", 4: "課長"}, "ippan_b1": {2: "A課", 3: "鈴木班"}}))
+    check("役職が課長の人を課長にするときは知らせない", "役職と異なる役割をお任せする場合のみ" not in preview_html)
     check("取り込むと、変わる内容と新しく作る班を出す（まだ反映しない）",
           'value="bulk_apply"' in preview_html and "鈴木班" in preview_html and "B課 → A課" in preview_html
           and database.execute("SELECT department_id FROM users WHERE id = ?", (user_id_of("ippan_b1"),)).fetchone()[0] == department_b_id)

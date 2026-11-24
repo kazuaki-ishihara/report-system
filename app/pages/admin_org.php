@@ -211,6 +211,12 @@ if (is_post() && post_str('action') === 'bulk_preview') {
             }
             $finalUserId = (int) $finalUserIdText;
         }
+        // 役職が課長・部長でない人を新しく課長にするときは、確かめの画面を出してから保存する（K-069。課長の代わり・お試しなどで任せることはある）
+        $isRoleTitleMismatch = $finalUserId !== null && !role_title_fits_final((string) db_val('SELECT role_title FROM users WHERE id = ?', [$finalUserId]));
+        if ($isRoleTitleMismatch && post_str('role_mismatch_ok') !== '1' && !is_final_reviewer_of($finalUserId, $deptId)) {
+            rk_cancel();
+            redirect('/admin/org.php?tab=departments&edit=' . $deptId . '&final_check=' . $finalUserId . '#dept-final');
+        }
         tx(function () use ($deptId, $finalUserId): void {
             // 今の課長は、課長の役を外す（課長代理・リーダーの役には残さない）
             db_exec('DELETE FROM department_reviewers WHERE department_id = ? AND is_final = 1', [$deptId]);
@@ -219,7 +225,7 @@ if (is_post() && post_str('action') === 'bulk_preview') {
                 db_exec('INSERT INTO department_reviewers (department_id, user_id, is_final, sort_order, team_id, does_check) VALUES (?, ?, 1, 0, NULL, 1)', [$deptId, $finalUserId]);
             }
         });
-        audit_log('admin', 'department:' . $deptId . ':final');
+        audit_log('admin', 'department:' . $deptId . ':final' . ($isRoleTitleMismatch ? ';role_title_mismatch' : ''));
         flash('success', $finalUserId === null ? msg('課長を外しました') : msg('課長を保存しました'));
         rk_done('/admin/org.php?tab=departments&edit=' . $deptId . '#dept-final');
 
@@ -276,6 +282,16 @@ if ($tab === 'departments') {
               ORDER BY (u.department_id = ?) DESC, u.display_name',
             [$editId, $editId]
         );
+        // 役職が課長・部長でない人を課長に選んだときの確かめ（final_save から戻る。K-069）
+        $vars['finalCheckCandidate'] = null;
+        if (isset($_GET['final_check'])) {
+            $finalCheckUserId = input_id('final_check');
+            foreach ($vars['candidates'] as $candidateRow) {
+                if ((int) $candidateRow['id'] === $finalCheckUserId && !role_title_fits_final((string) $candidateRow['role_title'])) {
+                    $vars['finalCheckCandidate'] = $candidateRow;
+                }
+            }
+        }
     }
     $vars['managementDepartmentId'] = management_department_id();
     if ($vars['edit'] !== null) {
@@ -312,7 +328,8 @@ if ($tab === 'departments') {
         "SELECT u.*, d.name AS dept_name, t.name AS team_name,
                 (SELECT GROUP_CONCAT(d2.name || CASE r.is_final WHEN 1 THEN '（課長）' ELSE '（確認者' || COALESCE('・' || rt.name, '') || '）' END, '、')
                    FROM department_reviewers r JOIN departments d2 ON d2.id = r.department_id
-                   LEFT JOIN department_teams rt ON rt.id = r.team_id WHERE r.user_id = u.id) AS roles
+                   LEFT JOIN department_teams rt ON rt.id = r.team_id WHERE r.user_id = u.id) AS roles,
+                (SELECT COUNT(*) FROM department_reviewers fr WHERE fr.user_id = u.id AND fr.is_final = 1) AS final_department_count
            FROM users u LEFT JOIN departments d ON d.id = u.department_id LEFT JOIN department_teams t ON t.id = u.team_id"
         . ($where ? ' WHERE ' . implode(' AND ', $where) : '')
         . ' ORDER BY d.sort_order, u.display_name',

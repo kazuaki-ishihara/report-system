@@ -80,6 +80,17 @@ function is_final_reviewer_of(int $userId, int $departmentId): bool
     return db_val('SELECT 1 FROM department_reviewers WHERE user_id = ? AND department_id = ? AND is_final = 1', [$userId, $departmentId]) !== null;
 }
 
+/**
+ * 課長（最終確認者）の役に合う役職（K-069）。役職は表示だけで権限には使わないが、合わない人を課長にするときは
+ * 確かめを出し（G-14 の課の「課長」・一括の CSV）、ユーザーの一覧に「役職と役割が異なる」の印を出す。課長の代わり・お試しなどで任せることはある
+ */
+const FINAL_ROLE_TITLE_LIST = ['課長', '部長'];
+
+function role_title_fits_final(string $roleTitle): bool
+{
+    return in_array($roleTitle, FINAL_ROLE_TITLE_LIST, true);
+}
+
 /** 課別項目を管理できるか（課の項目管理者、課長、管理者） */
 function can_manage_fields_of(array $user, int $departmentId): bool
 {

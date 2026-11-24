@@ -51,6 +51,21 @@
     <p class="note"><?= h_phrases('この課の課長（最終確認者）を決めます。課長代理・リーダー（確認者）・チェックする人・項目管理者・班・締め日・管理の仕方は、この課の課長が「課の管理」の画面で決めます（システム管理者は、個々の課の管理はしません）。') ?></p>
     <?php $currentFinalCandidate = null; foreach ($candidates as $candidateRow) { if ((int) $candidateRow['is_final'] === 1) { $currentFinalCandidate = $candidateRow; } } ?>
     <p>今の課長: <strong><?= $currentFinalCandidate === null ? h(msg('課長がいません（確認を完了にできません）')) : h($currentFinalCandidate['display_name']) ?></strong></p>
+    <?php if (!empty($finalCheckCandidate)): /* 役職が課長・部長でない人を課長に選んだときの確かめ（K-069） */ ?>
+    <div class="flash flash-warning" role="alert" id="final-check">
+      <p><?= h(msg('{name} さんの役職は「{title}」です。課長にすると、この課の全員の報告（「限定」の項目を含む）を見られるようになり、課の管理・臨時の調査・出力・確認の完了もできるようになります。', ['name' => $finalCheckCandidate['display_name'], 'title' => (string) $finalCheckCandidate['role_title']])) ?></p>
+      <p><?= h(msg('課長の代わりやお試しなど、役職と異なる役割をお任せする場合のみ、「課長として保存する」を押してください。役職が誤っている場合は、先にユーザーの編集で役職を変更してください。')) ?></p>
+      <form method="post" action="<?= h(url('/admin/org.php?tab=departments&edit=' . (int) $edit['id'])) ?>" class="inline-form">
+        <?= form_hidden() ?>
+        <input type="hidden" name="action" value="final_save">
+        <input type="hidden" name="dept_id" value="<?= (int) $edit['id'] ?>">
+        <input type="hidden" name="final_user_id" value="<?= (int) $finalCheckCandidate['id'] ?>">
+        <input type="hidden" name="role_mismatch_ok" value="1">
+        <button type="submit" class="primary">課長として保存する</button>
+        <a class="button" href="<?= h(url('/admin/org.php?tab=departments&edit=' . (int) $edit['id'] . '#dept-final')) ?>">保存せずに戻る</a>
+      </form>
+    </div>
+    <?php endif; ?>
     <form method="post" action="<?= h(url('/admin/org.php?tab=departments&edit=' . (int) $edit['id'])) ?>" class="form"
           data-confirm="<?= h(msg('課長を変えます。課長はこの課の全員の報告（「限定」の項目を含む）を見られるようになります。よろしいですか？')) ?>">
       <?= form_hidden() ?>
@@ -132,7 +147,8 @@
         <td><?= h($u['display_name']) ?><?= (int) $u['is_admin'] === 1 ? ' <span class="tag">管理者</span>' : '' ?><?= (int) $u['is_admin_deputy'] === 1 ? ' <span class="tag">' . ((int) ($u['is_admin_deputy_lead'] ?? 0) === 1 ? '補佐（開発担当）' : '補佐') . '</span>' : '' ?></td>
         <td><?= h((string) $u['dept_name']) ?></td>
         <td><?= h((string) ($u['team_name'] ?? '')) ?></td>
-        <td><?= h((string) $u['roles']) ?></td>
+        <td><?= h((string) $u['roles']) ?><?php if ((int) $u['final_department_count'] > 0 && !role_title_fits_final((string) $u['role_title'])): ?>
+          <span class="tag tag-open" title="<?= h(msg('役職は「{title}」です。課長の代わりやお試しなどで、役職と異なる役割をお任せしている場合は、このままで問題ありません。', ['title' => (string) $u['role_title']])) ?>">役職と役割が異なる</span><?php endif; ?></td>
         <td><?= $u['totp_enabled_at'] !== null ? '設定済み' : '未設定' ?></td>
         <td><?= ($u['locked_until'] !== null && $u['locked_until'] > now()) ? 'ロック中' : '' ?></td>
         <td><a href="<?= h(url('/admin/user_edit.php?id=' . (int) $u['id'])) ?>">編集</a></td>
@@ -158,6 +174,7 @@
   <?php if ($bulkPlan !== null): ?>
     <h2>変わる内容</h2>
     <?php foreach ($bulkPlan['errorTextList'] as $bulkErrorText): ?><div class="flash flash-error" role="alert"><?= h_lines($bulkErrorText) ?></div><?php endforeach; ?>
+    <?php foreach ($bulkPlan['warningTextList'] ?? [] as $bulkWarningText): ?><div class="flash flash-warning" role="alert"><?= h_lines($bulkWarningText) ?></div><?php endforeach; ?>
     <?php if ($bulkPlan['newTeamList']): ?>
       <p>新しく作る班: <?php foreach ($bulkPlan['newTeamList'] as $newTeam): ?><span class="tag"><?= h($newTeam['departmentName']) ?> / <?= h($newTeam['teamName']) ?></span><?php endforeach; ?></p>
     <?php endif; ?>
