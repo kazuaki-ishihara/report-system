@@ -679,6 +679,20 @@ CREATE TABLE IF NOT EXISTS app_state (
 
 何度流しても同じ結果になるよう、`legacy_report_id` で移行済みかを判定する。`legacy_reports`・`legacy_comments` があれば、それを移行元にする。
 
+### 6.1 tomato（dev_hasimoto のシステム）の DB の取り込み（2026-11-24）
+
+tomato の DB は、この DB と同じ名前で中身の違う表（`users`・`report_fields`・`report_field_options`・`report_field_values`）を持つので、§6 のように同じファイルの中では移行できない（`migrate.php` が「no such column: department_id」で止まる）。別のファイルとして読んで取り込む。
+
+- `php app/bin/import_tomato.php --from=<tomato の reports.sqlite> [--db=<DB>] [--dry-run]`。先に `migrate.php` でテーブルを作っておく。tomato の DB は読むだけ（PHP 8.1 以上は読み取り専用で開く）。
+- 確かめ（問題が 1 件でもあれば何もしない）: ログイン ID（§6 と同じ作り方。この DB に同じ ID の人がいれば番号を足さずに止める。同じ人を 2 人にしないため）、報告の日付の形、報告を書いた人、追加した項目の型、コメントの項目（6 項目か追加した項目）。
+- 控え `app/backups/before_tomato_import_<日時>.sqlite` を取り、1 つのトランザクションで足す。
+  - 利用者: 新しく足す（`password_hash` はそのまま。`must_change_password = 1`、2 段階認証は未設定。役職・管理者はそのまま。所属の課はなし。上司（`manager_id`）は持ってこない）。
+  - 項目: 6 項目は §6 と同じ（あれば使う）。tomato で追加した項目（`is_system = 0`。ただし内容・課題・備考は 6 項目）は `tomato_<コード>` の無効の項目にする。型は text → single_text、textarea → multi_text、number・date・select・radio はそのまま、checkbox → multi_check。選択肢のコードは `o<tomato の選択肢 ID>`。
+  - 報告: `is_legacy = 1`・確認完了・課なしで足す（`legacy_report_id` は NULL）。追加した項目の値も入れる（選択肢はコード、チェックボックスはコードの JSON 配列）。自由記述とコメントは暗号化する。
+  - 取り込んだ印 `app_state.tomato_import_done` を残す（2 回目は何もしない）。記録 `admin import:tomato;users=…;reports=…;comments=…`。
+- 課を決めたあと（G-14 か組織の CSV）、`--fill-departments` で、課のない取り込んだ報告に書いた人の今の課を入れる。
+- 試した結果（tomato の写しに追加した項目 3 個・値・追加した項目へのコメントを入れて）: 利用者 8・報告 11・コメント 6 を取り込み、画面で値とコメントが読めること、同じ ID の人がいると止まること、2 回目は何もしないこと、tomato の DB が変わらないことを確かめた。
+
 ## 7. そのほかのコマンドラインの道具
 
 ブラウザーから開くと 404 を返す。
