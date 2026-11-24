@@ -64,6 +64,7 @@ $selfUrl = $target === null ? '/admin/user_edit.php' : '/admin/user_edit.php?id=
       data-confirm-on="<?= h(msg('補佐（開発担当）は、管理者と同じ権限を持ちます（心の不調・退職に関わる質問は見られません）。このシステムの設計・製造・保守の担当者に 1 名だけ付けてください')) ?>">
       補佐（開発担当。補佐のうち 1 名だけ。管理者と同じ権限。心の不調・退職に関わる質問は見られない。補佐の印も付けてください）</label>
     <?php endif; ?>
+    <label class="check"><input type="checkbox" name="is_executive" value="1" <?= $v('is_executive', '0') === '1' ? 'checked' : '' ?>> 部長以上（全課共通の臨時の調査の結果を見られる。集計だけで、個人の回答と名前は見られない）</label>
     <?php if ($target !== null): ?>
       <label class="check"><input type="checkbox" name="is_active" value="1" <?= $v('is_active', '1') === '1' ? 'checked' : '' ?>> 有効（外すとログインできなくなります。報告は残ります）</label>
     <?php endif; ?>

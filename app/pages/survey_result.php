@@ -14,12 +14,14 @@ $req = survey_find($id);
 if ($req === null || (int) $req['is_template'] === 1 || !in_array($req['status'], ['open', 'closed'], true)) {
     error_page(404);
 }
-if (!survey_can_manage($user, $req)) {
+// 課の調査はその課の課長だけ。全課共通の調査は、管理者・補佐と、依頼元・部長以上（K-067）
+$canViewResult = survey_is_all_departments($req) ? survey_can_view_all_departments_result($user, $req) : survey_can_manage($user, $req);
+if (!$canViewResult) {
     error_page(403);
 }
 $questions = survey_fields($id);
 
-// 全課共通の調査（K-066）: システム管理者・補佐が、全課の集計と課ごとのまとめを見る。個人の回答・未回答者の名前は出さない
+// 全課共通の調査（K-066・K-067）: 全課の集計と課ごとのまとめを見る（見るのは依頼元・部長以上。管理者・補佐は代行）。個人の回答・未回答者の名前は出さない
 if (survey_is_all_departments($req)) {
     $allResponseList = db_all('SELECT id FROM adhoc_responses WHERE request_id = ? AND submitted_at IS NOT NULL', [$id]);
     $allAnswerByResponseId = survey_answers($id);
@@ -75,7 +77,7 @@ if (survey_is_all_departments($req)) {
     render('survey_result_all', [
         'title' => '調査の結果（全課共通）', 'user' => $user, 'req' => $req, 'questions' => $questions,
         'overallTallyList' => $overallTallyList, 'departmentBreakdownList' => $departmentBreakdownList,
-        'responseRateText' => $responseRateText, 'isMobile' => is_mobile_request(),
+        'responseRateText' => $responseRateText, 'isMobile' => is_mobile_request(), 'canManage' => survey_can_manage($user, $req),
     ]);
     exit;
 }

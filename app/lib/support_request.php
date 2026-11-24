@@ -109,7 +109,7 @@ const SUPPORT_REQUEST_SCREEN_LABELS = [
  */
 const SUPPORT_REQUEST_SCREEN_CODE_BY_TEMPLATE = [
     'home' => 'G-03', 'report_edit' => 'G-04', 'report_view' => 'G-05', 'report_mine' => 'G-06',
-    'survey_answer' => 'G-11', 'survey_edit' => 'G-11', 'survey_manage' => 'G-11', 'survey_result' => 'G-11', 'survey_result_all' => 'G-11',
+    'survey_answer' => 'G-11', 'survey_edit' => 'G-11', 'survey_manage' => 'G-11', 'survey_result' => 'G-11', 'survey_result_all' => 'G-11', 'survey_results' => 'G-11',
     'status_index' => 'G-08', 'status_compare' => 'G-09', 'export_index' => 'G-10',
     'admin_fields' => 'G-12', 'admin_field_edit' => 'G-12', 'admin_field_options' => 'G-12', 'admin_field_preview' => 'G-12',
     'admin_projects' => 'G-13', 'admin_org' => 'G-14', 'admin_user_edit' => 'G-14', 'admin_logs' => 'G-15', 'admin_trash' => 'G-15',

@@ -60,6 +60,7 @@ function schema_ensure(PDO $pdo): array
         'ui_theme'             => "TEXT NOT NULL DEFAULT 'auto'",   // 画面のテーマ（G-16。UI_THEMES のキー）
         'team_id'              => 'INTEGER REFERENCES department_teams(id)',   // 今の班（「班ごと」の課。G-14 §6.7）
         'is_admin_deputy'      => 'INTEGER NOT NULL DEFAULT 0 CHECK (is_admin_deputy IN (0, 1))',
+        'is_executive'         => 'INTEGER NOT NULL DEFAULT 0 CHECK (is_executive IN (0, 1))',   // 部長以上: すべての全課共通の調査の結果（集計）を見られる（K-067）
         'is_admin_deputy_lead' => 'INTEGER NOT NULL DEFAULT 0 CHECK (is_admin_deputy_lead IN (0, 1))',   // 補佐（開発担当）。補佐のうち 1 名。管理者・補佐の予備のコードも初期化できる（G-14 §6.9。K-059）
         'ui_custom_colors'     => "TEXT NOT NULL DEFAULT ''",   // 自分の色（G-16 §4.6。JSON: base・accent・background）   // システム管理者補佐（G-14 §6.9。最大 3 名）
     ];
@@ -299,6 +300,12 @@ function schema_ensure(PDO $pdo): array
             sort_order INTEGER NOT NULL DEFAULT 0
         )",
         "CREATE TABLE IF NOT EXISTS adhoc_request_targets (
+            request_id INTEGER NOT NULL REFERENCES adhoc_requests(id) ON DELETE CASCADE,
+            user_id INTEGER NOT NULL REFERENCES users(id),
+            PRIMARY KEY (request_id, user_id)
+        )",
+        // 全課共通の調査の結果を見られる人（依頼元の担当など。調査ごとに管理者・補佐が指定する。集計だけを見る。K-067）
+        "CREATE TABLE IF NOT EXISTS adhoc_request_viewers (
             request_id INTEGER NOT NULL REFERENCES adhoc_requests(id) ON DELETE CASCADE,
             user_id INTEGER NOT NULL REFERENCES users(id),
             PRIMARY KEY (request_id, user_id)

@@ -105,6 +105,7 @@ ALTER TABLE users ADD COLUMN ui_theme         TEXT NOT NULL DEFAULT 'auto';   --
 -- department_reviewers にも後から列を足す: does_check INTEGER NOT NULL DEFAULT 1（チェックするか。K-039。課長は常に 1。G-23 §5）
 ALTER TABLE users ADD COLUMN ui_custom_colors TEXT NOT NULL DEFAULT '';   -- 自分の色（G-16 §4.6。JSON: base・accent・background）
 ALTER TABLE users ADD COLUMN is_admin_deputy  INTEGER NOT NULL DEFAULT 0 CHECK (is_admin_deputy IN (0, 1));   -- システム管理者補佐（G-14 §6.9）
+ALTER TABLE users ADD COLUMN is_executive INTEGER NOT NULL DEFAULT 0 CHECK (is_executive IN (0, 1));   -- 部長以上: すべての全課共通の調査の結果（集計だけ）を見られる（G-11 §10。G-14。K-067）
 ALTER TABLE users ADD COLUMN is_admin_deputy_lead INTEGER NOT NULL DEFAULT 0 CHECK (is_admin_deputy_lead IN (0, 1));   -- 補佐（開発担当）。補佐のうち有効な人で 1 名（G-14 §6.9。K-059。トリガー tr_users_admin_deputy_lead_*）
 -- 補佐は有効な人で 3 名まで、管理者と兼ねない（トリガー tr_users_admin_deputy_insert・tr_users_admin_deputy_update が RAISE(ABORT)）
 CREATE UNIQUE INDEX IF NOT EXISTS ux_users_login_id ON users (login_id);
@@ -478,6 +479,13 @@ CREATE TABLE IF NOT EXISTS adhoc_request_fields (
 CREATE TABLE IF NOT EXISTS adhoc_request_targets (
     request_id INTEGER NOT NULL REFERENCES adhoc_requests(id) ON DELETE CASCADE,
     user_id    INTEGER NOT NULL REFERENCES users(id),     -- 対象者を人で保存する（target_type を参照）
+    PRIMARY KEY (request_id, user_id)
+);
+
+-- 全課共通の調査の結果を見られる人（依頼元の担当など。調査ごとに管理者・補佐が指定する。集計だけを見る。G-11 §10。K-067）
+CREATE TABLE IF NOT EXISTS adhoc_request_viewers (
+    request_id INTEGER NOT NULL REFERENCES adhoc_requests(id) ON DELETE CASCADE,
+    user_id    INTEGER NOT NULL REFERENCES users(id),
     PRIMARY KEY (request_id, user_id)
 );
 

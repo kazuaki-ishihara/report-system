@@ -62,6 +62,7 @@
 │   ├── answer.php
 │   ├── manage.php
 │   ├── result.php
+│   ├── results.php
 │   └── survey_edit.php
 └── app/                     ← Web からは見えない（下記）
     ├── .htaccess            ← 必ず上げる（すべて拒否）
