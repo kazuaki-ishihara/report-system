@@ -3,7 +3,7 @@
 /** @var array $questions */
 /** @var array $responses */
 /** @var array $answers */
-/** @var array $summary */
+/** @var array<int, array> $surveyTallyByQuestionId 質問 ID => survey_tally() の 1 件 */
 /** @var array $notAnswered */
 /** @var array $targets */
 /** @var bool $showDetail */
@@ -12,21 +12,23 @@ $total = count($responses);
 <section class="card wide">
   <p><a href="<?= h(url('/surveys/survey_edit.php?id=' . (int) $req['id'])) ?>">← 調査の設定</a></p>
   <h1><?= h($req['title']) ?>（結果）</h1>
-  <p>回答 <strong><?= $total ?>/<?= count($targets) ?></strong>
+  <p>回答 <strong><?= $total ?>/<?= count($targets) ?></strong><?php if (count($targets) > 0): ?>（回答率 <?= (int) round($total * 100 / count($targets)) ?>%）<?php endif; ?>
     <?php if ($req['result_visibility'] === 'summary'): ?><span class="tag">依頼元には集計のみ</span><?php endif; ?></p>
   <a class="button" href="<?= h(url('/export/index.php?type=survey&survey_id=' . (int) $req['id'])) ?>">出力へ</a>
 
   <h2>集計</h2>
-  <?php foreach ($questions as $i => $q): if (!isset($summary[$q['id']])) { continue; } ?>
-    <h3><?= ($i + 1) ?>. <?= h($q['label']) ?></h3>
-    <table class="table">
-      <thead><tr><th>選択肢</th><th>件数</th><th>割合</th></tr></thead>
+  <p class="note"><?= h_phrases('割合は回答者数に対する % です。複数回答の質問は、足すと 100% を超えます。') ?></p>
+  <?php foreach ($questions as $i => $q): if (!isset($surveyTallyByQuestionId[$q['id']])) { continue; } $tally = $surveyTallyByQuestionId[$q['id']]; ?>
+    <h3><?= ($i + 1) ?>. <?= h($q['label']) ?><?php if ($tally['is_multiple']): ?><span class="note">（複数回答）</span><?php endif; ?></h3>
+    <table class="table survey-tally-table">
+      <thead><tr><th>選択肢</th><th class="num">件数</th><th class="num">割合</th><th class="survey-bar-cell">グラフ</th></tr></thead>
       <tbody>
-      <?php $opts = $q['type'] === 'checkbox' ? [['code' => '1', 'label' => 'はい']] : $q['options'];
-      foreach ($opts as $o): $n = (int) ($summary[$q['id']][(string) $o['code']] ?? 0); ?>
-        <tr><td><?= h($o['label']) ?></td><td><?= $n ?></td><td><?= $total > 0 ? round($n * 100 / $total) . '%' : '—' ?></td></tr>
+      <?php foreach ($tally['option_tally_list'] as $optionTally): ?>
+        <tr><td><?= h($optionTally['label']) ?></td><td class="num"><?= (int) $optionTally['count'] ?></td>
+          <td class="num"><?= $optionTally['percent'] === null ? '—' : (int) $optionTally['percent'] . '%' ?></td>
+          <td class="survey-bar-cell"><?= survey_bar_svg($optionTally['percent']) ?></td></tr>
       <?php endforeach; ?>
-      <tr class="muted"><td>未回答</td><td><?= (int) ($summary[$q['id']]['__none'] ?? 0) ?></td><td></td></tr>
+      <tr class="muted"><td>未回答</td><td class="num"><?= (int) $tally['unanswered_count'] ?></td><td></td><td></td></tr>
       </tbody>
     </table>
   <?php endforeach; ?>

@@ -36,28 +36,13 @@ if ($showDetail) {
     audit_log('view', 'survey:' . $id . ':responses');
 }
 
-// 集計（選択式・チェック）
-$summary = [];
-foreach ($questions as $q) {
-    if (!in_array($q['type'], ['select', 'radio', 'multi_check', 'checkbox'], true)) {
-        continue;
-    }
-    $counts = [];
-    foreach ($responses as $r) {
-        $v = $answers[(int) $r['id']][$q['id']] ?? '';
-        if ($v === null || $v === '') {
-            $counts['__none'] = ($counts['__none'] ?? 0) + 1;
-            continue;
-        }
-        $codes = $q['type'] === 'multi_check' ? (array) json_decode($v, true) : [$v];
-        foreach ($codes as $c) {
-            $counts[(string) $c] = ($counts[(string) $c] ?? 0) + 1;
-        }
-    }
-    $summary[$q['id']] = $counts;
+// 集計（選択式・チェック。出力と同じ survey_tally()）
+$surveyTallyByQuestionId = [];
+foreach (survey_tally($questions, $responses, $answers) as $tally) {
+    $surveyTallyByQuestionId[(int) $tally['question']['id']] = $tally;
 }
 
 render('survey_result', [
     'title' => '調査の結果', 'user' => $user, 'req' => $req, 'questions' => $questions, 'responses' => $responses,
-    'answers' => $answers, 'summary' => $summary, 'notAnswered' => $notAnswered, 'targets' => $targets, 'showDetail' => $showDetail,
+    'answers' => $answers, 'surveyTallyByQuestionId' => $surveyTallyByQuestionId, 'notAnswered' => $notAnswered, 'targets' => $targets, 'showDetail' => $showDetail,
 ]);

@@ -108,25 +108,19 @@ if ($type === 'report') {
     $responses = db_all('SELECT a.id, u.display_name FROM adhoc_responses a JOIN users u ON u.id = a.user_id WHERE a.request_id = ? AND a.submitted_at IS NOT NULL ORDER BY u.display_name', [$sid]);
     $answers = survey_answers($sid);
     $title = '臨時の調査 ' . $req['title'] . ($req['requester'] !== '' ? '（依頼元: ' . $req['requester'] . '）' : '');
+    $targetCount = (int) db_val('SELECT COUNT(*) FROM adhoc_request_targets WHERE request_id = ?', [$sid]);
+    $responseRateText = survey_response_rate_text($targetCount, count($responses)) . '  割合は回答者数に対する %（複数回答の質問は、足すと 100% を超えます）';
+    $visibleQuestions = array_values(array_filter($questions, function ($q) use ($withRestricted) {
+        return $q['conf'] !== 'restricted' || $withRestricted;
+    }));
+    $surveyTallyList = survey_tally($visibleQuestions, $responses, $answers);
+    // xlsx・CSV は 1 行 1 選択肢の表のまま（並べ替え・絞り込みに使えるように）。印刷は質問ごとの表とグラフ（views/export_print.php）
     $header = ['質問', '選択肢', '件数', '割合'];
     $rows = [];
-    foreach ($questions as $q) {
-        if ($q['conf'] === 'restricted' && !$withRestricted) {
-            continue;
-        }
-        if (in_array($q['type'], ['select', 'radio', 'multi_check', 'checkbox'], true)) {
-            $opts = $q['type'] === 'checkbox' ? [['code' => '1', 'label' => 'はい']] : $q['options'];
-            foreach ($opts as $o) {
-                $n = 0;
-                foreach ($responses as $r) {
-                    $v = (string) ($answers[(int) $r['id']][$q['id']] ?? '');
-                    $codes = $q['type'] === 'multi_check' ? (array) json_decode($v, true) : [$v];
-                    if (in_array((string) $o['code'], array_map('strval', $codes), true)) {
-                        $n++;
-                    }
-                }
-                $rows[] = [$q['label'], $o['label'], (string) $n, count($responses) > 0 ? round($n * 100 / count($responses)) . '%' : ''];
-            }
+    foreach ($surveyTallyList as $tally) {
+        $questionLabel = $tally['question']['label'] . ($tally['is_multiple'] ? '（複数回答）' : '');
+        foreach ($tally['option_tally_list'] as $optionTally) {
+            $rows[] = [$questionLabel, $optionTally['label'], (string) $optionTally['count'], $optionTally['percent'] === null ? '' : $optionTally['percent'] . '%'];
         }
     }
     $summaryRows = [];
@@ -156,8 +150,14 @@ $target .= ';free_text=' . ($withFree ? 1 : 0) . ';restricted=' . ($withRestrict
 audit_log('export', $target);
 
 $headerLines = ['社外秘', $title, $exporter];
+if ($type === 'survey') {
+    $headerLines[] = $responseRateText;   // 調査だけ 4 行目に回答の状況（割合の分母）
+}
 if ($format === 'print') {
-    render('export_print', ['title' => $title, 'user' => $user, 'headerLines' => $headerLines, 'header' => $header, 'rows' => $rows, 'summaryRows' => $summaryRows]);
+    render('export_print', [
+        'title' => $title, 'user' => $user, 'headerLines' => $headerLines, 'header' => $header, 'rows' => $rows, 'summaryRows' => $summaryRows,
+        'surveyTallyList' => $type === 'survey' ? $surveyTallyList : null,
+    ]);
 }
 $allRows = $rows;
 if ($summaryRows) {

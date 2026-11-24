@@ -802,3 +802,18 @@ form.wizard-active .sticky-actions button[value="submit"] { display: none; }
 
 /* 説明の文の区切り（h_phrases）: まとまりごとに折り返す。スマートフォンで言葉の途中で折り返さない */
 .phrase { display: inline-block; word-break: auto-phrase; }   /* まとまりが 1 行に入らないときも、対応するブラウザー（Chrome・Edge）では文節で折り返す */
+
+/* 臨時の調査の集計（G-10 の印刷・G-11 の結果）: 選択肢ごとの割合の横棒。幅は SVG の属性（survey_bar_svg()） */
+.survey-tally { margin-bottom: 16px; break-inside: avoid; page-break-inside: avoid; }
+.survey-tally h2 { font-size: 1.05em; margin: 12px 0 6px; }
+.survey-tally-table .num { text-align: right; white-space: nowrap; width: 5em; }
+.survey-tally-table .survey-bar-cell { width: 40%; }
+.survey-bar { display: block; width: 100%; height: 12px; }
+.survey-bar-track { fill: var(--row-alt-bg); stroke: var(--line); stroke-width: .5; vector-effect: non-scaling-stroke; }
+.survey-bar-fill { fill: var(--primary); }
+.print-page .survey-bar-track { fill: #f0f0f0; stroke: #999; }   /* 印刷の画面は白地のまま */
+.print-page .survey-bar-fill { fill: #1f6feb; }
+@media print {
+  .survey-bar-track { fill: #f0f0f0; stroke: #999; }
+  .survey-bar-fill { fill: #1f6feb; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+}
