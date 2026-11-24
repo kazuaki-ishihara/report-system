@@ -11,6 +11,14 @@
 一式は、リポジトリの public/ の中身（41 ファイル）と app/（108 ファイル）だけでできている。
 コミットした内容から作るので、作業中の変更は入らない。
 
+すでにアカウントを配って使っているサイト（デモ用の report-system_onion など）には、差分だけを上げる。
+DB・暗号の鍵・アカウントはそのまま残る。上げてある版のコミットを --base に指定する。
+
+  python tools/deploy/build_diff_package.py --base <上げてある版> --site <サーバーのフォルダー名>
+
+できた tools/deploy/output/diff_<日時>_<base>_<ref>/ に、追加・変更したファイルだけの <site>/ と、
+差分公開範囲.txt（上げるもの・消すもの・触らないもの・migrate.php の要否）と 反映手順.txt ができる。
+
 ■ サーバーの中の形
 
 ~/www/report-system/
