@@ -17,7 +17,7 @@ $headingTag = $headingTag ?? 'h3';
   <?php endforeach; ?>
   </tbody>
 </table>
-<p class="note"><?= h_phrases('課は今の所属で数えます。回答者が ' . SURVEY_DEPARTMENT_BREAKDOWN_MIN_RESPONDENTS . ' 人より少ない課は、選択肢ごとの内訳を出しません（個人の回答が分からないように）。') ?></p>
+<p class="note"><?= h_phrases('課は今の所属で数えます。課ごとの内訳の割合は、その課の回答者数に対する % です。') ?></p>
 
 <?php foreach ($overallTallyList as $questionNumber => $tally): $questionId = (int) $tally['question']['id']; ?>
 <div class="survey-tally">
@@ -40,7 +40,7 @@ $headingTag = $headingTag ?? 'h3';
     <?php foreach ($departmentBreakdownList as $departmentBreakdown): $departmentTally = $departmentBreakdown['tally_by_question_id'][$questionId] ?? null; ?>
       <tr><td><?= h($departmentBreakdown['department_name']) ?><span class="note">（回答 <?= (int) $departmentBreakdown['respondent_count'] ?> 人）</span></td>
       <?php if ($departmentTally === null): ?>
-        <td colspan="<?= count($tally['option_tally_list']) ?>" class="note">内訳は出しません（回答者が <?= SURVEY_DEPARTMENT_BREAKDOWN_MIN_RESPONDENTS ?> 人より少ない）</td>
+        <td colspan="<?= count($tally['option_tally_list']) ?>" class="note">回答なし</td>
       <?php else: foreach ($departmentTally['option_tally_list'] as $departmentOptionTally): ?>
         <td class="num"><?= (int) $departmentOptionTally['count'] ?><span class="note">（<?= $departmentOptionTally['percent'] === null ? '—' : (int) $departmentOptionTally['percent'] . '%' ?>）</span></td>
       <?php endforeach; endif; ?>
