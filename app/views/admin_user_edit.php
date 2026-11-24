@@ -6,7 +6,7 @@
 /** @var array $departments */
 /** @var array $roleTitles */
 /** @var array $post */
-/** @var array<int, array{id: int|string, name: string, department_id: int|string}> $teamOptionList 有効な班（課ごと） */
+/** @var array<int, array{id: int|string, name: string, department_id: int|string}> $teamOptionList 有効なライン（課ごと） */
 $v = function (string $k, $default = '') use ($target, $post) {
     if (isset($post[$k]) && is_string($post[$k])) {
         return $post[$k];
@@ -52,7 +52,7 @@ $selfUrl = $target === null ? '/admin/user_edit.php' : '/admin/user_edit.php?id=
       <option value="">（なし）</option>
       <?php foreach ($departments as $d): ?><option value="<?= (int) $d['id'] ?>" <?= $v('department_id') === (string) $d['id'] ? 'selected' : '' ?>><?= h($d['name']) ?></option><?php endforeach; ?>
     </select>
-    <p class="note"><?= h_phrases('班（「班ごと」で管理する課）は、その課の課長が「課の管理」で決めます。課を移すと班は外れます。') ?></p>
+    <p class="note"><?= h_phrases('ライン（「ラインごと」で管理する課）は、その課の課長が「課の管理」で決めます。課を移すとラインは外れます。') ?></p>
     <?php if (!$isOperatorDeputy): ?>
     <label class="check"><input type="checkbox" name="is_admin" value="1" <?= $v('is_admin', '0') === '1' ? 'checked' : '' ?>
       data-confirm-on="<?= h(msg('管理者は管理画面（項目・案件・組織・ユーザー・記録）を使えるようになります。報告の中身は、確認者の課の分だけ見られます')) ?>"> 管理者</label>

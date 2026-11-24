@@ -2,7 +2,7 @@
 /** @var array<string, int|float|string|null> $department 管理する課の行 */
 /** @var array<int, array<string, int|float|string|null>> $manageableDepartmentById 自分が課長の課（課 ID => 課の行） */
 /** @var array<int, array<string, int|float|string|null>> $memberRowList 課員と確認者の行（department_manage_member_rows()） */
-/** @var array<int, array{id: int|string, name: string, is_active: int|string}> $teamList 班（無効を含む） */
+/** @var array<int, array{id: int|string, name: string, is_active: int|string}> $teamList ライン（無効を含む） */
 /** @var string[] $errorTextList */
 $departmentId = (int) $department['id'];
 $selfUrl = url('/admin/department.php?dept=' . $departmentId);
@@ -18,7 +18,7 @@ $renderTeamOptions = function (?int $selectedTeamId, string $emptyLabel) use ($a
 ?>
 <section class="card wide">
   <h1>課の管理</h1>
-  <p class="note"><?= h_phrases('自分が課長の課の、締め日・管理の仕方・確認者（課長代理・リーダー）・チェックする人・項目管理者・班を決めます。課の名前・課長・組織の改訂（引き継ぎ）は、システム管理者が決めます。') ?></p>
+  <p class="note"><?= h_phrases('自分が課長の課の、締め日・管理の仕方・確認者（課長代理・リーダー）・チェックする人・項目管理者・ラインを決めます。課の名前・課長・組織の改訂（引き継ぎ）は、システム管理者が決めます。') ?></p>
   <?php if (count($manageableDepartmentById) > 1): ?>
     <form method="get" action="<?= h(url('/admin/department.php')) ?>" class="filters">
       <select name="dept" aria-label="課"><?php foreach ($manageableDepartmentById as $manageableDepartmentId => $manageableDepartment): ?><option value="<?= (int) $manageableDepartmentId ?>" <?= $manageableDepartmentId === $departmentId ? 'selected' : '' ?>><?= h($manageableDepartment['name']) ?></option><?php endforeach; ?></select>
@@ -38,22 +38,22 @@ $renderTeamOptions = function (?int $selectedTeamId, string $emptyLabel) use ($a
       <label>管理の仕方（課長代理・リーダーが見る報告の範囲）</label>
       <div class="choices">
         <label class="choice"><input type="radio" name="review_scope" value="department" <?= $isTeamScope ? '' : 'checked' ?>> 課全体（課長代理・リーダーは課の全員の報告を見る）</label>
-        <label class="choice"><input type="radio" name="review_scope" value="team" <?= $isTeamScope ? 'checked' : '' ?>> 班ごと（課長代理・リーダーは担当の班の報告だけを見る。課長は全員）</label>
+        <label class="choice"><input type="radio" name="review_scope" value="team" <?= $isTeamScope ? 'checked' : '' ?>> ラインごと（課長代理・リーダーは担当のラインの報告だけを見る。課長は全員）</label>
       </div>
       <button type="submit" class="primary">保存</button>
     </form>
   </section>
 
   <section id="dept-members" data-tab-title="確認者と課員">
-    <p class="note">「確認者」に印を付けた人は、この課の報告を見てコメントできます（「班ごと」の課では担当の班の人の報告だけ。「限定」の項目は課長だけ）。
+    <p class="note">「確認者」に印を付けた人は、この課の報告を見てコメントできます（「ラインごと」の課では担当のラインの人の報告だけ。「限定」の項目は課長だけ）。
       「チェックする」の人だけが報告のチェックをし、「チェック n/m」の m に数えます。チェックしない人も、報告を見ること・コメントはできます。
       新しく確認者にするときの「チェックする」は、課長代理は印あり、ほか（リーダーなど）は印なしで出します。項目管理者は、この課の課別項目を変更できます。</p>
-    <form method="post" action="<?= h($selfUrl) ?>" class="form" data-confirm="<?= h(msg('確認者・チェックする人・項目管理者・班を保存します。よろしいですか？')) ?>">
+    <form method="post" action="<?= h($selfUrl) ?>" class="form" data-confirm="<?= h(msg('確認者・チェックする人・項目管理者・ラインを保存します。よろしいですか？')) ?>">
       <?= form_hidden() ?>
       <input type="hidden" name="action" value="members_save">
       <input type="search" class="table-filter" data-filter-table="#department-member-table" placeholder="名前・ID で絞り込む" hidden>
       <table class="table" id="department-member-table">
-        <thead><tr><th>名前</th><th>役職</th><?php if ($isTeamScope): ?><th>班</th><?php endif; ?><th>確認者</th><?php if ($isTeamScope): ?><th>担当の班</th><?php endif; ?><th>チェックする</th><th>項目管理者</th></tr></thead>
+        <thead><tr><th>名前</th><th>役職</th><?php if ($isTeamScope): ?><th>ライン</th><?php endif; ?><th>確認者</th><?php if ($isTeamScope): ?><th>担当のライン</th><?php endif; ?><th>チェックする</th><th>項目管理者</th></tr></thead>
         <tbody>
         <?php foreach ($memberRowList as $memberRow):
             $memberUserId = (int) $memberRow['id'];
@@ -65,11 +65,11 @@ $renderTeamOptions = function (?int $selectedTeamId, string $emptyLabel) use ($a
             <td><?= h($memberRow['display_name']) ?> <span class="note"><?= h((string) $memberRow['login_id']) ?></span><?= $isDepartmentMember ? '' : ' <span class="tag">ほかの課</span>' ?></td>
             <td><?= h((string) $memberRow['role_title']) ?></td>
             <?php if ($isTeamScope): ?>
-              <td><?php if ($isDepartmentMember): ?><select name="member_team[<?= $memberUserId ?>]" aria-label="<?= h($memberRow['display_name']) ?>の班"><?= $renderTeamOptions($memberRow['team_id'] === null ? null : (int) $memberRow['team_id'], '班なし') ?></select><?php else: ?>—<?php endif; ?></td>
+              <td><?php if ($isDepartmentMember): ?><select name="member_team[<?= $memberUserId ?>]" aria-label="<?= h($memberRow['display_name']) ?>のライン"><?= $renderTeamOptions($memberRow['team_id'] === null ? null : (int) $memberRow['team_id'], 'ラインなし') ?></select><?php else: ?>—<?php endif; ?></td>
             <?php endif; ?>
             <td><?php if ($isFinalMember): ?><strong>課長</strong><?php else: ?><label class="check small"><input type="checkbox" name="reviewer[<?= $memberUserId ?>]" value="1" <?= $isReviewerMember ? 'checked' : '' ?>> 確認者</label><?php endif; ?></td>
             <?php if ($isTeamScope): ?>
-              <td><?php if ($isFinalMember): ?>課全体<?php else: ?><select name="reviewer_team[<?= $memberUserId ?>]" aria-label="<?= h($memberRow['display_name']) ?>の担当の班"><?= $renderTeamOptions($memberRow['reviewer_team_id'] === null ? null : (int) $memberRow['reviewer_team_id'], '課全体') ?></select><?php endif; ?></td>
+              <td><?php if ($isFinalMember): ?>課全体<?php else: ?><select name="reviewer_team[<?= $memberUserId ?>]" aria-label="<?= h($memberRow['display_name']) ?>の担当のライン"><?= $renderTeamOptions($memberRow['reviewer_team_id'] === null ? null : (int) $memberRow['reviewer_team_id'], '課全体') ?></select><?php endif; ?></td>
             <?php endif; ?>
             <td><?php if ($isFinalMember): ?>常にする<?php else: ?><label class="check small"><input type="checkbox" name="does_check[<?= $memberUserId ?>]" value="1" <?= $doesCheckChecked ? 'checked' : '' ?>> する</label><?php endif; ?></td>
             <td><input type="checkbox" name="field_admin[<?= $memberUserId ?>]" value="1" <?= (int) $memberRow['is_field_admin'] === 1 ? 'checked' : '' ?> aria-label="<?= h($memberRow['display_name']) ?>を項目管理者にする"></td>
@@ -81,14 +81,14 @@ $renderTeamOptions = function (?int $selectedTeamId, string $emptyLabel) use ($a
     </form>
   </section>
 
-  <section id="dept-teams" data-tab-title="班">
-    <?php if (!$isTeamScope): ?><p class="note"><?= h_phrases('この課の管理の仕方は「課全体」です。班は「基本」で「班ごと」にしたときに使います。') ?></p><?php endif; ?>
-    <p class="note"><?= h_phrases('「班ごと」の課で使います。課長代理ごとの班を作り、「確認者と課員」で確認者の担当の班と、課員の班を選びます。班を移った人の過去の報告は、今の班の課長代理・リーダーが見ます。') ?></p>
+  <section id="dept-teams" data-tab-title="ライン">
+    <?php if (!$isTeamScope): ?><p class="note"><?= h_phrases('この課の管理の仕方は「課全体」です。ラインは「基本」で「ラインごと」にしたときに使います。') ?></p><?php endif; ?>
+    <p class="note"><?= h_phrases('「ラインごと」の課で使います。課長代理ごとのラインを作り、「確認者と課員」で確認者の担当のラインと、課員のラインを選びます。ラインを移った人の過去の報告は、今のラインの課長代理・リーダーが見ます。') ?></p>
     <?php foreach ($teamList as $teamRow): ?>
       <form method="post" action="<?= h($selfUrl) ?>" class="filters">
         <?= form_hidden() ?>
         <input type="hidden" name="action" value="team_update"><input type="hidden" name="team_id" value="<?= (int) $teamRow['id'] ?>">
-        <input type="text" name="team_name" value="<?= h($teamRow['name']) ?>" maxlength="40" aria-label="班の名前">
+        <input type="text" name="team_name" value="<?= h($teamRow['name']) ?>" maxlength="40" aria-label="ラインの名前">
         <label class="check"><input type="checkbox" name="team_active" value="1" <?= (int) $teamRow['is_active'] === 1 ? 'checked' : '' ?>> 有効</label>
         <button type="submit" class="small">保存</button>
       </form>
@@ -96,8 +96,8 @@ $renderTeamOptions = function (?int $selectedTeamId, string $emptyLabel) use ($a
     <form method="post" action="<?= h($selfUrl) ?>" class="filters">
       <?= form_hidden() ?>
       <input type="hidden" name="action" value="team_add">
-      <input type="text" name="team_name" maxlength="40" placeholder="例: 山田班" aria-label="足す班の名前">
-      <button type="submit" class="small">班を足す</button>
+      <input type="text" name="team_name" maxlength="40" placeholder="例: 山田ライン" aria-label="足すラインの名前">
+      <button type="submit" class="small">ラインを足す</button>
     </form>
   </section>
   </div>

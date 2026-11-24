@@ -599,7 +599,7 @@ def main():
     section("G-14", "G 組織の改訂の予約")
     def preview_csv(csv_body_text):
         _status_code, _location, bulk_html = admin_client.get("/admin/org.php?tab=bulk")
-        csv_bytes = ("ログイン ID,表示名,所属の課,班,役割,担当の班,項目管理者,有効\r\n" + csv_body_text).encode("utf-8")
+        csv_bytes = ("ログイン ID,表示名,所属の課,ライン,役割,担当のライン,項目管理者,有効\r\n" + csv_body_text).encode("utf-8")
         _status_code, _location, preview_html = admin_client.post_file("/admin/org.php?tab=bulk", {"csrf_token": csrf(bulk_html), "action": "bulk_preview"}, "org_csv", "org.csv", csv_bytes)
         token_match = re.search(r'name="plan_token" value="([0-9a-f]+)"', preview_html)
         return token_match.group(1) if token_match else "", preview_html
@@ -617,7 +617,7 @@ def main():
     check("G: 予約した日が来ると、画面の表示で反映される", database.execute("SELECT d.name FROM users u JOIN departments d ON d.id = u.department_id WHERE u.login_id = 'ippan_a2'").fetchone()[0] == "B課"
           and database.execute("SELECT status FROM org_schedules WHERE id = ?", (schedule_row[0],)).fetchone()[0] == "applied")
     database.execute("INSERT INTO org_schedules (apply_on, csv_text, change_count, status, created_by, created_at) VALUES (?, ?, 1, 'scheduled', ?, datetime('now'))",
-                     (today.isoformat(), "ログイン ID,表示名,所属の課,班,役割,担当の班,項目管理者,有効\r\nippan_a2,A一般2,無い課,,,,,1\r\n", user_info_by_login_id["admin01"]["id"]))
+                     (today.isoformat(), "ログイン ID,表示名,所属の課,ライン,役割,担当のライン,項目管理者,有効\r\nippan_a2,A一般2,無い課,,,,,1\r\n", user_info_by_login_id["admin01"]["id"]))
     member_client.get("/index.php")
     check("G: その時点で誤りがあれば反映せず「失敗」にする", database.execute("SELECT status FROM org_schedules ORDER BY id DESC LIMIT 1").fetchone()[0] == "failed")
     _status_code, _location, admin_top_html = admin_client.get("/admin/index.php")

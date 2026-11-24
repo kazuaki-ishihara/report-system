@@ -20,7 +20,7 @@ $errors = [];
 if ($tab === 'bulk' && ($_GET['csv'] ?? '') === '1') {
     audit_log('export', 'export:organization');
     $organizationCsvBody = export_csv(
-        ['社外秘', '組織（ユーザーの所属・班・役割）', '出力者: ' . $user['login_id'] . '  出力日時: ' . date('Y-m-d H:i')],
+        ['社外秘', '組織（ユーザーの所属・ライン・役割）', '出力者: ' . $user['login_id'] . '  出力日時: ' . date('Y-m-d H:i')],
         ORG_CSV_COLUMNS,
         org_csv_current_rows()
     );
@@ -198,7 +198,7 @@ if (is_post() && post_str('action') === 'bulk_preview') {
         rk_done('/admin/org.php?tab=departments&edit=' . $successorDepartmentId . '#dept-succession');
 
     } elseif ($action === 'final_save') {
-        // 課長（最終確認者）を決める。課長代理・リーダー・項目管理者・班は、その課の課長が「課の管理」で決める（K-042）
+        // 課長（最終確認者）を決める。課長代理・リーダー・項目管理者・ラインは、その課の課長が「課の管理」で決める（K-042）
         $deptId = input_id('dept_id', 'POST');
         if (db_one('SELECT id FROM departments WHERE id = ?', [$deptId]) === null) {
             error_page(404);

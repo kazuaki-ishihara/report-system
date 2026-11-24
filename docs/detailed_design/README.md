@@ -40,7 +40,7 @@
 | [G22_support_requests.md](G22_support_requests.md) | G-22 要望・依頼（課長・確認者 → システム管理者の返信） |
 | [G24_update_notices.md](G24_update_notices.md) | G-24 更新のお知らせ（便利機能 A） |
 | [G25_faq.md](G25_faq.md) | G-25 よくある質問（便利機能 J） |
-| [G23_department_manage.md](G23_department_manage.md) | G-23 課の管理（課長: 締め日・管理の仕方・確認者・チェックする人・項目管理者・班） |
+| [G23_department_manage.md](G23_department_manage.md) | G-23 課の管理（課長: 締め日・管理の仕方・確認者・チェックする人・項目管理者・ライン） |
 
 G-16 は、基本設計書の F-02（2 段階認証・端末の管理）を行う画面として追加した。G-15 には、F-21（削除の取り消し）を含めた。
 

@@ -131,7 +131,7 @@ function department_with_predecessor_ids(int $departmentId): array
  *
  * @return array<int, array{departmentId: int, isFinal: bool, teamId: ?int, isTeamScoped: bool, coveredDepartmentIdSet: array<int, true>}>
  *   coveredDepartmentIdSet: その課と、組織の改訂で引き継いだ前の課（G-14 §6.6）
- *   isTeamScoped: 「班ごと」の課で、課長でなく担当の班があるとき（その班の人の報告だけを見る。K-025）
+ *   isTeamScoped: 「ラインごと」の課で、課長でなく担当のラインがあるとき（そのラインの人の報告だけを見る。K-025）
  */
 function report_view_grants(int $userId): array
 {
@@ -161,7 +161,7 @@ function report_view_grants(int $userId): array
 }
 
 /**
- * 利用者の今の課と班（報告は人について回る。K-032・K-033）。1 回の要求の中では覚えておく。
+ * 利用者の今の課とライン（報告は人について回る。K-032・K-033）。1 回の要求の中では覚えておく。
  *
  * @return array{departmentId: ?int, teamId: ?int}
  */
@@ -181,7 +181,7 @@ function user_current_placement(int $userId): array
 /**
  * 確認者として、この報告を見られるか。
  * 報告の課（作成時の課）か、本人の今の課（K-032）を、その課かそれを引き継いだ課の確認者として見られるとき。
- * 「班ごと」の課で担当の班がある確認者は、本人の今の班がその班のときだけ（K-033）。課長は班に関係なく見る。
+ * 「ラインごと」の課で担当のラインがある確認者は、本人の今のラインがそのラインのときだけ（K-033）。課長はラインに関係なく見る。
  *
  * @param bool $isFinalRequired true なら課長として（「限定」を見られるか）
  * @param bool $isOwnerDepartmentIncluded false なら、報告の課（作成時の課）からだけ判定する（チェックの人数を数えるとき）
@@ -243,7 +243,7 @@ function can_view_restricted(array $user, array $report): bool
 
 /**
  * チェックを求める確認者（「チェック n/m」の m）。報告の課（作成時の課。引き継ぎを含む）の、有効な確認者のうち、
- * その報告を見られる人（班ごとの課では担当の班の人と、課全体の確認者・課長）。本人は除く。
+ * その報告を見られる人（ラインごとの課では担当のラインの人と、課全体の確認者・課長）。本人は除く。
  *
  * @return int[] 利用者 ID
  */

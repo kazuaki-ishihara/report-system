@@ -9,7 +9,7 @@ declare(strict_types=1);
 //   php tools/test/org_seed.php --yes
 // 部長以上（課に所属しない。「部長以上」の印）4 人と、依頼元（人財管理部）の担当 1 人も作る（結果を見る人。K-067）。
 // 課の単位は仮設定 K-022 の 7 つ（システム 1 部の 1・2 課、2 部の 1・2・3 課、3 部、営業課）。
-// 課長代理ごとに班を作り、課は「班ごと」の管理にする。リーダーは班の確認者（主任）。営業課は課長と課員だけ。
+// 課長代理ごとにラインを作り、課は「ラインごと」の管理にする。リーダーはラインの確認者（主任）。営業課は課長と課員だけ。
 // そのうえで、全課共通の臨時の調査「AI利用状況（全社）」を作り、対象者の全員が回答した状態にする（全員回答のシミュレーション）。
 // 答えは課ごとの傾向を付けてばらけさせる。乱数の種は決まっているので、何度作っても同じ答えになる。
 // 名前は架空。パスワードは pass-<ID>-1234（dev_seed.php と同じ決まり）。
@@ -36,7 +36,7 @@ if (!survey_all_departments_supported()) {
 }
 
 /*
- * 組織図の課。teams は課長代理ごとの班: [課長代理がいるか, リーダーの人数, 課員の人数]。
+ * 組織図の課。teams は課長代理ごとのライン: [課長代理がいるか, リーダーの人数, 課員の人数]。
  * usage は「AI を業務で使っていますか」の重み（毎日・時々・使わない）。課ごとの傾向にする
  */
 const ORG_UNIT_LIST = [
@@ -92,7 +92,7 @@ $organizationResult = tx(function (): array {
             if ($hasDeputy) {
                 $deputyDisplayName = $nextDisplayName();
                 db_exec('INSERT INTO department_teams (department_id, name, sort_order, created_at, updated_at) VALUES (?, ?, ?, ?, ?)',
-                    [$departmentId, explode(' ', $deputyDisplayName)[0] . '班', ($teamIndex + 1) * 10, $nowText, $nowText]);
+                    [$departmentId, explode(' ', $deputyDisplayName)[0] . 'ライン', ($teamIndex + 1) * 10, $nowText, $nowText]);
                 $teamId = (int) db()->lastInsertId();
                 $deputyUserId = seed_create_user($unit['code'] . '.dairi' . ($teamIndex + 1), $deputyDisplayName, '課長代理', $departmentId, $teamId, 'reviewer', $teamId);
                 $usageWeightListByUserId[$deputyUserId] = $unit['usage'];

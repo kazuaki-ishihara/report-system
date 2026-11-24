@@ -38,7 +38,7 @@ SQLite 3。テーブルは `app/lib/schema.php` の `schema_ensure()` で作る�
 | | `report_field_options` | 選択肢 |
 | | `department_field_options` | 共通の選択式の項目の、課ごとの選択肢（G-12 §6.5） |
 | | `department_successions` | 組織の改訂で引き継いだ課（G-14 §6.6） |
-| | `department_teams` | 課の班（G-14 §6.7） |
+| | `department_teams` | 課のライン（G-14 §6.7） |
 | | `warning_words` | 客先名らしい言葉の一覧 |
 | 案件 | `projects` | 案件コードと社内向けの呼び名（予約の案件「案件なし」を 1 つ持つ。G-13 §6.5） |
 | 報告 | `report_records` | 月次報告 |
@@ -206,7 +206,7 @@ WHEN EXISTS (SELECT 1 FROM report_field_values v WHERE v.field_id = OLD.field_id
                     OR (v.value_text LIKE '[%' AND instr(v.value_text, '"' || OLD.code || '"') > 0)))
 BEGIN SELECT RAISE(ABORT, 'report_field_options in use cannot be deleted; deactivate the option instead'); END;
 
--- 課の班（「班ごと」で管理する課。G-14 §6.7）
+-- 課のライン（「ラインごと」で管理する課。G-14 §6.7）
 CREATE TABLE IF NOT EXISTS department_teams (
     id            INTEGER PRIMARY KEY AUTOINCREMENT,
     department_id INTEGER NOT NULL REFERENCES departments(id),
@@ -219,8 +219,8 @@ CREATE TABLE IF NOT EXISTS department_teams (
 );
 -- あとから足した列
 ALTER TABLE departments ADD COLUMN review_scope TEXT NOT NULL DEFAULT 'department' CHECK (review_scope IN ('department', 'team'));   -- 管理の仕方
-ALTER TABLE department_reviewers ADD COLUMN team_id INTEGER REFERENCES department_teams(id);   -- 担当の班（NULL なら課全体）
-ALTER TABLE users ADD COLUMN team_id INTEGER REFERENCES department_teams(id);                  -- 今の班
+ALTER TABLE department_reviewers ADD COLUMN team_id INTEGER REFERENCES department_teams(id);   -- 担当のライン（NULL なら課全体）
+ALTER TABLE users ADD COLUMN team_id INTEGER REFERENCES department_teams(id);                  -- 今のライン
 
 -- 組織の改訂で、課が引き継いだ改訂の前の課（G-14 §6.6）。後の課の確認者は、前の課の報告も見られる
 CREATE TABLE IF NOT EXISTS department_successions (

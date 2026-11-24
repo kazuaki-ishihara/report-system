@@ -57,7 +57,7 @@ if (is_post()) {
                 $deptId = (int) $deptRaw;
             }
         }
-        // 班は課長が「課の管理」で決める（K-042）。同じ課のままなら今の班を残し、課を移したら班を外す
+        // ラインは課長が「課の管理」で決める（K-042）。同じ課のままなら今のラインを残し、課を移したらラインを外す
         $teamId = ($target !== null && $target['team_id'] !== null && $deptId !== null && (int) $target['department_id'] === $deptId) ? (int) $target['team_id'] : null;
         if ($target === null) {
             $loginId = auth_normalize_login_id(post_str('login_id'));
@@ -216,7 +216,7 @@ if ($target !== null) {
     $target = db_one('SELECT * FROM users WHERE id = ?', [(int) $target['id']]);
 }
 
-// 班の選択肢（課ごと。画面では課を選ぶと、その課の班だけを出す）
+// ラインの選択肢（課ごと。画面では課を選ぶと、その課のラインだけを出す）
 $teamOptionList = db_all('SELECT t.id, t.name, t.department_id FROM department_teams t JOIN departments d ON d.id = t.department_id
                             WHERE t.is_active = 1 AND d.is_active = 1 ORDER BY d.sort_order, t.sort_order, t.id');
 

@@ -22,7 +22,7 @@ $rows = db_all(
 );
 $hasMore = count($rows) > $per;
 $rows = array_slice($rows, 0, $per);
-// チェック n/m（チェックを求める確認者だけ数える。班ごとの課では担当の班の確認者と課全体の確認者）
+// チェック n/m（チェックを求める確認者だけ数える。ラインごとの課では担当のラインの確認者と課全体の確認者）
 foreach ($rows as $rowIndex => $reportRow) {
     $checkCounts = report_check_counts($reportRow);
     $rows[$rowIndex]['checked'] = $checkCounts['checked'];

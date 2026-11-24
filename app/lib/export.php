@@ -35,7 +35,7 @@ function compare_dataset(int $deptId, string $fromPeriod, string $toPeriod, bool
           ORDER BY r.period, u.display_name",
         [$deptId, $fromPeriod, $toPeriod]
     );
-    // 見る人を渡したときは、その人が見られる報告だけ（班ごとの課で担当の班だけを見る確認者など）
+    // 見る人を渡したときは、その人が見られる報告だけ（ラインごとの課で担当のラインだけを見る確認者など）
     if ($viewer !== null) {
         $reports = array_values(array_filter($reports, function (array $reportRow) use ($viewer): bool {
             return can_view_report($viewer, $reportRow);

@@ -300,7 +300,7 @@ def main():
         check("課長がログインできる（課の管理）", login("kacho_a"))
         b.goto(a.base + "/admin/department.php?dept=1")
         shot("department_manage")
-        check("課の管理は節（基本・確認者と課員・班）のタブに分かれる",
+        check("課の管理は節（基本・確認者と課員・ライン）のタブに分かれる",
               b.eval("document.querySelectorAll('.section-tabs button').length") == 3 and b.visible("#dept-basic"))
         b.eval("Array.prototype.filter.call(document.querySelectorAll('.section-tabs button'), function (tabButton) { return tabButton.textContent === '確認者と課員'; })[0].click()")
         time.sleep(0.2)

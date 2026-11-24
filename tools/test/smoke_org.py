@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """組織まわりの確認（ローカル検証環境専用。dev_seed.php の直後に実行する）。
 
-- K-025 課ごとの管理の仕方（課全体／班ごと）と班
-- K-033 班を移った人の過去の報告は、今の班の課長代理・リーダーが見る
+- K-025 課ごとの管理の仕方（課全体／ラインごと）とライン
+- K-033 ラインを移った人の過去の報告は、今のラインの課長代理・リーダーが見る
 - K-032 課を移った人の、移る前の報告は、新しい課の確認者も見られる
 - K-006 メッセージを変えられるのは、管理担当の課の課長だけ
 - K-031 課長がいない課を、管理者のホームで知らせる
 - K-034 組織の一括の入れ替え（CSV）
-- K-042 課の管理は課長（締め日・管理の仕方・確認者・班）。管理者は課長を決める
+- K-042 課の管理は課長（締め日・管理の仕方・確認者・ライン）。管理者は課長を決める
 - K-039 課長代理・リーダーの「チェックする／しない」
 
     php tools/test/dev_seed.php --yes
@@ -83,7 +83,7 @@ def main():
         return team_row[0] if team_row else 0
 
     def save_members_a(reviewer_team_by_login_id, member_team_by_login_id, does_check_login_id_set):
-        """課の管理の「確認者と課員」: 確認者（課長代理・リーダー）と担当の班・チェックする・課員の班をまとめて保存する"""
+        """課の管理の「確認者と課員」: 確認者（課長代理・リーダー）と担当のライン・チェックする・課員のラインをまとめて保存する"""
         form_values = {"action": "members_save"}
         for login_id, reviewer_team_id in reviewer_team_by_login_id.items():
             form_values["reviewer[%d]" % user_id_of(login_id)] = "1"
@@ -112,35 +112,35 @@ def main():
     status_code, _location, kacho_menu_html = client_of("kacho_a").get("/index.php")
     check("課長のメニューに「課の管理」", "/admin/department.php" in kacho_menu_html)
     status_code, _location, org_edit_html = admin_client.get(org_edit_path_a)
-    check("管理者の課の編集は「基本・課長・引き継ぎ」（締め日・管理の仕方・確認者・班はない）",
-          'data-tab-title="課長"' in org_edit_html and 'data-tab-title="班"' not in org_edit_html
+    check("管理者の課の編集は「基本・課長・引き継ぎ」（締め日・管理の仕方・確認者・ラインはない）",
+          'data-tab-title="課長"' in org_edit_html and 'data-tab-title="ライン"' not in org_edit_html
           and 'name="review_scope"' not in org_edit_html and 'name="close_day"' not in org_edit_html)
-    status_code, _location, _page_html = post_org(org_edit_path_a, {"action": "team_add", "dept_id": str(department_a_id), "team_name": "管理者の班"})
-    check("管理者は班を足せない（400）", status_code == 400, status_code)
+    status_code, _location, _page_html = post_org(org_edit_path_a, {"action": "team_add", "dept_id": str(department_a_id), "team_name": "管理者のライン"})
+    check("管理者はラインを足せない（400）", status_code == 400, status_code)
     status_code, _location, _page_html = post_org(org_edit_path_a, {"action": "roles_save", "dept_id": str(department_a_id)})
     check("管理者は確認者をまとめて変えられない（400）", status_code == 400, status_code)
 
-    # ---- K-025 班ごとの課を作る（課長） ----
-    section("G-23", "K-025 班ごとの課を作る（課長）")
+    # ---- K-025 ラインごとの課を作る（課長） ----
+    section("G-23", "K-025 ラインごとの課を作る（課長）")
     status_code, location, _page_html = save_department_a("team")
-    check("課長が課を「班ごと」にできる", status_code == 303 and database.execute(
+    check("課長が課を「ラインごと」にできる", status_code == 303 and database.execute(
         "SELECT review_scope FROM departments WHERE id = ?", (department_a_id,)).fetchone()[0] == "team", (status_code, location))
-    for team_name in ["山田班", "佐藤班"]:
+    for team_name in ["山田ライン", "佐藤ライン"]:
         post_department_a({"action": "team_add", "team_name": team_name})
-    yamada_team_id, sato_team_id = team_id_of("山田班"), team_id_of("佐藤班")
-    check("課長が班を足せる", yamada_team_id > 0 and sato_team_id > 0, (yamada_team_id, sato_team_id))
-    post_department_a({"action": "team_add", "team_name": "山田班"})
-    check("同じ名前の班は足せない", database.execute("SELECT COUNT(*) FROM department_teams WHERE name = '山田班'").fetchone()[0] == 1)
+    yamada_team_id, sato_team_id = team_id_of("山田ライン"), team_id_of("佐藤ライン")
+    check("課長がラインを足せる", yamada_team_id > 0 and sato_team_id > 0, (yamada_team_id, sato_team_id))
+    post_department_a({"action": "team_add", "team_name": "山田ライン"})
+    check("同じ名前のラインは足せない", database.execute("SELECT COUNT(*) FROM department_teams WHERE name = '山田ライン'").fetchone()[0] == 1)
     status_code, location, _page_html = save_members_a({"dairi_a": yamada_team_id, "leader_a": sato_team_id},
                                                        {"ippan_a1": yamada_team_id, "ippan_a2": sato_team_id}, {"dairi_a", "leader_a"})
     reviewer_team_by_login_id = {login_id: database.execute("SELECT team_id FROM department_reviewers WHERE user_id = ? AND department_id = ?",
                                                             (user_id_of(login_id), department_a_id)).fetchone()[0]
                                  for login_id in ["kacho_a", "dairi_a", "leader_a"]}
-    check("課長が確認者に担当の班を付けられる（課長は班を持たない）",
+    check("課長が確認者に担当のラインを付けられる（課長はラインを持たない）",
           reviewer_team_by_login_id == {"kacho_a": None, "dairi_a": yamada_team_id, "leader_a": sato_team_id}, reviewer_team_by_login_id)
-    check("課長が課員の班を決められる", database.execute("SELECT team_id FROM users WHERE id = ?", (user_id_of("ippan_a1"),)).fetchone()[0] == yamada_team_id)
+    check("課長が課員のラインを決められる", database.execute("SELECT team_id FROM users WHERE id = ?", (user_id_of("ippan_a1"),)).fetchone()[0] == yamada_team_id)
     status_code, _location, _page_html = post_department_a({"action": "members_save", "member_team[%d]" % user_id_of("ippan_b1"): str(yamada_team_id)})
-    check("ほかの課の人の班は決められない（400）", status_code == 400 and database.execute(
+    check("ほかの課の人のラインは決められない（400）", status_code == 400 and database.execute(
         "SELECT team_id FROM users WHERE id = ?", (user_id_of("ippan_b1"),)).fetchone()[0] is None, status_code)
 
     # 前提: 2 人が前月の報告を提出
@@ -157,32 +157,32 @@ def main():
             "SELECT id FROM report_records WHERE user_id = ? AND period = ?", (user_id_of(login_id), previous_month)).fetchone()[0]
     report_a1_id, report_a2_id = report_id_by_login_id["ippan_a1"], report_id_by_login_id["ippan_a2"]
 
-    check("班ごと: 課長代理（山田班）は自分の班の人の報告を開ける", status_of("dairi_a", report_a1_id) == 200)
-    check("班ごと: 課長代理（山田班）は隣の班の人の報告を開けない（404）", status_of("dairi_a", report_a2_id) == 404)
-    check("班ごと: リーダー（佐藤班）は自分の班の人の報告を開ける", status_of("leader_a", report_a2_id) == 200)
-    check("班ごと: 課長は全員の報告を開ける", status_of("kacho_a", report_a1_id) == 200 and status_of("kacho_a", report_a2_id) == 200)
+    check("ラインごと: 課長代理（山田ライン）は自分のラインの人の報告を開ける", status_of("dairi_a", report_a1_id) == 200)
+    check("ラインごと: 課長代理（山田ライン）は隣のラインの人の報告を開けない（404）", status_of("dairi_a", report_a2_id) == 404)
+    check("ラインごと: リーダー（佐藤ライン）は自分のラインの人の報告を開ける", status_of("leader_a", report_a2_id) == 200)
+    check("ラインごと: 課長は全員の報告を開ける", status_of("kacho_a", report_a1_id) == 200 and status_of("kacho_a", report_a2_id) == 200)
     status_code, _location, mine_html = client_of("ippan_a1").get("/reports/mine.php")
-    check("班ごと: チェックの人数は担当の班の確認者と課長だけ（0/2）", "チェック 0/2" in mine_html)
+    check("ラインごと: チェックの人数は担当のラインの確認者と課長だけ（0/2）", "チェック 0/2" in mine_html)
     status_code, _location, status_html = client_of("dairi_a").get("/status/index.php?period=%s&dept=%d" % (previous_month, department_a_id))
-    check("班ごと: 提出状況のリンクは担当の班の人だけ",
+    check("ラインごと: 提出状況のリンクは担当のラインの人だけ",
           "/reports/view.php?id=%d" % report_a1_id in status_html and "/reports/view.php?id=%d" % report_a2_id not in status_html)
     status_code, _location, compare_html = client_of("dairi_a").get("/status/compare.php?period=%s&dept=%d" % (previous_month, department_a_id))
-    check("班ごと: 横並びは担当の班の人の報告だけ", "A一般1" in compare_html and "A一般2" not in compare_html)
+    check("ラインごと: 横並びは担当のラインの人の報告だけ", "A一般1" in compare_html and "A一般2" not in compare_html)
 
-    # ---- K-033 班を移ると、過去の報告も今の班が見る ----
-    section("G-05", "K-033 班を移ると、過去の報告も今の班が見る")
+    # ---- K-033 ラインを移ると、過去の報告も今のラインが見る ----
+    section("G-05", "K-033 ラインを移ると、過去の報告も今のラインが見る")
     save_members_a({"dairi_a": yamada_team_id, "leader_a": sato_team_id}, {"ippan_a1": sato_team_id, "ippan_a2": sato_team_id}, {"dairi_a", "leader_a"})
     client_by_login_id.clear()   # 1 回の要求の中で覚えた権限が残らないよう、ログインし直す（サーバー側は要求ごと）
-    check("班を移ると、前の班の課長代理は過去の報告を開けない", status_of("dairi_a", report_a1_id) == 404)
-    check("班を移ると、今の班のリーダーが過去の報告を開ける", status_of("leader_a", report_a1_id) == 200)
+    check("ラインを移ると、前のラインの課長代理は過去の報告を開けない", status_of("dairi_a", report_a1_id) == 404)
+    check("ラインを移ると、今のラインのリーダーが過去の報告を開ける", status_of("leader_a", report_a1_id) == 200)
 
     # ---- K-032 課を移った人の、移る前の報告 ----
     section("G-05", "K-032 課を移った人の、移る前の報告")
     save_user_department("ippan_a2", department_b_id)
-    check("課を移ると班は外れる（班は課長が決める）", database.execute("SELECT team_id FROM users WHERE id = ?", (user_id_of("ippan_a2"),)).fetchone()[0] is None)
+    check("課を移るとラインは外れる（ラインは課長が決める）", database.execute("SELECT team_id FROM users WHERE id = ?", (user_id_of("ippan_a2"),)).fetchone()[0] is None)
     check("課を移った人の移る前の報告を、新しい課の課長が開ける", status_of("kacho_b", report_a2_id) == 200)
     check("前の課の課長も、引き続き開ける", status_of("kacho_a", report_a2_id) == 200)
-    check("前の課の、担当の班の確認者は（今の班が違うので）開けない", status_of("leader_a", report_a2_id) == 404)
+    check("前の課の、担当のラインの確認者は（今のラインが違うので）開けない", status_of("leader_a", report_a2_id) == 404)
 
     # ---- 課全体に戻す ----
     section("G-23", "課全体に戻す")
@@ -213,11 +213,11 @@ def main():
     check("課の管理の表に「チェックする」と課長の「常にする」", 'name="does_check[%d]"' % user_id_of("leader_a") in member_table_html and "常にする" in member_table_html)
     save_members_a({"dairi_a": None, "leader_a": None}, {"ippan_a1": None}, {"dairi_a", "leader_a"})
 
-    # ---- 班を無効にすると、所属と担当が外れる ----
-    section("G-23", "班を無効にすると、所属と担当が外れる")
+    # ---- ラインを無効にすると、所属と担当が外れる ----
+    section("G-23", "ラインを無効にすると、所属と担当が外れる")
     save_members_a({"dairi_a": None, "leader_a": sato_team_id}, {"ippan_a1": sato_team_id}, {"dairi_a", "leader_a"})
-    post_department_a({"action": "team_update", "team_id": str(sato_team_id), "team_name": "佐藤班"})
-    check("班を無効にすると、所属の人と担当の確認者の班が外れる",
+    post_department_a({"action": "team_update", "team_id": str(sato_team_id), "team_name": "佐藤ライン"})
+    check("ラインを無効にすると、所属の人と担当の確認者のラインが外れる",
           database.execute("SELECT COUNT(*) FROM users WHERE team_id = ?", (sato_team_id,)).fetchone()[0] == 0
           and database.execute("SELECT COUNT(*) FROM department_reviewers WHERE team_id = ?", (sato_team_id,)).fetchone()[0] == 0)
 
@@ -272,7 +272,7 @@ def main():
     status_code, _location, _csv_text = admin_client.get("/admin/org.php?tab=bulk&csv=1")
     exported_csv_text = admin_client.last_raw.decode("utf-8-sig")
     check("今の組織を CSV に出力できる（社外秘の見出し・列）", status_code == 200 and exported_csv_text.startswith('"社外秘"')
-          and "ログイン ID,表示名,所属の課,班,役割,担当の班,項目管理者,有効" in exported_csv_text.replace('"', ''), status_code)
+          and "ログイン ID,表示名,所属の課,ライン,役割,担当のライン,項目管理者,有効" in exported_csv_text.replace('"', ''), status_code)
     check("管理者でない人は出力できない（403）", client_of("kacho_a").get("/admin/org.php?tab=bulk&csv=1")[0] == 403)
     exported_row_list = list(csv.reader(io.StringIO(exported_csv_text)))
     header_index = next(row_index for row_index, csv_row in enumerate(exported_row_list) if csv_row[:1] == ["ログイン ID"])
@@ -295,7 +295,7 @@ def main():
         status_code, _location, bulk_html = admin_client.get("/admin/org.php?tab=bulk")
         return admin_client.post_file("/admin/org.php?tab=bulk", {"csrf_token": csrf(bulk_html), "action": "bulk_preview"}, "org_csv", "org.csv", csv_bytes)
 
-    # 列の番号: 0 ログイン ID、2 所属の課、3 班、4 役割、5 担当の班、6 項目管理者、7 有効
+    # 列の番号: 0 ログイン ID、2 所属の課、3 ライン、4 役割、5 担当のライン、6 項目管理者、7 有効
     status_code, _location, preview_html = upload_csv(make_csv({"kacho_b": {2: "B課", 4: "課長"}, "dairi_a": {4: "課長", 5: ""}},
                                                                [["no_such_user", "x", "A課", "", "", "", "", "1"]]))
     check("誤りがあれば知らせ、反映のボタンを出さない（登録されていない ID・課長が 2 人）",
@@ -304,10 +304,15 @@ def main():
     check("CSV で役職が課長・部長でない人を課長にするときは、丁寧に知らせる（止めはしない。K-069）",
           "さんの役職は「一般」です（課長・部長ではありません）。役職と異なる役割をお任せする場合のみ、このまま反映してください。" in preview_html
           and 'value="bulk_apply"' in preview_html, status_code)
-    status_code, _location, preview_html = upload_csv(make_csv({"kacho_b": {2: "B課", 4: "課長"}, "ippan_b1": {2: "A課", 3: "鈴木班"}}))
+    old_header_csv_bytes = make_csv({"ippan_b1": {3: "鈴木ライン"}}).decode("utf-8").replace(
+        "所属の課,ライン,役割,担当のライン,", "所属の課,班,役割,担当の班,", 1).encode("utf-8")
+    status_code, _location, preview_html = upload_csv(old_header_csv_bytes)
+    check("「班」を「ライン」に変える前の見出し（班・担当の班）の CSV も取り込める", "所属の課,班," in old_header_csv_bytes.decode("utf-8")
+          and "見出しの行" not in preview_html and 'value="bulk_apply"' in preview_html and "鈴木ライン" in preview_html, status_code)
+    status_code, _location, preview_html = upload_csv(make_csv({"kacho_b": {2: "B課", 4: "課長"}, "ippan_b1": {2: "A課", 3: "鈴木ライン"}}))
     check("役職が課長の人を課長にするときは知らせない", "役職と異なる役割をお任せする場合のみ" not in preview_html)
-    check("取り込むと、変わる内容と新しく作る班を出す（まだ反映しない）",
-          'value="bulk_apply"' in preview_html and "鈴木班" in preview_html and "B課 → A課" in preview_html
+    check("取り込むと、変わる内容と新しく作るラインを出す（まだ反映しない）",
+          'value="bulk_apply"' in preview_html and "鈴木ライン" in preview_html and "B課 → A課" in preview_html
           and database.execute("SELECT department_id FROM users WHERE id = ?", (user_id_of("ippan_b1"),)).fetchone()[0] == department_b_id)
     plan_token = preview_html.split('name="plan_token" value="')[1].split('"')[0] if 'name="plan_token"' in preview_html else ""
     status_code, _location, _page_html = admin_client.post("/admin/org.php?tab=bulk", {
@@ -317,7 +322,7 @@ def main():
         "csrf_token": csrf(preview_html), "request_key": os.urandom(16).hex(), "action": "bulk_apply", "plan_token": plan_token})
     b1_row = database.execute("SELECT u.department_id, t.name FROM users u LEFT JOIN department_teams t ON t.id = u.team_id WHERE u.id = ?",
                               (user_id_of("ippan_b1"),)).fetchone()
-    check("反映すると、所属と班が変わり、無い班は作られる", status_code == 303 and b1_row == (department_a_id, "鈴木班"), (status_code, location, b1_row))
+    check("反映すると、所属とラインが変わり、無いラインは作られる", status_code == 303 and b1_row == (department_a_id, "鈴木ライン"), (status_code, location, b1_row))
     check("反映すると、役割も変わる（B課の課長）", database.execute(
         "SELECT is_final FROM department_reviewers WHERE user_id = ? AND department_id = ?", (user_id_of("kacho_b"), department_b_id)).fetchone() == (1,))
     check("CSV に載っていても変わらない人はそのまま（A課の課長）", database.execute(

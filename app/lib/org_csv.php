@@ -4,13 +4,15 @@ declare(strict_types=1);
 
 // ====================================================================
 // 組織の一括の入れ替え（CSV）（詳細設計書 G14_org_users.md §6.8）
-// 毎年の組織改訂で、課員の所属・班・役割をまとめて入れる。動かない人は CSV でも同じ値のまま（変わらない）。
+// 毎年の組織改訂で、課員の所属・ライン・役割をまとめて入れる。動かない人は CSV でも同じ値のまま（変わらない）。
 // 流れ: 今の組織を出力 → 直す → 取り込む（変わる内容を確かめる）→ 反映する。
 // ====================================================================
 
 /** CSV の列（出力も取り込みもこの順） */
-const ORG_CSV_COLUMNS = ['ログイン ID', '表示名', '所属の課', '班', '役割', '担当の班', '項目管理者', '有効'];
+const ORG_CSV_COLUMNS = ['ログイン ID', '表示名', '所属の課', 'ライン', '役割', '担当のライン', '項目管理者', '有効'];
 const ORG_CSV_ROLE_LABELS = ['' => '', 'reviewer' => '確認者', 'final' => '課長'];
+/** 前の見出しの名前（「班」を「ライン」に変える前に出力した CSV も取り込めるように、今の名前に読み替える。2026-11-24） */
+const ORG_CSV_OLD_COLUMN_NAMES = ['班' => 'ライン', '担当の班' => '担当のライン'];
 
 /**
  * 今の組織を CSV の行にする（1 人 1 行。役割は所属の課での役割）。
@@ -79,7 +81,8 @@ function org_csv_plan(string $csvText, int $operatorUserId): array
         }
         $csvCells = array_map(function ($cellValue): string { return trim((string) $cellValue); }, $csvCells);
         if (!$isHeaderFound) {
-            if ($csvCells === ORG_CSV_COLUMNS) {
+            $headerCells = array_map(function (string $headerCell): string { return ORG_CSV_OLD_COLUMN_NAMES[$headerCell] ?? $headerCell; }, $csvCells);
+            if ($headerCells === ORG_CSV_COLUMNS) {
                 $isHeaderFound = true;
             }
             continue;   // 見出しの前の行（「社外秘」など）は読み飛ばす
@@ -137,17 +140,17 @@ function org_csv_plan(string $csvText, int $operatorUserId): array
             $plan['errorTextList'][] = msg('{line} 行目: 自分自身は無効にできません', ['line' => $lineNumber]);
             continue;
         }
-        if ($departmentId === null && ($cells['班'] !== '' || $roleCode !== '' || $cells['担当の班'] !== '' || $cells['項目管理者'] === '1')) {
-            $plan['errorTextList'][] = msg('{line} 行目: 所属の課がない人に、班・役割は付けられません', ['line' => $lineNumber]);
+        if ($departmentId === null && ($cells['ライン'] !== '' || $roleCode !== '' || $cells['担当のライン'] !== '' || $cells['項目管理者'] === '1')) {
+            $plan['errorTextList'][] = msg('{line} 行目: 所属の課がない人に、ライン・役割は付けられません', ['line' => $lineNumber]);
             continue;
         }
-        if ($roleCode !== 'reviewer' && $cells['担当の班'] !== '') {
-            $plan['errorTextList'][] = msg('{line} 行目: 担当の班は「確認者」のときだけ入れてください', ['line' => $lineNumber]);
+        if ($roleCode !== 'reviewer' && $cells['担当のライン'] !== '') {
+            $plan['errorTextList'][] = msg('{line} 行目: 担当のラインは「確認者」のときだけ入れてください', ['line' => $lineNumber]);
             continue;
         }
-        foreach (['班', '担当の班'] as $teamColumnName) {
+        foreach (['ライン', '担当のライン'] as $teamColumnName) {
             if (str_len($cells[$teamColumnName]) > 40 || has_control_chars($cells[$teamColumnName])) {
-                $plan['errorTextList'][] = msg('{line} 行目: 班の名前は 40 文字以内にしてください', ['line' => $lineNumber]);
+                $plan['errorTextList'][] = msg('{line} 行目: ラインの名前は 40 文字以内にしてください', ['line' => $lineNumber]);
                 continue 2;
             }
         }
@@ -161,8 +164,8 @@ function org_csv_plan(string $csvText, int $operatorUserId): array
             }
         }
         $plan['planByUserId'][$userId] = [
-            'departmentId' => $departmentId, 'teamName' => $cells['班'], 'roleCode' => $isActive ? $roleCode : '',
-            'reviewerTeamName' => $isActive ? $cells['担当の班'] : '', 'isFieldAdmin' => $isActive && $cells['項目管理者'] === '1', 'isActive' => $isActive,
+            'departmentId' => $departmentId, 'teamName' => $cells['ライン'], 'roleCode' => $isActive ? $roleCode : '',
+            'reviewerTeamName' => $isActive ? $cells['担当のライン'] : '', 'isFieldAdmin' => $isActive && $cells['項目管理者'] === '1', 'isActive' => $isActive,
         ];
 
         // 変わる内容
@@ -183,9 +186,9 @@ function org_csv_plan(string $csvText, int $operatorUserId): array
             }
         };
         $describeChange(msg('所属の課'), (string) ($currentPlacementRow['department_name'] ?? ''), $departmentName);
-        $describeChange(msg('班'), (string) ($currentPlacementRow['team_name'] ?? ''), $cells['班']);
+        $describeChange(msg('ライン'), (string) ($currentPlacementRow['team_name'] ?? ''), $cells['ライン']);
         $describeChange(msg('役割'), ORG_CSV_ROLE_LABELS[$currentRoleCode], ORG_CSV_ROLE_LABELS[$isActive ? $roleCode : '']);
-        $describeChange(msg('担当の班'), (string) ($currentPlacementRow['reviewer_team_name'] ?? ''), $isActive ? $cells['担当の班'] : '');
+        $describeChange(msg('担当のライン'), (string) ($currentPlacementRow['reviewer_team_name'] ?? ''), $isActive ? $cells['担当のライン'] : '');
         $describeChange(msg('項目管理者'), (int) $currentPlacementRow['is_field_admin'] === 1 ? '1' : '', $isActive && $cells['項目管理者'] === '1' ? '1' : '');
         $describeChange(msg('有効'), (int) $userRow['is_active'] === 1 ? '1' : '0', $isActive ? '1' : '0');
         $otherDepartmentRoleCount = (int) db_val('SELECT COUNT(*) FROM department_reviewers WHERE user_id = ? AND department_id IS NOT ?', [$userId, $userRow['department_id']]);
@@ -202,8 +205,8 @@ function org_csv_plan(string $csvText, int $operatorUserId): array
             $plan['changeList'][] = ['loginId' => $loginId, 'displayName' => (string) $userRow['display_name'], 'descriptionList' => $descriptionList];
         }
 
-        // 新しい班
-        foreach (array_unique([$cells['班'], $isActive ? $cells['担当の班'] : '']) as $teamName) {
+        // 新しいライン
+        foreach (array_unique([$cells['ライン'], $isActive ? $cells['担当のライン'] : '']) as $teamName) {
             if ($teamName === '' || $departmentId === null) {
                 continue;
             }

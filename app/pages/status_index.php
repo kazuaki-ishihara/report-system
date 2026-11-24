@@ -135,7 +135,7 @@ $bulkCandidateCount = 0;   // まとめてチェックできる報告の数
 foreach ($rows as $r) {
     $submitted = in_array($r['status'], ['submitted', 'confirmed'], true);
     $mine = (int) $r['user_id'] === $uid;
-    // 中身へのリンクと自分のチェックの状態は、その報告を見られるときだけ（管理者でも確認者でなければ出さない。班ごとの課では担当の班だけ）
+    // 中身へのリンクと自分のチェックの状態は、その報告を見られるときだけ（管理者でも確認者でなければ出さない。ラインごとの課では担当のラインだけ）
     $reportForPermission = $r['report_id'] === null ? null : [
         'id' => (int) $r['report_id'], 'user_id' => (int) $r['report_user_id'], 'department_id' => $r['report_department_id'],
         'status' => (string) $r['status'], 'deleted_at' => $r['deleted_at'], 'revision' => (int) $r['revision'],

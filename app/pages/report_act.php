@@ -25,9 +25,9 @@ report_comment_ensure_edited_column();
 
 $isOwner = (int) $report['user_id'] === $uid;
 $deptId = $report['department_id'] === null ? 0 : (int) $report['department_id'];
-// 確認者としてこの報告を見られるか（引き継ぎ・課を移った人・班ごとの課を含む。共通編 §10.2）
+// 確認者としてこの報告を見られるか（引き継ぎ・課を移った人・ラインごとの課を含む。共通編 §10.2）
 $isReviewer = !$isOwner && reviewer_can_see_report($uid, $report, false);
-// チェックを求められている確認者か（報告を作ったときの課と、それを引き継いだ課の確認者で、班が合う人）
+// チェックを求められている確認者か（報告を作ったときの課と、それを引き継いだ課の確認者で、ラインが合う人）
 $isExpectedReviewer = !$isOwner && in_array($uid, report_expected_reviewer_ids($report), true);
 $isFinal = reviewer_can_see_report($uid, $report, true, false);   // 報告の課（と引き継いだ課）の課長だけ。管理者でも課長でなければ確認完了にできない
 $back = '/reports/view.php?id=' . $id;
@@ -185,7 +185,7 @@ switch ($action) {
         );
         // 「未チェックを順に見る」: 同じ課・同じ月の次の未チェックへ
         if (($_POST['seq'] ?? '') === '1') {
-            // 次の未チェック: 同じ課・同じ月の、自分が見られる（班ごとの課では担当の班の）報告
+            // 次の未チェック: 同じ課・同じ月の、自分が見られる（ラインごとの課では担当のラインの）報告
             $nextId = null;
             foreach (db_all(
                 "SELECT r.* FROM report_records r LEFT JOIN report_reviews v ON v.report_id = r.id AND v.user_id = ?

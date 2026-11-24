@@ -48,7 +48,7 @@
     </form>
     </section>
     <section id="dept-final" data-tab-title="課長">
-    <p class="note"><?= h_phrases('この課の課長（最終確認者）を決めます。課長代理・リーダー（確認者）・チェックする人・項目管理者・班・締め日・管理の仕方は、この課の課長が「課の管理」の画面で決めます（システム管理者は、個々の課の管理はしません）。') ?></p>
+    <p class="note"><?= h_phrases('この課の課長（最終確認者）を決めます。課長代理・リーダー（確認者）・チェックする人・項目管理者・ライン・締め日・管理の仕方は、この課の課長が「課の管理」の画面で決めます（システム管理者は、個々の課の管理はしません）。') ?></p>
     <?php $currentFinalCandidate = null; foreach ($candidates as $candidateRow) { if ((int) $candidateRow['is_final'] === 1) { $currentFinalCandidate = $candidateRow; } } ?>
     <p>今の課長: <strong><?= $currentFinalCandidate === null ? h(msg('課長がいません（確認を完了にできません）')) : h($currentFinalCandidate['display_name']) ?></strong></p>
     <?php if (!empty($finalCheckCandidate)): /* 役職が課長・部長でない人を課長に選んだときの確かめ（K-069） */ ?>
@@ -139,7 +139,7 @@
   </form>
   <input type="search" class="table-filter" data-filter-table="#user-table" placeholder="この一覧をさらに絞り込む" hidden>
   <table class="table" id="user-table">
-    <thead><tr><th>ログイン ID</th><th>表示名</th><th>課</th><th>班</th><th>役割</th><th>2 段階認証</th><th>ロック</th><th></th></tr></thead>
+    <thead><tr><th>ログイン ID</th><th>表示名</th><th>課</th><th>ライン</th><th>役割</th><th>2 段階認証</th><th>ロック</th><th></th></tr></thead>
     <tbody>
     <?php foreach ($users as $u): ?>
       <tr class="<?= (int) $u['is_active'] === 1 ? '' : 'muted' ?>">
@@ -158,10 +158,10 @@
   </table>
 
 <?php elseif ($tab === 'bulk'): /** @var array|null $bulkPlan org_csv_plan() の戻り値（取り込んだとき） */ ?>
-  <p><?= h_phrases('毎年の組織改訂で、ユーザーの所属の課・班・役割（課長・確認者・担当の班・項目管理者）・有効をまとめて入れます。手順は「組織の改訂の手順」（docs/org_revision.md）。') ?></p>
+  <p><?= h_phrases('毎年の組織改訂で、ユーザーの所属の課・ライン・役割（課長・確認者・担当のライン・項目管理者）・有効をまとめて入れます。手順は「組織の改訂の手順」（docs/org_revision.md）。') ?></p>
   <ol class="steps">
     <li>今の組織を出力する: <a class="button" href="<?= h(url('/admin/org.php?tab=bulk&csv=1')) ?>">今の組織を CSV に出力</a></li>
-    <li>CSV を直す（動かない人はそのまま。CSV に載せない人は変わりません。新しい人は先に「ユーザーを追加」で登録します。無い班の名前は、その課に班を作ります）。</li>
+    <li>CSV を直す（動かない人はそのまま。CSV に載せない人は変わりません。新しい人は先に「ユーザーを追加」で登録します。無いラインの名前は、その課にラインを作ります）。</li>
     <li>直した CSV を取り込み、変わる内容を確かめてから「反映する」を押す。</li>
   </ol>
   <form method="post" action="<?= h(url('/admin/org.php?tab=bulk')) ?>" class="form" enctype="multipart/form-data">
@@ -176,7 +176,7 @@
     <?php foreach ($bulkPlan['errorTextList'] as $bulkErrorText): ?><div class="flash flash-error" role="alert"><?= h_lines($bulkErrorText) ?></div><?php endforeach; ?>
     <?php foreach ($bulkPlan['warningTextList'] ?? [] as $bulkWarningText): ?><div class="flash flash-warning" role="alert"><?= h_lines($bulkWarningText) ?></div><?php endforeach; ?>
     <?php if ($bulkPlan['newTeamList']): ?>
-      <p>新しく作る班: <?php foreach ($bulkPlan['newTeamList'] as $newTeam): ?><span class="tag"><?= h($newTeam['departmentName']) ?> / <?= h($newTeam['teamName']) ?></span><?php endforeach; ?></p>
+      <p>新しく作るライン: <?php foreach ($bulkPlan['newTeamList'] as $newTeam): ?><span class="tag"><?= h($newTeam['departmentName']) ?> / <?= h($newTeam['teamName']) ?></span><?php endforeach; ?></p>
     <?php endif; ?>
     <?php if (!$bulkPlan['changeList']): ?>
       <p><?= h_phrases(msg('変わる人はいません。')) ?></p>
