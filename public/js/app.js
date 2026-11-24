@@ -138,7 +138,7 @@
   // ---- メンテナンス中（便利機能 F）: 保存などのボタンを止める（入力は残る。終わってから保存できる） ----
   if (document.body.getAttribute('data-maintenance') === '1') {
     Array.prototype.forEach.call(document.querySelectorAll('form[method="post"], form[method="POST"]'), function (postForm) {
-      if (postForm.action && /logout\.php/.test(postForm.action)) { return; }
+      if (/logout\.php/.test(postForm.getAttribute('action') || '')) { return; }
       Array.prototype.forEach.call(postForm.querySelectorAll('button[type="submit"], button:not([type])'), function (submitButton) {
         submitButton.disabled = true;
         submitButton.title = M('メンテナンス中のため、保存などの操作はできません');
@@ -475,23 +475,6 @@
     });
   });
 
-  // ---- ユーザーの編集（G-14）: ラインは、選んだ所属の課のラインだけを出す ----
-  var userDepartmentSelect = document.getElementById('department_id');
-  var userTeamSelect = document.getElementById('team_id');
-  if (userDepartmentSelect && userTeamSelect) {
-    var applyTeamOptions = function () {
-      Array.prototype.forEach.call(userTeamSelect.options, function (teamOption) {
-        if (teamOption.value === '') { return; }
-        var isSameDepartment = teamOption.getAttribute('data-department-id') === userDepartmentSelect.value;
-        teamOption.hidden = !isSameDepartment;
-        teamOption.disabled = !isSameDepartment;
-      });
-      if (userTeamSelect.selectedOptions.length && userTeamSelect.selectedOptions[0].disabled) { userTeamSelect.value = ''; }
-    };
-    userDepartmentSelect.addEventListener('change', applyTeamOptions);
-    applyTeamOptions();
-  }
-
   // ---- コメントの定型文を本文に入れる（G-05。G-19 で課長が登録した文） ----
   document.addEventListener('change', function (changeEvent) {
     var templateSelect = changeEvent.target;
@@ -503,10 +486,76 @@
     commentTextarea.focus();
   });
 
+  // ---- ログインの状態の確認（共通編 §11.3.1）。別のタブでログインし直したときは、この画面の CSRF トークンを新しくする ----
+  // 結果: ok = 送ってよい、login = 切れている、other = 別の利用者でログインしている、network = 通信できない
+  var sessionCheckUrl = document.body.getAttribute('data-session-check');
+  function checkSession() {
+    var abortController = window.AbortController ? new AbortController() : null;
+    var timeoutTimer = window.setTimeout(function () { if (abortController) { abortController.abort(); } }, 10000);
+    return fetch(sessionCheckUrl, { credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' }, signal: abortController ? abortController.signal : undefined })
+      .then(function (response) {
+        if (response.status === 401) { return 'login'; }
+        if (!response.ok) { return 'ok'; }   // 確かめられないとき（メンテナンスなど）は、今までどおり送ってサーバーに任せる
+        return response.json().then(function (sessionInfo) {
+          if (String(sessionInfo.user_id) !== document.body.getAttribute('data-user-id')) { return 'other'; }
+          Array.prototype.forEach.call(document.querySelectorAll('input[name="csrf_token"]'), function (tokenInput) { tokenInput.value = sessionInfo.csrf_token; });
+          return 'ok';
+        }, function () { return 'ok'; });
+      })
+      .catch(function () { return 'network'; })
+      .then(function (sessionState) { window.clearTimeout(timeoutTimer); return sessionState; });
+  }
+  function needsSessionCheck(targetForm) {
+    if (!sessionCheckUrl || !window.fetch || !HTMLFormElement.prototype.requestSubmit) { return false; }
+    if ((targetForm.getAttribute('method') || '').toLowerCase() !== 'post' || targetForm.getAttribute('target') === '_blank') { return false; }
+    return !/logout\.php/.test(targetForm.getAttribute('action') || '');
+  }
+  function removeSessionNotice() {
+    Array.prototype.forEach.call(document.querySelectorAll('.session-notice'), function (oldNotice) { oldNotice.remove(); });
+  }
+  function showSessionNotice(targetForm, submitter, sessionState) {
+    removeSessionNotice();
+    var noticeBox = document.createElement('div');
+    noticeBox.className = 'flash flash-error session-notice';
+    noticeBox.setAttribute('role', 'alert');
+    var noticeText = document.createElement('p');
+    noticeBox.appendChild(noticeText);
+    if (sessionState === 'network') {
+      setMessageText(noticeText, M('通信できないため、送信していません。入力は残っています。通信できる場所で、もう一度押してください。'));
+    } else {
+      setMessageText(noticeText, sessionState === 'other'
+        ? M('別の利用者でログインしているため、送信していません。入力は残っています。この画面を開いた利用者でログインし直してから、もう一度押してください。')
+        : M('ログインが切れたため、送信していません。入力は残っています。下のボタンで別の画面を開いてログインし、この画面に戻って、もう一度押してください。'));
+      var loginLink = document.createElement('a');
+      loginLink.href = document.body.getAttribute('data-login-url');
+      loginLink.target = '_blank';
+      loginLink.rel = 'noopener';
+      loginLink.className = 'button';
+      loginLink.textContent = M('別の画面でログインする');
+      noticeBox.appendChild(loginLink);
+    }
+    var actionBar = submitter ? submitter.closest('.sticky-actions') : null;
+    var insertPosition = actionBar || submitter;
+    if (insertPosition && insertPosition.parentNode === targetForm) {
+      targetForm.insertBefore(noticeBox, insertPosition);
+    } else {
+      targetForm.appendChild(noticeBox);
+    }
+    noticeBox.scrollIntoView({ block: 'center' });
+  }
+
   // ---- 確認の表示（data-confirm）と二重押しの防止 ----
   document.addEventListener('submit', function (e) {
     var f = e.target;
     var submitter = e.submitter;
+    if (f.dataset.sessionChecked === '1') {
+      // ログインを確かめて送り直したとき（確認の表示は済んでいる）
+      if (e.defaultPrevented) { return; }
+      leaving = true;
+      f.dataset.submitting = '1';
+      window.setTimeout(function () { f.dataset.submitting = '0'; }, 30000);
+      return;
+    }
     var msg = (submitter && submitter.getAttribute('data-confirm')) || f.getAttribute('data-confirm');
     if (msg && !window.confirm(msg)) { e.preventDefault(); return; }
     if (submitter && submitter.getAttribute('data-warn-check')) {
@@ -522,6 +571,27 @@
     });
     if (e.defaultPrevented) { return; }
     if (f.dataset.submitting === '1') { e.preventDefault(); return; }
+    if (needsSessionCheck(f)) {
+      // ログインが切れたまま送ると入力が失われるため、先に確かめる。よければ同じボタンで送り直す（確認の表示は 2 回出さない）
+      e.preventDefault();
+      f.dataset.submitting = '1';
+      removeSessionNotice();
+      checkSession().then(function (sessionState) {
+        f.dataset.submitting = '0';
+        if (sessionState !== 'ok') {
+          showSessionNotice(f, submitter, sessionState);
+          f.dispatchEvent(new Event('submit-stopped'));
+          return;
+        }
+        f.dataset.sessionChecked = '1';
+        try {
+          if (submitter) { f.requestSubmit(submitter); } else { f.requestSubmit(); }
+        } finally {
+          delete f.dataset.sessionChecked;
+        }
+      });
+      return;
+    }
     leaving = true; // 送信・画面の移動は自分の操作なので、離れるときの確認を出さない
     f.dataset.submitting = '1';
     window.setTimeout(function () { f.dataset.submitting = '0'; }, 30000);
@@ -706,8 +776,19 @@
     form.addEventListener('input', function () { dirty = true; });
     form.addEventListener('change', function () { dirty = true; });
     form.addEventListener('submit', function () { dirty = false; });
+    form.addEventListener('submit-stopped', function () { dirty = true; });   // ログイン切れなどで送らなかった。入力は保存されていない
+    var needsLoginCheck = false;   // 前の自動保存がログイン切れだった（別のタブでログインし直したかを、送る前に確かめる）
+    var showAutosaveStatus = function (statusText) { if (status) { setMessageText(status, statusText); } };
     window.setInterval(function () {
       if (!dirty || stopped) { return; }
+      if (needsLoginCheck && sessionCheckUrl) {
+        checkSession().then(function (sessionState) { if (sessionState === 'ok') { needsLoginCheck = false; sendAutosave(); } });
+        return;
+      }
+      sendAutosave();
+    }, 60000);
+    var sendAutosave = function () {
+      if (!dirty || stopped || form.dataset.submitting === '1') { return; }
       dirty = false;
       var seq = editSeq;
       var data = new FormData(form);
@@ -715,9 +796,28 @@
       data.set('request_key', randomHex(16));
       var ctrl = window.AbortController ? new AbortController() : null;
       var timer = window.setTimeout(function () { if (ctrl) { ctrl.abort(); } }, 30000);
-      fetch(form.action, { method: 'POST', body: data, credentials: 'same-origin', signal: ctrl ? ctrl.signal : undefined })
-        .then(function (r) { return r.json(); })
+      // 送り先はフォームの属性から読む（フォームに name="action" のボタンがあるため、form.action はそのボタンを指す）
+      fetch(form.getAttribute('action'), { method: 'POST', body: data, credentials: 'same-origin', headers: { Accept: 'application/json' }, signal: ctrl ? ctrl.signal : undefined })
+        .then(function (response) {
+          return response.json().catch(function () { return { ok: false, reason: 'error' }; });   // JSON でない応答（404・500 の画面など）
+        })
         .then(function (j) {
+          if (j.reason === 'login' || (j.reason === 'error' && j.status === 403)) {
+            dirty = true;
+            needsLoginCheck = true;
+            if (j.reason === 'login') { showAutosaveStatus(M('ログインが切れたため自動保存できませんでした。入力は残っています')); }
+            return;
+          }
+          if (j.reason === 'not_draft') {
+            stopped = true;
+            showAutosaveStatus(M('この報告は提出済みのため、自動保存を止めました。画面を開き直してください'));
+            return;
+          }
+          if (j.reason === 'error') {
+            dirty = true;
+            showAutosaveStatus(M('エラーのため自動保存できませんでした。入力は残っています。「下書き保存」を押してください'));
+            return;
+          }
           if (j.reason === 'conflict') {
             if (status) { setMessageText(status, M('同じ月の報告が別の画面で作られたため、自動保存を止めました。「下書き保存」を押してください')); }
             stopped = true;
@@ -732,7 +832,7 @@
           if (status) { setMessageText(status, M('通信が切れたため自動保存できませんでした。入力は残っています')); }
         })
         .then(function () { window.clearTimeout(timer); });
-    }, 60000);
+    };
   }
 
   // ---- よくある質問のチャット（G-25 §2.1〜§2.7。AI は使わない。サーバーの faq_search() が選んだ、載っている質問と答えを吹き出しで出す。
@@ -857,7 +957,7 @@
       feedbackData.append('log_id', String(logId));
       feedbackData.append('feedback', feedbackCode);
       feedbackData.append('faq_id', faqId ? String(faqId) : '');
-      fetch(chatForm.action, { method: 'POST', body: feedbackData, credentials: 'same-origin', headers: { Accept: 'application/json' } }).catch(function () {});
+      fetch(chatForm.getAttribute('action'), { method: 'POST', body: feedbackData, credentials: 'same-origin', headers: { Accept: 'application/json' } }).catch(function () {});
     }
     /** 問い合わせの失敗をサーバーの記録（app.log）に残す（サーバーに届かないときは残せない） */
     function reportClientError(failureKind, statusCode) {
@@ -867,7 +967,7 @@
       errorData.append('action', 'chat_client_error');
       errorData.append('kind', failureKind);
       errorData.append('status', String(statusCode || 0));
-      fetch(chatForm.action, { method: 'POST', body: errorData, credentials: 'same-origin', headers: { Accept: 'application/json' } }).catch(function () {});
+      fetch(chatForm.getAttribute('action'), { method: 'POST', body: errorData, credentials: 'same-origin', headers: { Accept: 'application/json' } }).catch(function () {});
     }
     /** チャットを開いたときと同じ状態に戻す（最初の吹き出しと分野のボタンだけを残す） */
     function resetChat() {
@@ -911,7 +1011,7 @@
     function offerRelated(logId, faqId) {
       var waitingBubble = addBubble('bot', M('探しています…'));
       waitingBubble.classList.add('chat-waiting');
-      var requestUrl = new URL(chatForm.action, window.location.href);
+      var requestUrl = new URL(chatForm.getAttribute('action'), window.location.href);
       requestUrl.search = '?format=json&related=' + encodeURIComponent(String(faqId)) + '&exclude=' + encodeURIComponent(shownFaqIdList.join(','));
       fetch(requestUrl.toString(), { credentials: 'same-origin', headers: { Accept: 'application/json' } })
         .then(function (response) { return response.json(); })
@@ -979,7 +1079,7 @@
     function fetchFaq(queryName, queryValue, onResult) {
       var waitingBubble = addBubble('bot', M('探しています…'));
       waitingBubble.classList.add('chat-waiting');
-      var requestUrl = new URL(chatForm.action, window.location.href);
+      var requestUrl = new URL(chatForm.getAttribute('action'), window.location.href);
       var screenInput = chatForm.querySelector('input[name="screen"]');
       requestUrl.search = '?format=json&' + queryName + '=' + encodeURIComponent(queryValue)
         + (screenInput ? '&screen=' + encodeURIComponent(screenInput.value) : '');

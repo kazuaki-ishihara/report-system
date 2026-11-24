@@ -68,6 +68,10 @@ function backup_size_text(int $byteCount): string
  */
 function backup_create(): string
 {
+    if (!is_file((string) cfg('db_path'))) {
+        // 無いまま開くと空の DB ができ、空の写しを作って成功したことになる（古い写しも押し出される。APP-122）
+        throw new RuntimeException('DB がありません: ' . cfg('db_path'));
+    }
     $backupDirectory = backup_directory();
     if (!is_dir($backupDirectory) && !mkdir($backupDirectory, 0700, true) && !is_dir($backupDirectory)) {
         throw new RuntimeException('バックアップの置き場所を作れません: ' . $backupDirectory);

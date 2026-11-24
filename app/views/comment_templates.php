@@ -53,9 +53,9 @@ $lastTemplateIndex = count($templateList) - 1;
     <?php endforeach; ?>
   </ul>
 
+  <?php foreach ($errorTextList as $errorText): ?><div class="flash flash-error" role="alert"><?= h_lines($errorText) ?></div><?php endforeach; ?>
   <?php if (count($templateList) < $maxTemplateCount): ?>
     <h2>定型文を追加</h2>
-    <?php foreach ($errorTextList as $errorText): ?><div class="flash flash-error" role="alert"><?= h_lines($errorText) ?></div><?php endforeach; ?>
     <form method="post" action="<?= h(url($selfPath)) ?>" class="form" data-leave-warn="1">
       <?= form_hidden() ?>
       <label for="new-template-body">定型文（300 文字まで）</label>

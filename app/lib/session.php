@@ -105,6 +105,10 @@ function page_start(array $opt = []): ?array
         json_response(['ok' => false, 'reason' => 'login'], 401);
     }
     if ($user === null) {
+        if (is_post()) {
+            // ふだんは、送る前に画面の JavaScript がログインの状態を確かめる（共通編 §11.3.1）。ここに来たときは、保存していないことを知らせる
+            flash('error', msg('ログインが切れていたため、送信した内容は保存されていません。ログインしてから、もう一度入力してください。'));
+        }
         $next = (string) ($_SERVER['REQUEST_URI'] ?? '');
         $base = cfg('base_path');
         if ($base !== '' && strpos($next, $base) === 0) {
