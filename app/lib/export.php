@@ -166,10 +166,13 @@ function compare_summary(array $data, string $period): array
     return ['groups' => $out, 'counts' => $counts];
 }
 
-/** 数式の注入を防ぐ（= + - @ タブ 改行で始まる値の先頭に '） */
+/**
+ * 数式の注入を防ぐ（= + - @ タブ CR で始まる値の先頭に '）。
+ * 日本語の Excel は CSV を開くとき、全角の ＝ ＋ － ＠ で始まる値も数式として読むので、それも対象にする。
+ */
 function export_safe_cell(string $s): string
 {
-    if ($s !== '' && strpos("=+-@\t\r", $s[0]) !== false) {
+    if ($s !== '' && (strpos("=+-@\t\r", $s[0]) !== false || preg_match('/\A[\x{FF1D}\x{FF0B}\x{FF0D}\x{FF20}]/u', $s) === 1)) {
         return "'" . $s;
     }
     return $s;

@@ -187,6 +187,7 @@ details summary { cursor: pointer; color: var(--primary); }
 .copy-box select { max-width: 100%; }
 .print-page { background: #fff; padding: 16px; }
 .print-table { font-size: 10pt; }
+.print-table .print-nowrap { white-space: nowrap; }   /* 月次報告の印刷: 短い値（対象月・氏名・案件・選択）は途中で折り返さない */
 @media print {
   @page { size: A4 landscape; margin: 12mm; }
   .app-main { max-width: none; padding: 0; }

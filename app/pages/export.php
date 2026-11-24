@@ -66,8 +66,11 @@ if ($type === 'report') {
     }
     $title = '月次報告 ' . $depts[$deptId]['name'] . ' ' . period_label($from) . ($from !== $to ? '〜' . period_label($to) : '');
     $header = ['対象月', '氏名', '案件'];
+    // 印刷用の画面で折り返さない列（対象月・氏名・案件と、選択・日付・数の短い値）。自由記述と複数選択だけを折り返す
+    $printNowrapColumnList = [true, true, true];
     foreach ($data['columns'] as $f) {
         $header[] = $f['label'] . ($f['conf'] === 'restricted' ? '（限定）' : '');
+        $printNowrapColumnList[] = in_array($f['type'], ['select', 'radio', 'checkbox', 'date', 'month', 'number'], true);
     }
     $rows = [];
     if ($content !== 'summary') {
@@ -156,7 +159,7 @@ if ($type === 'survey') {
 if ($format === 'print') {
     render('export_print', [
         'title' => $title, 'user' => $user, 'headerLines' => $headerLines, 'header' => $header, 'rows' => $rows, 'summaryRows' => $summaryRows,
-        'surveyTallyList' => $type === 'survey' ? $surveyTallyList : null,
+        'surveyTallyList' => $type === 'survey' ? $surveyTallyList : null, 'nowrapColumnList' => $printNowrapColumnList ?? [],
     ]);
 }
 $allRows = $rows;
