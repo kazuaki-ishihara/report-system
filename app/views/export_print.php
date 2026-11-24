@@ -4,7 +4,9 @@
 /** @var array $rows */
 /** @var array $summaryRows */
 /** @var array|null $surveyTallyList 調査のとき survey_tally() の結果（質問ごとの表とグラフで出す）。月次報告は null */
+/** @var array|null $departmentBreakdownList 全課共通の調査のとき survey_department_breakdown() の結果（課ごとのまとめも出す。K-066） */
 $surveyTallyList = $surveyTallyList ?? null;
+$departmentBreakdownList = $departmentBreakdownList ?? null;
 ?>
 <section class="print-page">
   <div class="print-head">
@@ -17,7 +19,9 @@ $surveyTallyList = $surveyTallyList ?? null;
   </div>
   <p class="no-print"><button type="button" class="primary print-button">印刷する（PDF として保存）</button>
     <span class="note"><?= h_phrases('印刷の画面で、送信先に「PDF に保存」（Firefox では「ファイルへ出力」）を選びます。') ?></span></p>
-  <?php if ($surveyTallyList !== null): ?>
+  <?php if ($surveyTallyList !== null && $departmentBreakdownList !== null): ?>
+    <?php $overallTallyList = $surveyTallyList; $headingTag = 'h2'; include __DIR__ . '/survey_all_departments_tally.php'; ?>
+  <?php elseif ($surveyTallyList !== null): ?>
     <?php foreach ($surveyTallyList as $questionNumber => $tally): ?>
     <div class="survey-tally">
       <h2><?= ($questionNumber + 1) ?>. <?= h($tally['question']['label']) ?><?php if ($tally['is_multiple']): ?><span class="note">（複数回答）</span><?php endif; ?></h2>

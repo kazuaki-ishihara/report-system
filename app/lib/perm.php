@@ -337,8 +337,10 @@ function menu_items(array $user): array
     if ($isReviewer || $isAdmin) {
         $items[] = ['/status/index.php', '提出状況', '確認'];
     }
+    if ($isFinalReviewer || $isAdmin) {
+        $items[] = ['/surveys/manage.php', '臨時の調査', '確認'];   // 管理者・補佐は全課共通の調査（K-066）
+    }
     if ($isFinalReviewer) {
-        $items[] = ['/surveys/manage.php', '臨時の調査', '確認'];
         $items[] = ['/export/index.php', '出力', '確認'];
     }
     if ($isFinalReviewer) {

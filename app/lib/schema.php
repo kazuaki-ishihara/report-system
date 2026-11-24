@@ -269,7 +269,7 @@ function schema_ensure(PDO $pdo): array
         "CREATE INDEX IF NOT EXISTS ix_comments_open ON report_field_comments (thread_status) WHERE parent_id IS NULL",
         "CREATE TABLE IF NOT EXISTS adhoc_requests (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            department_id INTEGER NOT NULL REFERENCES departments(id),
+            department_id INTEGER REFERENCES departments(id),   -- NULL は全課共通の調査（システム管理者・補佐が作る。K-066）
             title TEXT NOT NULL,
             requester TEXT NOT NULL DEFAULT '',
             purpose TEXT NOT NULL DEFAULT '',
@@ -574,4 +574,66 @@ function schema_ensure(PDO $pdo): array
     }
 
     return $log;
+}
+
+/**
+ * 臨時の調査（adhoc_requests）の department_id を NULL にできるようにする（全課共通の調査。K-066）。
+ * SQLite は NOT NULL を外せないので、表を作り直す（SQLite の手順「12 steps」に従う）。
+ * 外部キーを有効のまま古い表を消すと、質問・対象・回答が連鎖で消えるため、外部キーを止めてから行う。
+ * PRAGMA foreign_keys はトランザクションの中では変えられないので、schema_ensure() の tx() の外（migrate.php）で呼ぶ。
+ * 作り直す必要がなければ何もしない。作り直したら記録の行を返す。
+ */
+function schema_make_survey_department_nullable(PDO $pdo): ?string
+{
+    $departmentColumn = null;
+    foreach ($pdo->query('PRAGMA table_info(adhoc_requests)')->fetchAll() as $columnInfo) {
+        if ($columnInfo['name'] === 'department_id') {
+            $departmentColumn = $columnInfo;
+        }
+    }
+    if ($departmentColumn === null || (int) $departmentColumn['notnull'] === 0) {
+        return null;   // 表がまだない（schema_ensure() が新しい形で作る）か、作り直し済み
+    }
+    $columnNameList = array_map(function (array $columnInfo): string { return (string) $columnInfo['name']; }, $pdo->query('PRAGMA table_info(adhoc_requests)')->fetchAll());
+    $pdo->exec('PRAGMA foreign_keys = OFF');
+    try {
+        $pdo->exec('BEGIN IMMEDIATE');
+        try {
+            $pdo->exec("CREATE TABLE adhoc_requests_rebuild (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                department_id INTEGER REFERENCES departments(id),
+                title TEXT NOT NULL,
+                requester TEXT NOT NULL DEFAULT '',
+                purpose TEXT NOT NULL DEFAULT '',
+                result_visibility TEXT NOT NULL DEFAULT 'summary' CHECK (result_visibility IN ('summary', 'detail')),
+                target_type TEXT NOT NULL DEFAULT 'all' CHECK (target_type IN ('all', 'users')),
+                is_template INTEGER NOT NULL DEFAULT 0 CHECK (is_template IN (0, 1)),
+                status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'open', 'closed')),
+                due_at TEXT,
+                created_by INTEGER NOT NULL REFERENCES users(id),
+                opened_at TEXT,
+                closed_at TEXT,
+                deleted_at TEXT,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            )");
+            $columnListSql = implode(', ', $columnNameList);
+            $pdo->exec("INSERT INTO adhoc_requests_rebuild ({$columnListSql}) SELECT {$columnListSql} FROM adhoc_requests");
+            $rowCountBefore = (int) $pdo->query('SELECT COUNT(*) FROM adhoc_requests')->fetchColumn();
+            $pdo->exec('DROP TABLE adhoc_requests');
+            $pdo->exec('ALTER TABLE adhoc_requests_rebuild RENAME TO adhoc_requests');
+            $rowCountAfter = (int) $pdo->query('SELECT COUNT(*) FROM adhoc_requests')->fetchColumn();
+            $foreignKeyProblemList = $pdo->query('PRAGMA foreign_key_check')->fetchAll();
+            if ($rowCountAfter !== $rowCountBefore || $foreignKeyProblemList) {
+                throw new RuntimeException('臨時の調査の表の作り直しで、件数か外部キーが合いません（元に戻しました）');
+            }
+            $pdo->exec('COMMIT');
+        } catch (Throwable $rebuildError) {
+            $pdo->exec('ROLLBACK');
+            throw $rebuildError;
+        }
+    } finally {
+        $pdo->exec('PRAGMA foreign_keys = ON');
+    }
+    return 'adhoc_requests.department_id を NULL にできるようにした（全課共通の調査。' . $rowCountAfter . ' 件を写した）';
 }

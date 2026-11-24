@@ -532,13 +532,17 @@ def main():
     for content_path, content_label in [
         ("/status/compare.php?period=%s&dept=%d" % (current_month, department_a_id), "横並び"),
         ("/export/index.php", "出力"),
-        ("/surveys/manage.php", "臨時の調査"),
     ]:
         status_code, _location, _page_html = admin_client.get(content_path)
         check("K-026 管理者は%sを開けない（403）" % content_label, status_code == 403, status_code)
+    # 臨時の調査は、管理者も全課共通の調査（K-066）のために一覧を開ける。課の調査は出さない
+    status_code, _location, survey_manage_html = admin_client.get("/surveys/manage.php")
+    department_survey_title_list = [row[0] for row in database.execute("SELECT title FROM adhoc_requests WHERE department_id IS NOT NULL AND deleted_at IS NULL")]
+    check("K-026・K-066 管理者は臨時の調査の一覧を開けるが、課の調査は出ない",
+          status_code == 200 and all(title not in survey_manage_html for title in department_survey_title_list), (status_code, department_survey_title_list))
     admin_menu_html = admin_client.get("/index.php")[2]
-    check("K-026 管理者のメニューに、出力・臨時の調査が出ない",
-          "/export/index.php" not in admin_menu_html and "/surveys/manage.php" not in admin_menu_html)
+    check("K-026・K-066 管理者のメニューに、出力は出ない（臨時の調査は全課共通の調査のために出る）",
+          "/export/index.php" not in admin_menu_html and "/surveys/manage.php" in admin_menu_html)
     status_code, _location, search_html = admin_client.get(search_path(q="人手", dept=str(department_a_id)))
     check("K-026 管理者の検索は自分の報告だけ（ほかの課の報告は出ない）", status_code == 200 and "/reports/view.php?id=" not in search_html, status_code)
     status_code, _location, comment_list_html = admin_client.get("/reports/comments.php?tab=sent&status=unresolved")

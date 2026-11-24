@@ -1,6 +1,8 @@
 <?php
 /** @var array|null $req */
 /** @var array $depts */
+/** @var bool $canCreateAllDepartments 全課共通の調査を作れる（システム管理者・補佐。K-066） */
+/** @var bool $isAllDepartments この調査が全課共通 */
 /** @var bool $editable */
 /** @var array $errors */
 /** @var array $questions */
@@ -19,7 +21,7 @@ $statusLabel = $req === null ? '新規' : ((int) $req['is_template'] === 1 ? '�
 ?>
 <section class="card">
   <p><a href="<?= h(url('/surveys/manage.php')) ?>">← 臨時の調査</a></p>
-  <h1><?= $req === null ? '臨時の調査を作る' : h($req['title']) ?> <span class="tag"><?= h($statusLabel) ?></span></h1>
+  <h1><?= $req === null ? '臨時の調査を作る' : h($req['title']) ?> <span class="tag"><?= h($statusLabel) ?></span><?php if ($isAllDepartments): ?> <span class="tag">全課共通</span><?php endif; ?></h1>
   <?php foreach ($errors as $e): ?><div class="flash flash-error" role="alert"><?= h_lines($e) ?></div><?php endforeach; ?>
 
   <form method="post" action="<?= h(url($self)) ?>" class="form">
@@ -27,7 +29,13 @@ $statusLabel = $req === null ? '新規' : ((int) $req['is_template'] === 1 ? '�
     <input type="hidden" name="action" value="save_meta">
     <?php if ($req === null): ?>
       <label for="department_id">課</label>
-      <select id="department_id" name="department_id"><?php foreach ($depts as $id => $d): ?><option value="<?= (int) $id ?>"><?= h($d['name']) ?></option><?php endforeach; ?></select>
+      <select id="department_id" name="department_id">
+        <?php foreach ($depts as $id => $d): ?><option value="<?= (int) $id ?>"><?= h($d['name']) ?></option><?php endforeach; ?>
+        <?php if ($canCreateAllDepartments): ?><option value="all" <?= !$depts ? 'selected' : '' ?>>全課共通（すべての課の全員）</option><?php endif; ?>
+      </select>
+      <?php if ($canCreateAllDepartments): ?>
+        <p class="note"><?= h_phrases('全課共通の調査は、すべての課の全員が対象で、結果は集計だけです（個人の回答は、だれも見られません）。答え方は選択式とチェックだけです。') ?></p>
+      <?php endif; ?>
     <?php endif; ?>
     <label for="title">題名</label>
     <input id="title" name="title" type="text" maxlength="100" value="<?= h($v('title')) ?>" required>
@@ -37,7 +45,11 @@ $statusLabel = $req === null ? '新規' : ((int) $req['is_template'] === 1 ? '�
     <textarea id="purpose" name="purpose" maxlength="300"><?= h($v('purpose')) ?></textarea>
     <label for="due_at">回答期限</label>
     <input id="due_at" name="due_at" type="date" value="<?= h($v('due_at')) ?>">
-    <?php if ($editable): ?>
+    <?php if ($editable && $isAllDepartments): ?>
+      <input type="hidden" name="result_visibility" value="summary">
+      <input type="hidden" name="target_type" value="all">
+      <p class="note"><?= h_phrases('全課共通の調査: 対象はすべての課の全員（公開の時点の所属者）、結果は集計だけです。') ?></p>
+    <?php elseif ($editable): ?>
       <label>結果の扱い</label>
       <div class="choices">
         <label class="choice"><input type="radio" name="result_visibility" value="summary" <?= $v('result_visibility', 'summary') === 'summary' ? 'checked' : '' ?>> 依頼元には集計のみを渡す</label>
@@ -87,7 +99,7 @@ $statusLabel = $req === null ? '新規' : ((int) $req['is_template'] === 1 ? '�
     <?php endforeach; ?>
   </ol>
 
-  <?php if ($editable): ?>
+  <?php if ($editable && !$isAllDepartments): ?>
     <h3>月次報告の項目を使う</h3>
     <p class="note"><?= h_phrases('回答欄には、回答する人の最新の月次報告の値が入ります。') ?></p>
     <form method="post" action="<?= h(url($self)) ?>" class="filters">
@@ -95,17 +107,19 @@ $statusLabel = $req === null ? '新規' : ((int) $req['is_template'] === 1 ? '�
       <select name="field_id" aria-label="月次の項目"><?php foreach ($sources as $f): ?><option value="<?= (int) $f['id'] ?>"><?= h($f['label']) ?></option><?php endforeach; ?></select>
       <button type="submit" name="action" value="add_source">足す</button>
     </form>
+  <?php endif; ?>
+  <?php if ($editable): ?>
     <h3>この調査だけの質問を足す</h3>
     <form method="post" action="<?= h(url($self)) ?>" class="form">
       <?= form_hidden() ?>
       <label for="q_label">質問</label>
       <input id="q_label" name="q_label" type="text" maxlength="100" placeholder="例: AI を業務で使っていますか" required>
       <label for="q_type">答え方</label>
-      <select id="q_type" name="q_type"><?php foreach (SURVEY_TYPES as $t): ?><option value="<?= h($t) ?>" <?= $t === 'radio' ? 'selected' : '' ?>><?= h(FIELD_TYPES[$t]) ?></option><?php endforeach; ?></select>
+      <select id="q_type" name="q_type"><?php foreach ($isAllDepartments ? SURVEY_ALL_DEPARTMENTS_TYPES : SURVEY_TYPES as $t): ?><option value="<?= h($t) ?>" <?= $t === 'radio' ? 'selected' : '' ?>><?= h(FIELD_TYPES[$t]) ?></option><?php endforeach; ?></select>
       <label for="q_options">選択肢（1 行に 1 つ。プルダウン・ラジオ・チェックボックスのとき）</label>
       <textarea id="q_options" name="q_options" placeholder="毎日使う&#10;ときどき使う&#10;使わない"></textarea>
       <label for="q_conf">機密区分</label>
-      <select id="q_conf" name="q_conf"><?php foreach (FIELD_CONF as $k => $l): ?><option value="<?= h($k) ?>" <?= $k === 'internal' ? 'selected' : '' ?>><?= h($l) ?></option><?php endforeach; ?></select>
+      <select id="q_conf" name="q_conf"><?php foreach (FIELD_CONF as $k => $l): if ($isAllDepartments && $k === 'restricted') { continue; } ?><option value="<?= h($k) ?>" <?= $k === 'internal' ? 'selected' : '' ?>><?= h($l) ?></option><?php endforeach; ?></select>
       <label for="q_help">説明（任意）</label>
       <input id="q_help" name="q_help" type="text" maxlength="300">
       <label class="check"><input type="checkbox" name="q_required" value="1"> 必須</label>
