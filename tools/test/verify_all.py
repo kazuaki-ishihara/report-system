@@ -309,7 +309,7 @@ STEP_TABLE = [
     {"key": "screens", "name": "設計書の検証の観点の残り（ログイン・再設定・ホーム・出力・項目・案件・利用者・アカウント）", "script": "smoke_screens.py", "screen": "共通"},
     {"key": "edges", "name": "設計書で未検証だった項目（時間に頼るもの・同時の新規作成・境目・二重送信 など）", "script": "smoke_edges.py", "screen": "共通"},
     {"key": "viewpoints", "name": "設計書の検証の観点の突き合わせで見つかった残り（G-03〜G-16）", "script": "smoke_viewpoints.py", "screen": "共通"},
-    {"key": "org", "name": "組織（班ごと・異動・管理担当・課長がいない課）", "script": "smoke_org.py", "screen": "G-14"},
+    {"key": "org", "name": "組織（ラインごと・異動・管理担当・課長がいない課）", "script": "smoke_org.py", "screen": "G-14"},
     {"key": "deputy", "name": "システム管理者補佐（代行できること・見られないもの）", "script": "smoke_deputy.py", "screen": "G-14"},
     {"key": "theme", "name": "自分の色（土台・強調・背景、読めない組み合わせを断る）", "script": "smoke_theme.py", "screen": "G-16"},
     {"key": "messages", "name": "メッセージ（課長が文言を変える）", "script": "smoke_messages.py", "screen": "G-17"},

@@ -39,7 +39,7 @@ $reviewers = db_all(
       ORDER BY r.is_final DESC, r.sort_order',
     [$id, $deptId, (int) $report['user_id']]
 );
-// チェックを求める確認者だけを出す（班ごとの課では、担当の班の確認者と課全体の確認者・課長）
+// チェックを求める確認者だけを出す（ラインごとの課では、担当のラインの確認者と課全体の確認者・課長）
 $expectedReviewerIdSet = array_fill_keys(report_expected_reviewer_ids($report), true);
 $reviewers = array_values(array_filter($reviewers, function (array $reviewerRow) use ($expectedReviewerIdSet): bool {
     return isset($expectedReviewerIdSet[(int) $reviewerRow['user_id']]);

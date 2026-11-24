@@ -475,7 +475,7 @@
     });
   });
 
-  // ---- ユーザーの編集（G-14）: 班は、選んだ所属の課の班だけを出す ----
+  // ---- ユーザーの編集（G-14）: ラインは、選んだ所属の課のラインだけを出す ----
   var userDepartmentSelect = document.getElementById('department_id');
   var userTeamSelect = document.getElementById('team_id');
   if (userDepartmentSelect && userTeamSelect) {

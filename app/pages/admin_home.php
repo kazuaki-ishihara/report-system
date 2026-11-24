@@ -101,7 +101,7 @@ foreach ($adminMenuItemList as $adminMenuItem) {
             $statusList[] = ['text' => '不適切な表現（7 日） ' . $abusiveCount . ' 件', 'isAttention' => true];
         }
     } elseif ($sectionPath === '/admin/department.php') {
-        $descriptionText = '自分の課の締め日・管理の仕方・確認者（課長代理・リーダー）・チェックする人・項目管理者・班';
+        $descriptionText = '自分の課の締め日・管理の仕方・確認者（課長代理・リーダー）・チェックする人・項目管理者・ライン';
         $finalDepartmentCount = (int) db_val('SELECT COUNT(*) FROM department_reviewers r JOIN departments d ON d.id = r.department_id AND d.is_active = 1 WHERE r.user_id = ? AND r.is_final = 1', [(int) $user['id']]);
         $statusList[] = ['text' => '管理する課 ' . $finalDepartmentCount, 'isAttention' => false];
     } elseif ($sectionPath === '/requests/index.php') {
@@ -115,7 +115,7 @@ foreach ($adminMenuItemList as $adminMenuItem) {
         $descriptionText = '案件コードと社内向けの呼び名（客先名は入れない）。案件台帳との突き合わせ用の CSV';
         $statusList[] = ['text' => '有効な案件 ' . (int) db_val('SELECT COUNT(*) FROM projects WHERE is_active = 1') . ' 件', 'isAttention' => false];
     } elseif ($sectionPath === '/admin/org.php') {
-        $descriptionText = '課・班・ユーザー・確認者・組織の一括の入れ替え（CSV）';
+        $descriptionText = '課・ライン・ユーザー・確認者・組織の一括の入れ替え（CSV）';
         $departmentWithoutFinalCount = (int) db_val(
             "SELECT COUNT(*) FROM departments d WHERE d.is_active = 1 AND NOT EXISTS (
                 SELECT 1 FROM department_reviewers r JOIN users u ON u.id = r.user_id AND u.is_active = 1 WHERE r.department_id = d.id AND r.is_final = 1)"

@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 // ====================================================================
 // G-23 課の管理（課長が自分の課を管理する。詳細設計書 G23_department_manage.md。K-042）
-//   基本: 締め日・管理の仕方（課全体／班ごと）
-//   確認者と課員: 課長代理・リーダー（確認者）・担当の班・チェックする／しない（K-039）・項目管理者・課員の班
-//   班: 班の追加・名前・有効
+//   基本: 締め日・管理の仕方（課全体／ラインごと）
+//   確認者と課員: 課長代理・リーダー（確認者）・担当のライン・チェックする／しない（K-039）・項目管理者・課員のライン
+//   ライン: ラインの追加・名前・有効
 // システム管理者は個々の課を管理しない（課の追加・名前・課長・引き継ぎは G-14）。
 // ====================================================================
 
@@ -60,7 +60,7 @@ if (is_post()) {
         }
 
     } elseif ($action === 'members_save') {
-        // 課長代理・リーダー（確認者）・担当の班・チェックする・項目管理者・課員の班をまとめて保存する（課長の行は変えない）
+        // 課長代理・リーダー（確認者）・担当のライン・チェックする・項目管理者・課員のラインをまとめて保存する（課長の行は変えない）
         $memberRowList = department_manage_member_rows($departmentId);
         $memberById = [];
         foreach ($memberRowList as $memberRow) {
@@ -105,7 +105,7 @@ if (is_post()) {
         tx(function () use ($savePlanList, $departmentId): void {
             foreach ($savePlanList as $memberUserId => $savePlan) {
                 if ($savePlan['isFinal']) {
-                    // 課長の行は G-14（管理者）で決める。ここでは班だけ
+                    // 課長の行は G-14（管理者）で決める。ここではラインだけ
                 } elseif ($savePlan['isReviewer'] && $savePlan['wasReviewer']) {
                     db_exec('UPDATE department_reviewers SET team_id = ?, does_check = ? WHERE department_id = ? AND user_id = ?',
                         [$savePlan['reviewerTeam'], $savePlan['doesCheck'], $departmentId, $memberUserId]);
@@ -129,15 +129,15 @@ if (is_post()) {
         rk_done($selfPath . '#dept-members');
 
     } else {
-        // 班の追加・名前・有効（「班ごと」の課。K-025）
+        // ラインの追加・名前・有効（「ラインごと」の課。K-025）
         $teamName = trim(post_str('team_name'));
-        validate_text($teamName, msg('班の名前'), 40, true, $errorTextList);
+        validate_text($teamName, msg('ラインの名前'), 40, true, $errorTextList);
         $editedTeamId = $action === 'team_update' ? input_id('team_id', 'POST') : null;
         if ($editedTeamId !== null && db_one('SELECT id FROM department_teams WHERE id = ? AND department_id = ?', [$editedTeamId, $departmentId]) === null) {
             error_page(404);
         }
         if (db_val('SELECT 1 FROM department_teams WHERE department_id = ? AND name = ? AND id <> ?', [$departmentId, $teamName, $editedTeamId ?? 0]) !== null) {
-            $errorTextList[] = msg('同じ名前の班があります');
+            $errorTextList[] = msg('同じ名前のラインがあります');
         }
         if (!$errorTextList) {
             if ($editedTeamId === null) {
@@ -149,13 +149,13 @@ if (is_post()) {
                 $isTeamActive = ($_POST['team_active'] ?? '') === '1' ? 1 : 0;
                 db_exec('UPDATE department_teams SET name = ?, is_active = ?, updated_at = ? WHERE id = ?', [$teamName, $isTeamActive, now(), $editedTeamId]);
                 if ($isTeamActive === 0) {
-                    // 無効にした班: 所属の人と担当の確認者の班を外す（課全体の扱いになる）
+                    // 無効にしたライン: 所属の人と担当の確認者のラインを外す（課全体の扱いになる）
                     db_exec('UPDATE users SET team_id = NULL WHERE team_id = ?', [$editedTeamId]);
                     db_exec('UPDATE department_reviewers SET team_id = NULL WHERE team_id = ?', [$editedTeamId]);
                 }
                 audit_log('admin', 'department:' . $departmentId . ':team_update');
             }
-            flash('success', msg('班を保存しました'));
+            flash('success', msg('ラインを保存しました'));
             rk_done($selfPath . '#dept-teams');
         }
     }

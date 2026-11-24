@@ -73,7 +73,7 @@ function management_department_id(): ?int
 }
 
 /**
- * 課の班（「班ごと」で管理する課。G-14 §6.7）。
+ * 課のライン（「ラインごと」で管理する課。G-14 §6.7）。
  *
  * @return array<int, array{id: int|string, name: string, is_active: int|string}> 並び順
  */

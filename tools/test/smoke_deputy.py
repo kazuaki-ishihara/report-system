@@ -198,7 +198,7 @@ def main():
 
     # CSV: 補佐は管理者の行を変えられない
     _status_code, _location, bulk_html = deputy_client.get("/admin/org.php?tab=bulk")
-    csv_text = "ログイン ID,表示名,所属の課,班,役割,担当の班,項目管理者,有効\r\nadmin01,管理者,B課,,,,,1\r\n"
+    csv_text = "ログイン ID,表示名,所属の課,ライン,役割,担当のライン,項目管理者,有効\r\nadmin01,管理者,B課,,,,,1\r\n"
     status_code, _location, preview_html = deputy_client.post_file(
         "/admin/org.php?tab=bulk", {"action": "bulk_preview", "csrf_token": csrf(bulk_html), "request_key": os.urandom(16).hex()},
         "org_csv", "org.csv", csv_text.encode("utf-8"))

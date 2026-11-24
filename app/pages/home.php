@@ -49,7 +49,7 @@ foreach (reviewer_departments($uid) as $deptId => $isFinal) {
     if ($dept === null) {
         continue;
     }
-    // 未チェック: その課・対象月の、自分が見られる（班ごとの課では担当の班の）報告のうち、チェックしていない・更新ありのもの
+    // 未チェック: その課・対象月の、自分が見られる（ラインごとの課では担当のラインの）報告のうち、チェックしていない・更新ありのもの
     // 「チェックしない」の課長代理・リーダーは数えない（K-039）
     $doesCheck = reviewer_does_check($uid, (int) $deptId);
     $unchecked = 0;

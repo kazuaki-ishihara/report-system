@@ -58,7 +58,7 @@ function schema_ensure(PDO $pdo): array
         'is_active'            => 'INTEGER NOT NULL DEFAULT 1 CHECK (is_active IN (0, 1))',
         'updated_at'           => 'TEXT',
         'ui_theme'             => "TEXT NOT NULL DEFAULT 'auto'",   // 画面のテーマ（G-16。UI_THEMES のキー）
-        'team_id'              => 'INTEGER REFERENCES department_teams(id)',   // 今の班（「班ごと」の課。G-14 §6.7）
+        'team_id'              => 'INTEGER REFERENCES department_teams(id)',   // 今のライン（「ラインごと」の課。G-14 §6.7）
         'is_admin_deputy'      => 'INTEGER NOT NULL DEFAULT 0 CHECK (is_admin_deputy IN (0, 1))',
         'is_executive'         => 'INTEGER NOT NULL DEFAULT 0 CHECK (is_executive IN (0, 1))',   // 部長以上: すべての全課共通の調査の結果（集計）を見られる（K-067）
         'is_admin_deputy_lead' => 'INTEGER NOT NULL DEFAULT 0 CHECK (is_admin_deputy_lead IN (0, 1))',   // 補佐（開発担当）。補佐のうち 1 名。管理者・補佐の予備のコードも初期化できる（G-14 §6.9。K-059）
@@ -552,7 +552,7 @@ function schema_ensure(PDO $pdo): array
     $addedColumnsByTable = [
         'departments'         => ['review_scope' => "TEXT NOT NULL DEFAULT 'department' CHECK (review_scope IN ('department', 'team'))"],   // 管理の仕方（G-14 §6.7）
         'department_reviewers' => [
-            'team_id'    => 'INTEGER REFERENCES department_teams(id)',   // 担当の班（NULL なら課全体）
+            'team_id'    => 'INTEGER REFERENCES department_teams(id)',   // 担当のライン（NULL なら課全体）
             'does_check' => 'INTEGER NOT NULL DEFAULT 1 CHECK (does_check IN (0, 1))',   // チェックするか（K-039。課長は常に 1。課長が「課の管理」で決める）
         ],
         'access_logs'         => ['acted_as_deputy' => 'INTEGER NOT NULL DEFAULT 0 CHECK (acted_as_deputy IN (0, 1))'],   // 補佐としての操作（G-15）
