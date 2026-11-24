@@ -97,6 +97,8 @@ function screen_help_text(string $templateName): string
             return msg('臨時の調査の題名・依頼元・期限・対象と、質問を決めます。公開すると質問は変えられません。');
         case 'survey_result':
             return msg('臨時の調査の回答の集計と、未回答の人を見ます。個人の回答を開くと記録に残ります。');
+        case 'survey_result_all':
+            return msg('全課共通の臨時の調査の、全課の集計と課ごとのまとめを見て、出力します。個人の回答と未回答の人の名前は出しません。');
         case 'survey_answer':
             return msg('臨時の調査に答えます。期限までは答えを直せます。');
         case 'export_index':

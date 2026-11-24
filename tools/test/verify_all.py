@@ -303,6 +303,7 @@ STEP_TABLE = [
     {"key": "copy", "name": "過去の報告から写す", "script": "smoke_copy.py", "screen": "G-04"},
     {"key": "fields", "name": "項目マスタ（追加・編集・権限・変更の決まり・限定・並べ替え・有効/無効）", "script": "smoke_fields.py", "screen": "G-12", "secrets": True},
     {"key": "more", "name": "変更なし・提出状況・横並び・臨時の調査・出力・記録・削除データ", "script": "smoke_more.py", "screen": "G-08", "secrets": True},
+    {"key": "surveys_all", "name": "全課共通の臨時の調査（管理者・補佐が作る・全課の集計と課ごとのまとめ・出力）", "script": "smoke_surveys_all.py", "screen": "G-11", "secrets": True},
     {"key": "fixes", "name": "件数の数え方・権限と状態の確認・入力の確認・文言（APP-001〜012）", "script": "smoke_fixes.py", "screen": "共通"},
     {"key": "features", "name": "報告まわりの便利機能（コメント一覧・定型文・検索・管理者のホーム など）", "script": "smoke_features.py", "screen": "共通"},
     {"key": "screens", "name": "設計書の検証の観点の残り（ログイン・再設定・ホーム・出力・項目・案件・利用者・アカウント）", "script": "smoke_screens.py", "screen": "共通"},

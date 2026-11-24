@@ -440,9 +440,10 @@ CREATE TABLE IF NOT EXISTS goal_sheet_history (id INTEGER PRIMARY KEY AUTOINCREM
 ### 3.7 臨時の調査
 
 ```sql
+-- 既存の DB は department_id が NOT NULL のため、migrate.php が表を作り直す（schema_make_survey_department_nullable()。外部キーを止めて写し、件数と外部キーを確かめる）
 CREATE TABLE IF NOT EXISTS adhoc_requests (
     id                INTEGER PRIMARY KEY AUTOINCREMENT,
-    department_id     INTEGER NOT NULL REFERENCES departments(id),   -- 作成した課長の課
+    department_id     INTEGER REFERENCES departments(id),   -- 作成した課長の課。NULL は全課共通の調査（システム管理者・補佐が作る。G-11 §10。K-066）
     title             TEXT NOT NULL,
     requester         TEXT NOT NULL DEFAULT '',
     purpose           TEXT NOT NULL DEFAULT '',

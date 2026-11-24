@@ -13,10 +13,54 @@ function survey_find(int $id): ?array
     return db_one('SELECT * FROM adhoc_requests WHERE id = ? AND deleted_at IS NULL', [$id]);
 }
 
-/** 管理できるか（その課の課長、または管理者） */
+/** 全課共通の調査で使える答え方（選択式とチェックだけ。だれも個人の回答を見ないため、集計できるものに限る。K-066） */
+const SURVEY_ALL_DEPARTMENTS_TYPES = ['select', 'radio', 'multi_check', 'checkbox'];
+
+/** 課ごとの内訳を出す最少の回答者数（これより少ない課は、選択肢ごとの件数を出さない。個人が分からないように。K-066） */
+const SURVEY_DEPARTMENT_BREAKDOWN_MIN_RESPONDENTS = 3;
+
+/** 全課共通の調査か（department_id が NULL。システム管理者・補佐が作る。K-066） */
+function survey_is_all_departments(array $req): bool
+{
+    return $req['department_id'] === null;
+}
+
+/**
+ * 管理できるか。課の調査はその課の課長だけ（管理者でも課長でなければ不可。回答は報告の中身と同じ扱い）。
+ * 全課共通の調査はシステム管理者と補佐（個人の回答は見られず、集計だけを見る）
+ */
 function survey_can_manage(array $user, array $req): bool
 {
-    return is_final_reviewer_of((int) $user['id'], (int) $req['department_id']);   // 管理者でも課長でなければ不可（回答は報告の中身と同じ扱い）
+    if (survey_is_all_departments($req)) {
+        return can_manage_system($user);
+    }
+    return is_final_reviewer_of((int) $user['id'], (int) $req['department_id']);
+}
+
+/** 臨時の調査の画面（一覧・作成）を使えるか: どこかの課の課長、またはシステム管理者・補佐（全課共通の調査） */
+function survey_can_use_manage_screens(array $user): bool
+{
+    return (bool) final_departments($user) || can_manage_system($user);
+}
+
+/** 全課共通の調査を作れる DB か（古い DB は migrate.php で表を作り直すまで department_id が NOT NULL） */
+function survey_all_departments_supported(): bool
+{
+    foreach (db_all('PRAGMA table_info(adhoc_requests)') as $columnInfo) {
+        if ($columnInfo['name'] === 'department_id') {
+            return (int) $columnInfo['notnull'] === 0;
+        }
+    }
+    return false;
+}
+
+/** 全課共通の調査の対象者: 有効な課に所属する、有効な利用者全員（公開の時点） */
+function survey_all_departments_members(): array
+{
+    return db_all(
+        'SELECT u.id, u.display_name, u.login_id FROM users u JOIN departments d ON d.id = u.department_id
+          WHERE u.is_active = 1 AND d.is_active = 1 ORDER BY d.sort_order, d.id, u.display_name'
+    );
 }
 
 /** 質問を様式の仕組みで扱える形にする */
@@ -109,6 +153,94 @@ function survey_tally(array $questionList, array $responseList, array $answerByR
     return $tallyList;
 }
 
+/**
+ * 全課共通の調査の、課ごとのまとめ（G-11 の結果・出力。K-066）。
+ * 課は回答した時点ではなく、今の所属で数える（異動した人は今の課。所属がなくなった人は「所属なし」）。
+ * 回答者が SURVEY_DEPARTMENT_BREAKDOWN_MIN_RESPONDENTS 人より少ない課は、選択肢ごとの集計を null にする（個人が分からないように）。
+ *
+ * @param array<int, array<string, mixed>> $questionList survey_fields() の質問
+ * @param array<int, array<int, string|null>> $answerByResponseId survey_answers() の値
+ * @return array<int, array{department_name: string, target_count: int, respondent_count: int, tally_by_question_id: array<int, array>|null}>
+ */
+function survey_department_breakdown(int $requestId, array $questionList, array $answerByResponseId): array
+{
+    $departmentSummaryByKey = [];
+    $departmentRowList = db_all(
+        'SELECT t.user_id, u.department_id, d.name AS department_name, d.sort_order AS department_sort_order,
+                a.id AS response_id, a.submitted_at
+           FROM adhoc_request_targets t
+           JOIN users u ON u.id = t.user_id
+           LEFT JOIN departments d ON d.id = u.department_id
+           LEFT JOIN adhoc_responses a ON a.request_id = t.request_id AND a.user_id = t.user_id
+          WHERE t.request_id = ?
+          ORDER BY (d.id IS NULL), d.sort_order, d.id',
+        [$requestId]
+    );
+    $responseListByKey = [];
+    foreach ($departmentRowList as $departmentRow) {
+        $departmentKey = $departmentRow['department_id'] === null ? 'none' : 'd' . (int) $departmentRow['department_id'];
+        if (!isset($departmentSummaryByKey[$departmentKey])) {
+            $departmentSummaryByKey[$departmentKey] = [
+                'department_name' => $departmentRow['department_id'] === null ? '所属なし' : (string) $departmentRow['department_name'],
+                'target_count' => 0, 'respondent_count' => 0, 'tally_by_question_id' => null,
+            ];
+            $responseListByKey[$departmentKey] = [];
+        }
+        $departmentSummaryByKey[$departmentKey]['target_count']++;
+        if ($departmentRow['response_id'] !== null && $departmentRow['submitted_at'] !== null) {
+            $departmentSummaryByKey[$departmentKey]['respondent_count']++;
+            $responseListByKey[$departmentKey][] = ['id' => (int) $departmentRow['response_id']];
+        }
+    }
+    foreach ($departmentSummaryByKey as $departmentKey => $departmentSummary) {
+        if ($departmentSummary['respondent_count'] < SURVEY_DEPARTMENT_BREAKDOWN_MIN_RESPONDENTS) {
+            continue;
+        }
+        $tallyByQuestionId = [];
+        foreach (survey_tally($questionList, $responseListByKey[$departmentKey], $answerByResponseId) as $tally) {
+            $tallyByQuestionId[(int) $tally['question']['id']] = $tally;
+        }
+        $departmentSummaryByKey[$departmentKey]['tally_by_question_id'] = $tallyByQuestionId;
+    }
+    return array_values($departmentSummaryByKey);
+}
+
+/**
+ * 全課共通の調査の出力（xlsx・CSV）の表: 全課の集計のあとに、課ごとの集計を続ける（1 行 1 選択肢。列の先頭に課）。
+ * 回答者が少ない課は、内訳の代わりに 1 行だけ出す。
+ *
+ * @return array{header: string[], rows: array<int, string[]>, status_rows: array<int, string[]>}
+ */
+function survey_all_departments_export_table(array $overallTallyList, array $departmentBreakdownList): array
+{
+    $tallyRowList = function (string $departmentName, array $tallyList): array {
+        $rowList = [];
+        foreach ($tallyList as $tally) {
+            $questionLabel = $tally['question']['label'] . ($tally['is_multiple'] ? '（複数回答）' : '');
+            foreach ($tally['option_tally_list'] as $optionTally) {
+                $rowList[] = [$departmentName, $questionLabel, $optionTally['label'], (string) $optionTally['count'], $optionTally['percent'] === null ? '' : $optionTally['percent'] . '%'];
+            }
+        }
+        return $rowList;
+    };
+    $rowList = $tallyRowList('全課', $overallTallyList);
+    $statusRowList = [['課', '対象', '回答', '回答率']];
+    foreach ($departmentBreakdownList as $departmentBreakdown) {
+        $statusRowList[] = [
+            $departmentBreakdown['department_name'], (string) $departmentBreakdown['target_count'], (string) $departmentBreakdown['respondent_count'],
+            $departmentBreakdown['target_count'] > 0 ? (int) round($departmentBreakdown['respondent_count'] * 100 / $departmentBreakdown['target_count']) . '%' : '',
+        ];
+        if ($departmentBreakdown['tally_by_question_id'] === null) {
+            $rowList[] = [$departmentBreakdown['department_name'], '（回答者が ' . SURVEY_DEPARTMENT_BREAKDOWN_MIN_RESPONDENTS . ' 人より少ないため、内訳を出しません）', '', '', ''];
+            continue;
+        }
+        foreach ($tallyRowList($departmentBreakdown['department_name'], array_values($departmentBreakdown['tally_by_question_id'])) as $departmentRow) {
+            $rowList[] = $departmentRow;
+        }
+    }
+    return ['header' => ['課', '質問', '選択肢', '件数', '割合'], 'rows' => $rowList, 'status_rows' => $statusRowList];
+}
+
 /** 回答の状況の 1 行（例: 「対象 10 人・回答 6 人（回答率 60%）」） */
 function survey_response_rate_text(int $targetCount, int $respondentCount): string
 {
@@ -140,7 +272,7 @@ function survey_copy(array $req, int $userId, bool $asTemplate): int
     db_exec(
         "INSERT INTO adhoc_requests (department_id, title, requester, purpose, result_visibility, target_type, is_template, status, created_by, created_at, updated_at)
          VALUES (?, ?, ?, ?, ?, 'all', ?, 'draft', ?, ?, ?)",
-        [(int) $req['department_id'], (string) $req['title'] . ($asTemplate ? '' : '（複製）'), $req['requester'], $req['purpose'], $req['result_visibility'], $asTemplate ? 1 : 0, $userId, now(), now()]
+        [$req['department_id'] === null ? null : (int) $req['department_id'], (string) $req['title'] . ($asTemplate ? '' : '（複製）'), $req['requester'], $req['purpose'], $req['result_visibility'], $asTemplate ? 1 : 0, $userId, now(), now()]
     );
     $newId = (int) db()->lastInsertId();
     db_exec(

@@ -8,10 +8,12 @@ declare(strict_types=1);
 
 $user = page_start();
 $uid = (int) $user['id'];
-$depts = final_departments($user);
-if (!$depts) {
+if (!survey_can_use_manage_screens($user)) {
     error_page(403);
 }
+$depts = final_departments($user);
+// 全課共通の調査（K-066）: システム管理者・補佐が作る。DB が古い（migrate.php の前）ときは作らせない
+$canCreateAllDepartments = can_manage_system($user) && survey_all_departments_supported();
 
 $id = isset($_GET['id']) ? input_id('id') : null;
 $req = null;
@@ -25,10 +27,14 @@ if ($id !== null) {
     }
 }
 $editable = $req === null || $req['status'] === 'draft';
+$isAllDepartments = $req !== null && survey_is_all_departments($req);
 $errors = [];
 
-/** 課の有効な利用者（対象の候補） */
-$members = function (int $deptId): array {
+/** 対象の候補: 課の有効な利用者。全課共通の調査（課 ID が null）は、有効な課に所属する全員 */
+$members = function (?int $deptId): array {
+    if ($deptId === null) {
+        return survey_all_departments_members();
+    }
     return db_all('SELECT id, display_name, login_id FROM users WHERE department_id = ? AND is_active = 1 ORDER BY display_name', [$deptId]);
 };
 
@@ -53,9 +59,26 @@ if (is_post()) {
         if (!in_array($vis, ['summary', 'detail'], true) || !in_array($targetType, ['all', 'users'], true)) {
             error_page(400);
         }
-        $deptId = $req === null ? (int) post_str('department_id') : (int) $req['department_id'];
-        if (!isset($depts[$deptId])) {
-            error_page(403);
+        if ($req === null) {
+            $departmentChoice = post_str('department_id');
+            if ($departmentChoice === 'all') {
+                if (!$canCreateAllDepartments) {
+                    error_page(403);
+                }
+                $deptId = null;
+            } else {
+                $deptId = (int) $departmentChoice;
+                if (!isset($depts[$deptId])) {
+                    error_page(403);
+                }
+            }
+        } else {
+            $deptId = survey_is_all_departments($req) ? null : (int) $req['department_id'];
+        }
+        if ($deptId === null) {
+            // 全課共通の調査は、対象は全員・集計のみ（だれも個人の回答を見ない。K-066）
+            $vis = 'summary';
+            $targetType = 'all';
         }
         $targets = [];
         if ($targetType === 'users') {
@@ -112,6 +135,9 @@ if (is_post()) {
         }
         if ($action === 'add_source') {
             $fid = input_id('field_id', 'POST');
+            if ($isAllDepartments) {
+                error_page(400);   // 全課共通の調査は、月次の項目を使わない（K-066）
+            }
             $f = db_one("SELECT * FROM report_fields WHERE id = ? AND is_active = 1 AND field_type NOT IN ('project', 'table') AND (department_id IS NULL OR department_id = ?)", [$fid, (int) $req['department_id']]);
             if ($f === null) {
                 error_page(400);
@@ -132,6 +158,9 @@ if (is_post()) {
             validate_text($help, '説明', 300, false, $errors, true);
             if (!in_array($type, SURVEY_TYPES, true) || !isset(FIELD_CONF[$conf])) {
                 error_page(400);
+            }
+            if ($isAllDepartments && (!in_array($type, SURVEY_ALL_DEPARTMENTS_TYPES, true) || $conf === 'restricted')) {
+                error_page(400);   // 全課共通の調査は選択式とチェックだけ。「限定」は課長がいないため使わない（K-066）
             }
             if ($conf === 'restricted' && !is_final_reviewer_of($uid, (int) $req['department_id'])) {
                 error_page(403);
@@ -196,7 +225,7 @@ if (is_post()) {
                 tx(function () use ($req, $rid, $members) {
                     if ($req['target_type'] === 'all') {
                         db_exec('DELETE FROM adhoc_request_targets WHERE request_id = ?', [$rid]);
-                        foreach ($members((int) $req['department_id']) as $m) {
+                        foreach ($members(survey_is_all_departments($req) ? null : (int) $req['department_id']) as $m) {
                             db_exec('INSERT INTO adhoc_request_targets (request_id, user_id) VALUES (?, ?)', [$rid, (int) $m['id']]);
                         }
                     }
@@ -245,17 +274,20 @@ if ($req !== null) {
     $req = survey_find((int) $req['id']);
     $editable = $req['status'] === 'draft';
 }
-$deptForMembers = $req !== null ? (int) $req['department_id'] : (int) array_key_first($depts);
+// 人を指定する候補は課の人だけ（全課共通の調査は人を指定しない）。課長でない管理者が新しく作るときは候補なし
+$deptForMembers = $req !== null ? $req['department_id'] : array_key_first($depts);
 render('survey_edit', [
     'title'     => $req === null ? '臨時の調査を作る' : '臨時の調査',
     'user'      => $user,
     'req'       => $req,
     'depts'     => $depts,
+    'canCreateAllDepartments' => $canCreateAllDepartments,
+    'isAllDepartments' => $isAllDepartments,
     'editable'  => $editable,
     'errors'    => $errors,
     'questions' => $req === null ? [] : survey_fields((int) $req['id']),
-    'members'   => $members($deptForMembers),
+    'members'   => $deptForMembers === null ? [] : $members((int) $deptForMembers),
     'targets'   => $req === null ? [] : array_map(function ($r) { return (int) $r['user_id']; }, db_all('SELECT user_id FROM adhoc_request_targets WHERE request_id = ?', [(int) $req['id']])),
-    'sources'   => $req === null ? [] : array_values(array_filter(form_template_fields((int) $req['department_id']), function ($f) { return !in_array($f['type'], ['project', 'table'], true); })),
+    'sources'   => $req === null || $isAllDepartments ? [] : array_values(array_filter(form_template_fields((int) $req['department_id']), function ($f) { return !in_array($f['type'], ['project', 'table'], true); })),
     'post'      => is_post() ? $_POST : null,
 ]);
