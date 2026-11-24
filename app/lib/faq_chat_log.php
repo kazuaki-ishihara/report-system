@@ -112,12 +112,6 @@ const FAQ_CHAT_LOG_CREATE_SQL = "CREATE TABLE IF NOT EXISTS faq_chat_logs (
 const FAQ_CHAT_LOG_SCHEMA_MARK = "'violence', 'sabotage'";
 const FAQ_CHAT_LOG_INDEX_SQL = 'CREATE INDEX IF NOT EXISTS ix_faq_chat_logs_asked_at ON faq_chat_logs (asked_at)';
 
-/** 心の不調・退職に関わる質問の知らせを受け、見られるか: システム管理者だけ（補佐は対象外。K-054） */
-function faq_chat_log_can_receive_notice(array $user): bool
-{
-    return is_admin($user);
-}
-
 /**
  * その人が知らせを受け、見られる理由（distress_level）の並び。
  * システム管理者: すべて。補佐: ID・パスワードを求める質問と人への暴力を書いた文・システムやデータを壊すと書いた文（心の不調・退職は対象外。K-054・K-057）。ほか: なし。

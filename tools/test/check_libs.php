@@ -200,11 +200,151 @@ if (function_exists('goal_validate')) {
 $check('共通', '削除した報告は見られない', can_view_report(db_one('SELECT * FROM users WHERE id = 2'), ['id' => 1, 'user_id' => 2, 'department_id' => 1, 'status' => 'submitted', 'deleted_at' => $now]) === false);
 $_SERVER['HTTP_ACCEPT'] = '';
 $check('G-22', '開いていた画面のパスの形を確かめる', support_request_clean_source_path('/../x') === '' && support_request_clean_source_path('http://evil/') === '' && support_request_clean_source_path('/reports/mine.php') !== '');
-foreach ([1 => 'x'] as $unused) {
-    $check('G-24', 'まだ出す日でないお知らせは出さない', (function () use ($now): bool {
+$check('G-24', 'まだ出す日でないお知らせは出さない', (function () use ($now): bool {
         db_exec("INSERT INTO update_notices (title, body, show_from, show_until, created_by, updated_by, created_at, updated_at) VALUES ('先', '', '2999-01-01', '2999-02-01', 1, 1, ?, ?)", [$now, $now]);
         return notices_active(5) === [];
     })());
+
+// ---- 様式（zip・xlsx）の破損 ----
+if (function_exists('zip_read_entries')) {
+    $template = (string) file_get_contents(EXPENSE_TEMPLATE_PATH);
+    $check('G-26', '様式を読める', isset(zip_read_entries($template)[EXPENSE_TEMPLATE_SHEET_PATH]));
+    $check('G-26', '格納だけの zip も読める', zip_read_entries(zip_store(['a.txt' => '中身'])) === ['a.txt' => '中身']);
+    $store = zip_store(['a.txt' => 'abc']);
+    $centralAt = strpos($store, "PK\x01\x02");
+    $endAt = strrpos($store, "PK\x05\x06");
+    $broken = [
+        '終わりの印がない' => 'not a zip',
+        '一覧が壊れている' => substr_replace($store, 'XXXX', $centralAt, 4),
+        '知らない圧縮' => substr_replace($store, pack('v', 99), $centralAt + 10, 2),
+        'CRC が合わない' => substr_replace($store, "\x00\x00\x00\x01", $centralAt + 16, 4),
+        '圧縮の中身が壊れている' => substr_replace($store, pack('v', 8), $centralAt + 10, 2),
+    ];
+    foreach ($broken as $title => $bytes) {
+        $check('G-26', '壊れた zip を断る: ' . $title, @$throws(function () use ($bytes): void { @zip_read_entries($bytes); }) === 'RuntimeException');
+    }
+    $entries = zip_read_entries($template);
+    $sheetXml = new DOMDocument();
+    $sheetXml->loadXML($entries[EXPENSE_TEMPLATE_SHEET_PATH]);
+    $xpath = new DOMXPath($sheetXml);
+    $xpath->registerNamespace('m', 'http://schemas.openxmlformats.org/spreadsheetml/2006/main');
+    $check('G-26', '様式に無いセルを断る', $throws(function () use ($sheetXml, $xpath): void { expense_xlsx_set_cell($sheetXml, $xpath, 'ZZ999', 'x'); }) === 'RuntimeException');
+    $formulaCell = $xpath->query('//m:c[m:f]')->item(0);
+    $check('G-26', '式のセルに文字を入れない', $formulaCell !== null && $throws(function () use ($sheetXml, $xpath, $formulaCell): void { expense_xlsx_set_cell($sheetXml, $xpath, $formulaCell->getAttribute('r'), '文字'); }) === 'RuntimeException');
+    $oneRow = expense_normalize(['submitted_on' => '2026-11-01', 'payment_method' => 'transfer', 'employee_number' => '1', 'full_name' => '検証', 'rows' => [['start_date' => '2026-11-01', 'amount' => '1']]]);
+    $check('G-26', '1 ページだけの精算書', substr(expense_xlsx($oneRow), 0, 2) === 'PK');
+    $_POST['rows'] = ['x', ['amount' => '１,０００円']];
+    foreach (['submitted_on', 'payment_method', 'employee_number', 'office', 'department_name', 'full_name', 'advance_amount'] as $postedName) {
+        $_POST[$postedName] = '';
+    }
+    $posted = expense_data_from_post();
+    $check('G-26', '配列でない行は読み飛ばし、全角・カンマ・円の金額を読む', count($posted['rows']) === 1 && $posted['rows'][0]['amount'] === '1000', $posted['rows']);
+    $_POST = [];
+    // 様式のファイルそのものが壊れているとき（写した app で試す。本物の様式は変えない）
+    $copyApp = $work . '/app';
+    $copyDir = function (string $from, string $to) use (&$copyDir): void {
+        @mkdir($to, 0700, true);
+        foreach (scandir($from) as $name) {
+            if ($name === '.' || $name === '..' || in_array($name, ['data', 'logs', 'backups'], true)) {
+                continue;
+            }
+            is_dir("$from/$name") ? $copyDir("$from/$name", "$to/$name") : copy("$from/$name", "$to/$name");
+        }
+    };
+    $copyDir(APP_DIR, $copyApp);
+    $entriesWithoutSheet = $entries;
+    unset($entriesWithoutSheet[EXPENSE_TEMPLATE_SHEET_PATH]);
+    $runCopy = function (string $templateName, string $bytes, string $code) use ($copyApp): string {
+        file_put_contents($copyApp . '/templates/' . $templateName, $bytes);
+        $script = $copyApp . '/run_copy.php';
+        file_put_contents($script, '<?php require __DIR__ . "/bootstrap.php"; foreach (["expense", "goal"] as $n) { require_once APP_DIR . "/lib/$n.php"; } try { ' . $code . ' echo "OK"; } catch (Throwable $e) { echo get_class($e) . ":" . $e->getMessage(); }');
+        return (string) shell_exec('"' . PHP_BINARY . '" ' . escapeshellarg($script) . ' 2>&1');
+    };
+    $expenseCode = '@expense_xlsx(' . var_export($oneRow, true) . ');';
+    $check('G-26', '様式にシートが無い', strpos($runCopy('expense_sheet.xlsx', zip_store($entriesWithoutSheet), $expenseCode), 'template sheet not found') !== false);
+    $check('G-26', '様式のシートが壊れている', strpos($runCopy('expense_sheet.xlsx', zip_store([EXPENSE_TEMPLATE_SHEET_PATH => '<x'] + $entries), $expenseCode), 'RuntimeException') !== false);
+    if (function_exists('goal_xlsx')) {
+        $goalKind = goal_default_kind(db_one('SELECT * FROM users WHERE id = 2'));
+        $definition = GOAL_TEMPLATE_KINDS[$goalKind];
+        $goalEntries = zip_read_entries((string) file_get_contents(APP_DIR . '/templates/' . $definition['file']));
+        $goalSheet = ['id' => 1, 'user_id' => 2, 'fiscal_year' => 2026, 'kind' => $goalKind, 'data' => goal_normalize(['full_name' => '検証'], $goalKind)];
+        $goalCode = '@goal_xlsx(' . var_export($goalSheet, true) . ');';
+        $withoutGoal = $goalEntries;
+        unset($withoutGoal[$definition['sheet_path']]);
+        $check('G-27', '様式にシートが無い', strpos($runCopy($definition['file'], zip_store($withoutGoal), $goalCode), 'template sheet not found') !== false);
+        $check('G-27', '様式のシートが壊れている', strpos($runCopy($definition['file'], zip_store([$definition['sheet_path'] => '<x'] + $goalEntries), $goalCode), 'RuntimeException') !== false);
+        $goalXml = new DOMDocument();
+        $goalXml->loadXML('<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData><row r="1"><c r="A1"/><c r="D1"><f>1+1</f></c><c r="AA1"/></row></sheetData></worksheet>');
+        $goalXpath = new DOMXPath($goalXml);
+        $goalXpath->registerNamespace('m', 'http://schemas.openxmlformats.org/spreadsheetml/2006/main');
+        goal_xlsx_set_cell($goalXml, $goalXpath, 'B1', '足した');
+        goal_xlsx_set_cell($goalXml, $goalXpath, 'Z1', 1.5);
+        goal_xlsx_set_cell($goalXml, $goalXpath, 'AB1', 2);
+        $order = [];
+        foreach ($goalXpath->query('//m:c') as $cell) {
+            $order[] = $cell->getAttribute('r');
+        }
+        $check('G-27', '無いセルは、列の順を守って足す', $order === ['A1', 'B1', 'D1', 'Z1', 'AA1', 'AB1'], $order);
+        $check('G-27', '無い行・式のセルへの文字を断る', $throws(function () use ($goalXml, $goalXpath): void { goal_xlsx_set_cell($goalXml, $goalXpath, 'A99', 'x'); }) === 'RuntimeException'
+            && $throws(function () use ($goalXml, $goalXpath): void { goal_xlsx_set_cell($goalXml, $goalXpath, 'D1', 'x'); }) === 'RuntimeException');
+        // 同じ氏名の人のシートをまとめて受け取る
+        db_exec('UPDATE users SET is_active = 1 WHERE id = 4');
+        db_exec('DELETE FROM department_reviewers WHERE department_id = 1 AND is_final = 1');
+        db_exec('INSERT INTO department_reviewers (department_id, user_id, is_final, sort_order) VALUES (1, 4, 1, 10)');
+        foreach ([2, 3] as $memberId) {
+            goal_save(null, $memberId, 2026, $goalKind, goal_normalize(['full_name' => '同じ名前'], $goalKind), $memberId, 'create');
+        }
+        $zip = goal_department_zip(db_one('SELECT * FROM users WHERE id = 4'), 1, 2026);
+        $check('G-27', '同じ氏名の人のファイルは、番号で分ける', $zip !== null && count(zip_read_entries($zip)) === 2, $zip === null ? null : array_keys(zip_read_entries($zip)));
+        $check('G-27', 'だれもいない年度は null', goal_department_zip(db_one('SELECT * FROM users WHERE id = 4'), 1, 1999) === null);
+        $check('G-27', '課のない人の面談をする人はいない', goal_meeting_reviewers(1) === []);
+    }
 }
+
+// ---- そのほかの関数 ----
+$check('共通', '知らない設定の名前は止める', $throws(function (): void { cfg('no_such_key'); }) === 'RuntimeException');
+$check('G-22', '知らない状態の定型の返信は空', support_request_default_reply_text('unknown') === '');
+$check('G-24', 'お知らせの状態の名前', notice_state_label(['show_from' => '2999-01-01', 'show_until' => '2999-01-02']) === '出す前' && notice_state_label(['show_from' => '2000-01-01', 'show_until' => '2000-01-02']) === '終わった'
+    && notice_state_label(['show_from' => '2000-01-01', 'show_until' => '2999-01-02']) === '出している');
+$check('G-21', 'メンテナンス中でないときの知らせは空', maintenance_notice_text() === '');
+$check('G-25', '体の状態をからかう文は不適切とみなす', faq_is_abusive('うつ病みたいに返事をしないですね') || faq_is_condition_insult('うつ病なんですか変な態度ですね'));
+faq_ensure_category_column();
+faq_ensure_category_column();
+report_comment_ensure_edited_column();
+report_comment_ensure_edited_column();
+$check('共通', '列を足す処理は 2 回呼んでも同じ', true === in_array('edited_at', array_column(db()->query('PRAGMA table_info(report_field_comments)')->fetchAll(), 'name'), true));
+$check('G-11', '課の調査は、全課共通の結果の権限では見られない', survey_can_view_all_departments_result(db_one('SELECT * FROM users WHERE id = 1'), ['id' => 1, 'department_id' => 1]) === false);
+$check('G-14', '新しく課長にした人はチェックする', reviewer_default_does_check(2, true) === 1);
+$check('G-20', '探す課がなければ何も出さない', search_reports(db_one('SELECT * FROM users WHERE id = 2'), ['departmentIdList' => [], 'periodFrom' => '2026-01', 'periodTo' => '2026-02', 'choiceField' => null, 'choiceCode' => '', 'keywordText' => ''])['resultList'] === []);
+$check('G-10', 'まとめの決まりは設定で変えられる', (function (): bool {
+    $GLOBALS['APP_CONFIG']['summary_rules'] = ['x' => ['label' => 'X', 'field' => 'a', 'values' => []]];
+    $rules = summary_rules();
+    unset($GLOBALS['APP_CONFIG']['summary_rules']);
+    return array_keys($rules) === ['x'];
+})());
+$check('G-10', '不正な文字コードの幅も数える', xlsx_text_width("\xFF\xFE") > 0);
+$check('G-05', '読めない値の表示', strpos(form_display_html($field('single_text'), null), '表示できません') !== false);
+$noComparison = ['previousReport' => ['id' => 1], 'previousPeriodLabel' => '前', 'previousFieldById' => [1 => ['conf' => 'restricted'] + $field('single_text')], 'previousValueByProjectId' => [0 => [1 => '前の値']],
+    'previousProjectCodeById' => [], 'canViewPreviousRestricted' => false, 'isPreviousFreeTextPurged' => false];
+$check('G-05', '限定を見られない人に、前月の限定の値を出さない', report_previous_value_html($noComparison, $field('single_text'), 0, '今') === '');
+$check('G-05', '限定を見られる人には出す', strpos(report_previous_value_html(['canViewPreviousRestricted' => true] + $noComparison, $field('single_text'), 0, '今'), '前の値') !== false);
+$purged = ['isPreviousFreeTextPurged' => true, 'previousFieldById' => [1 => $field('single_text')]] + $noComparison;
+$check('G-05', '保管期限で消した自由記述は比べない', report_previous_value_html($purged, $field('single_text'), 0, '今') === '');
+
+// ---- 組織の CSV（残り） ----
+$noAdmin = org_csv_plan($header . $row(['ログイン ID' => 'boss', '有効' => '0']), 999);
+$check('G-14', '管理者がいなくなる CSV を断る', $contains($noAdmin['errorTextList'], '管理者が 1 人もいなくなる'), $noAdmin['errorTextList']);
+db_exec('INSERT INTO department_reviewers (department_id, user_id, is_final, sort_order) VALUES (2, 3, 0, 10)');
+$moved = $plan($row(['ログイン ID' => 'member3', '所属の課' => '二課']));
+$check('G-14', '前の課の役割を外すこと・ほかの課の役割は残ることを知らせる', $contains(array_map('json_encode', [$moved['changeList']]), substr(json_encode('前の課の役割は外す'), 1, 20)), $moved['changeList']);
+db_exec("INSERT INTO org_schedules (apply_on, csv_text, status, created_by, created_at) VALUES ('2020-01-01', ?, 'scheduled', 1, ?)", [$header . $row(['ログイン ID' => 'member2', '所属の課' => '二課']), $now]);
+db()->exec('CREATE TRIGGER tr_verify_fail BEFORE UPDATE OF department_id ON users BEGIN SELECT RAISE(ABORT, \'verify\'); END');
+org_schedules_run_due();
+db()->exec('DROP TRIGGER tr_verify_fail');
+$check('G-14', '反映の途中で誤りが起きた予約は、失敗として残り、何も変わらない', db_val("SELECT status FROM org_schedules ORDER BY id DESC LIMIT 1") === 'failed' && (int) db_val('SELECT department_id FROM users WHERE id = 2') === 1);
+
+// ---- 送信の番号が同時に来たとき（写しで試す） ----
+$check('共通', '検索・権限の関数のあとも DB は正しい', db()->query('PRAGMA integrity_check')->fetchColumn() === 'ok');
+
 echo $ngCount === 0 ? "\nすべて OK\n" : "\nNG {$ngCount}\n";
 exit($ngCount === 0 ? 0 : 1);
