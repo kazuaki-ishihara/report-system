@@ -7,6 +7,9 @@ $full = $stage === 'full' && (int) $user['must_change_password'] !== 1;
 ?>
 <section class="card">
   <h1>アカウント設定</h1>
+  <?php if ($full && system_role_label($user) !== ''): ?>
+  <p>システムの役割: <span class="tag"><?= h(system_role_label($user)) ?></span></p>
+  <?php endif; ?>
   <?php if ($full): ?>
   <nav class="tabs">
     <a href="<?= h(url('/account.php?tab=totp')) ?>" class="<?= $tab === 'totp' ? 'active' : '' ?>">2 段階認証</a>
@@ -138,12 +141,12 @@ $full = $stage === 'full' && (int) $user['must_change_password'] !== 1;
   <?php elseif ($tab === 'password'): ?>
     <h2>パスワードの変更</h2>
     <?php if ((int) $user['must_change_password'] === 1): ?>
-      <p><?= h_phrases('仮のパスワードでログインしています。新しいパスワードを決めてください。') ?></p>
+      <p><?= h_phrases((int) ($user['is_credential_reset'] ?? 0) === 1 ? '全員のログインの情報を総入れ替えしています。新しいパスワードを決めてください。続けて、2 段階認証を設定し直します。今のパスワードは使えません。' : '仮のパスワードでログインしています。新しいパスワードを決めてください。') ?></p>
     <?php endif; ?>
     <form method="post" action="<?= h(url('/account.php?tab=password')) ?>" class="form">
       <?= form_hidden(false) ?>
       <input type="hidden" name="action" value="password_change">
-      <?php if ((int) $user['must_change_password'] !== 1): ?>
+      <?php if ((int) $user['must_change_password'] !== 1 || (int) ($user['is_credential_reset'] ?? 0) === 1): ?>
         <label for="current_password_p">今のパスワード</label>
         <input id="current_password_p" name="current_password" type="password" autocomplete="current-password" required>
       <?php endif; ?>

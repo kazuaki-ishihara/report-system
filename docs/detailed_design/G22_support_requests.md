@@ -4,7 +4,7 @@
 |---|---|
 | URL | `/requests/index.php`（GET・POST。一覧と新しく出す）、`/requests/view.php?id=<ID>`（GET・POST。詳細とやり取り） |
 | ファイル | `app/pages/support_request_list.php`、`app/pages/support_request_view.php`、`app/views/support_request_list.php`、`app/views/support_request_view.php`、`app/lib/support_request.php`、`app/views/layout.php`（各画面のリンク） |
-| 利用者 | 出す人: 課長・確認者（課長代理・リーダー）。受ける人: システム管理者・システム管理者補佐（代行） |
+| 利用者 | 出す人: 課長・確認者（課長代理・主任）。受ける人: システム管理者・システム管理者補佐（代行） |
 | 主な端末 | PC・スマートフォン |
 | 段階 | 3 |
 

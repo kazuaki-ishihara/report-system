@@ -16,7 +16,7 @@ function survey_find(int $id): ?array
 /** 全課共通の調査で使える答え方（選択式とチェックだけ。だれも個人の回答を見ないため、集計できるものに限る。K-066） */
 const SURVEY_ALL_DEPARTMENTS_TYPES = ['select', 'radio', 'multi_check', 'checkbox'];
 
-/** 全課共通の調査か（department_id が NULL。システム管理者・補佐が作る。K-066） */
+/** 全課共通の調査か（department_id が NULL。システム管理者・補佐・人財管理者が作る。K-066・K-071） */
 function survey_is_all_departments(array $req): bool
 {
     return $req['department_id'] === null;
@@ -24,14 +24,26 @@ function survey_is_all_departments(array $req): bool
 
 /**
  * 管理できるか。課の調査はその課の課長だけ（管理者でも課長でなければ不可。回答は報告の中身と同じ扱い）。
- * 全課共通の調査はシステム管理者と補佐（個人の回答は見られず、集計だけを見る）
+ * 全課共通の調査はシステム管理者・補佐・人財管理者（個人の回答は見られず、集計だけを見る）
  */
 function survey_can_manage(array $user, array $req): bool
 {
     if (survey_is_all_departments($req)) {
-        return can_manage_system($user);
+        return survey_can_manage_all_departments($user);
     }
     return is_final_reviewer_of((int) $user['id'], (int) $req['department_id']);
+}
+
+/** 人財管理者か（人財管理部。全課共通の調査を作り、その結果（集計）を見られる印。ほかの管理の権限・報告の中身を見る権限はない。K-071） */
+function is_hr_manager(array $user): bool
+{
+    return (int) ($user['is_hr_manager'] ?? 0) === 1;
+}
+
+/** 全課共通の調査を作り、管理できるか: システム管理者・補佐・人財管理者（K-066・K-071） */
+function survey_can_manage_all_departments(array $user): bool
+{
+    return can_manage_system($user) || is_hr_manager($user);
 }
 
 /** 部長以上か（すべての全課共通の調査の結果を見られる印。K-067） */
@@ -43,7 +55,7 @@ function is_executive(array $user): bool
 /**
  * 全課共通の調査の結果（全課の集計・課ごとのまとめ・出力）を見られるか（K-067）。
  * 結果を見るのは依頼元と部長以上。管理者・補佐は作成と集計を代行する。個人の回答と名前は、だれにも出さない。
- * 見られる人: 管理者・補佐（管理する人）、部長以上の印の人（すべての調査）、調査ごとに指定された人（依頼元の担当など）
+ * 見られる人: 管理者・補佐・人財管理者（管理する人）、部長以上の印の人（すべての調査）、調査ごとに指定された人（依頼元の担当など）
  */
 function survey_can_view_all_departments_result(array $user, array $req): bool
 {
@@ -71,10 +83,10 @@ function survey_viewable_all_departments_requests(array $user): array
     );
 }
 
-/** メニューに「調査の結果」を出すか（管理者・補佐は「臨時の調査」から見るので出さない） */
+/** メニューに「調査の結果」を出すか（管理者・補佐・人財管理者は「臨時の調査」から見るので出さない） */
 function survey_has_result_viewing_menu(array $user): bool
 {
-    if (can_manage_system($user)) {
+    if (survey_can_manage_all_departments($user)) {
         return false;
     }
     return is_executive($user) || (bool) survey_viewable_all_departments_requests($user);
@@ -91,10 +103,10 @@ function survey_viewer_candidates(): array
     );
 }
 
-/** 臨時の調査の画面（一覧・作成）を使えるか: どこかの課の課長、またはシステム管理者・補佐（全課共通の調査） */
+/** 臨時の調査の画面（一覧・作成）を使えるか: どこかの課の課長、またはシステム管理者・補佐・人財管理者（全課共通の調査） */
 function survey_can_use_manage_screens(array $user): bool
 {
-    return (bool) final_departments($user) || can_manage_system($user);
+    return (bool) final_departments($user) || survey_can_manage_all_departments($user);
 }
 
 /** 全課共通の調査を作れる DB か（古い DB は migrate.php で表を作り直すまで department_id が NOT NULL） */

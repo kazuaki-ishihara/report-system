@@ -182,6 +182,126 @@ def main():
     check("課のない部長以上のホームは、エラーではなく「見られるもの」と「調査の結果」の入口",
           "所属の課が設定されていません" not in executive_home_html and "見られるもの" in executive_home_html and "/surveys/results.php" in executive_home_html)
 
+    # ---- 人財管理者（K-071）: 全課共通の調査を作り、結果（集計）を見られる。ほかの管理・課の調査・個人の回答は見られない ----
+    section("G-11", "人財管理者（全課共通の調査を作り、結果を見る。K-071）")
+    hr_login_id = "ippan_b1"
+    hr_user_id = user_info_by_login_id[hr_login_id]["id"]
+    hr_client = login(arguments.base, hr_login_id, user_info_by_login_id[hr_login_id])
+    check("印を付ける前の人は、一覧・作成・結果を開けない（403）",
+          [hr_client.get(path)[0] for path in ("/surveys/manage.php", "/surveys/survey_edit.php", "/surveys/result.php?id=%d" % survey_id)] == [403, 403, 403])
+    _, _, hr_home_html = hr_client.get("/index.php")
+    check("印を付ける前の人のメニューに「臨時の調査」は出ない", "/surveys/manage.php" not in hr_home_html)
+
+    def save_hr_flag(is_on):
+        _, _, page_html = admin_client.get("/admin/user_edit.php?id=%d" % hr_user_id)
+        form_values = {"csrf_token": csrf(page_html), "request_key": rkey(page_html), "action": "save", "display_name": "B一般1", "role_title": "一般",
+                       "department_id": str(database.execute("SELECT department_id FROM users WHERE id = ?", (hr_user_id,)).fetchone()[0]), "is_active": "1"}
+        if is_on:
+            form_values["is_hr_manager"] = "1"
+        status_code, _, _ = admin_client.post("/admin/user_edit.php?id=%d" % hr_user_id, form_values)
+        return status_code, database.execute("SELECT is_hr_manager, is_admin, is_admin_deputy, is_executive FROM users WHERE id = ?", (hr_user_id,)).fetchone()
+
+    def hr_log_count(suffix):
+        return database.execute("SELECT COUNT(*) FROM access_logs WHERE target = ?", ("user:%d:%s" % (hr_user_id, suffix),)).fetchone()[0]
+
+    status_code, flag_row = save_hr_flag(True)
+    check("管理者が「人財管理者」の印を付けられ、ほかの印は付かず、記録に残る",
+          status_code == 303 and flag_row == (1, 0, 0, 0) and hr_log_count("hr_manager_on") == 1, (status_code, flag_row))
+    _, _, users_html = admin_client.get("/admin/org.php?tab=users")
+    hr_row = re.search(r"<tr[^>]*>\s*<td>%s</td>.*?</tr>" % hr_login_id, users_html, re.S)
+    check("ユーザーの一覧のその人の行に「人財管理者」と出る", hr_row is not None and "人財管理者" in hr_row.group(0) and users_html.count('class="tag">人財管理者<') == 1)
+    _, _, hr_home_html = hr_client.get("/index.php")
+    check("人財管理者のメニューに「臨時の調査」が出て、「調査の結果」は出ない", "/surveys/manage.php" in hr_home_html and "/surveys/results.php" not in hr_home_html)
+    _, _, edit_html = hr_client.get("/surveys/survey_edit.php")
+    department_select = re.search(r'<select[^>]*name="department_id".*?</select>', edit_html, re.S)
+    department_value_list = re.findall(r'<option value="([^"]*)"', department_select.group(0)) if department_select else re.findall(r'name="department_id" value="([^"]*)"', edit_html)
+    check("人財管理者が作れるのは全課共通だけ（課は選べない）", department_value_list == ["all"], department_value_list)
+    meta_form = {"action": "save_meta", "title": "人財管理部の調査", "requester": "人財管理部", "purpose": "", "due_at": due_date_text,
+                 "result_visibility": "detail", "target_type": "users"}
+    department_a_id = seed["dept_a"]
+    status_code, _, _ = hr_client.post("/surveys/survey_edit.php", dict(meta_form, csrf_token=csrf(edit_html), request_key=rkey(edit_html), department_id=str(department_a_id)))
+    check("人財管理者でも、課の調査は作れない（403・DB に入らない）",
+          status_code == 403 and database.execute("SELECT COUNT(*) FROM adhoc_requests WHERE title = '人財管理部の調査'").fetchone()[0] == 0, status_code)
+    _, _, edit_html = hr_client.get("/surveys/survey_edit.php")
+    status_code, location, _ = hr_client.post("/surveys/survey_edit.php", dict(meta_form, csrf_token=csrf(edit_html), request_key=rkey(edit_html), department_id="all"))
+    match = re.search(r"id=(\d+)", location or "")
+    hr_survey_id = int(match.group(1)) if match else 0
+    hr_survey_row = database.execute("SELECT department_id, result_visibility, target_type, created_by FROM adhoc_requests WHERE id = ?", (hr_survey_id,)).fetchone()
+    check("人財管理者が全課共通の調査を作れる（集計のみ・全員に固定）", status_code == 303 and hr_survey_row == (None, "summary", "all", hr_user_id), (status_code, hr_survey_row))
+
+    def hr_edit(form_values):
+        _, _, page_html = hr_client.get("/surveys/survey_edit.php?id=%d" % hr_survey_id)
+        return hr_client.post("/surveys/survey_edit.php?id=%d" % hr_survey_id, dict(form_values, csrf_token=csrf(page_html), request_key=rkey(page_html)))
+
+    check("人財管理者の調査にも、文の質問は足せない（400）",
+          hr_edit({"action": "add_custom", "q_label": "自由に", "q_type": "multi_text", "q_options": "", "q_conf": "internal"})[0] == 400)
+    hr_edit({"action": "add_custom", "q_label": "研修の希望", "q_type": "radio", "q_options": "ある\nない", "q_conf": "internal"})
+    hr_expected_count = database.execute(
+        "SELECT COUNT(*) FROM users u JOIN departments d ON d.id = u.department_id WHERE u.is_active = 1 AND d.is_active = 1").fetchone()[0]
+    hr_edit({"action": "publish"})
+    hr_open_row = database.execute("SELECT status, (SELECT COUNT(*) FROM adhoc_request_targets t WHERE t.request_id = q.id) FROM adhoc_requests q WHERE id = ?", (hr_survey_id,)).fetchone()
+    check("人財管理者が質問を足して公開でき、課に所属する全員が対象になる", hr_open_row == ("open", hr_expected_count) and hr_expected_count > 0, (hr_open_row, hr_expected_count))
+    for target_survey_id, label in ((hr_survey_id, "自分が作った"), (survey_id, "管理者が作った")):
+        status_code, _, hr_result_html = hr_client.get("/surveys/result.php?id=%d&detail=1" % target_survey_id)
+        check("人財管理者は%s全課共通の調査の結果を開け、名前は出ない" % label,
+              status_code == 200 and "課ごとの回答の状況" in hr_result_html and "A一般1" not in hr_result_html and "B課長" not in hr_result_html, status_code)
+    hr_client.post("/surveys/result.php?id=%d" % survey_id, {"csrf_token": csrf(hr_result_html), "request_key": rkey(hr_result_html), "format": "csv"})
+    hr_csv_text = hr_client.last_raw.decode("utf-8-sig", "replace")
+    check("人財管理者も CSV を出力でき、名前は入らない", ["全課", "AI を業務で使っていますか", "毎日", "2", "50%"] in list(csv.reader(io.StringIO(hr_csv_text))) and "A一般1" not in hr_csv_text, hr_csv_text[:200])
+    # 課の調査（A課）は、一覧に出ず、設定も結果も開けない
+    hr_writable_database = sqlite3.connect(arguments.db, timeout=10, isolation_level=None)
+    department_survey_id = hr_writable_database.execute(
+        "INSERT INTO adhoc_requests (department_id, title, requester, purpose, result_visibility, target_type, status, due_at, created_by, created_at, updated_at)"
+        " VALUES (?, 'A課だけの調査', '', '', 'detail', 'all', 'open', ?, ?, datetime('now'), datetime('now'))",
+        (department_a_id, due_date_text, user_info_by_login_id["kacho_a"]["id"])).lastrowid
+    _, _, hr_manage_html = hr_client.get("/surveys/manage.php")
+    check("人財管理者の一覧に、全課共通の調査は出て、課の調査は出ない",
+          "人財管理部の調査" in hr_manage_html and "全社 AI 利用状況" in hr_manage_html and "A課だけの調査" not in hr_manage_html)
+    check("人財管理者は課の調査の設定・結果を開けない（403）",
+          hr_client.get("/surveys/survey_edit.php?id=%d" % department_survey_id)[0] == 403 and hr_client.get("/surveys/result.php?id=%d" % department_survey_id)[0] == 403)
+    hr_report_id = hr_writable_database.execute(
+        "INSERT INTO report_records (user_id, department_id, period, status, revision, submitted_at, created_at, updated_at)"
+        " VALUES (?, ?, '2020-01', 'submitted', 0, datetime('now'), datetime('now'), datetime('now'))",
+        (user_info_by_login_id["ippan_a1"]["id"], department_a_id)).lastrowid
+    forbidden_status_list = [hr_client.get(path)[0] for path in (
+        "/admin/index.php", "/admin/org.php", "/admin/logs.php", "/admin/trash.php", "/status/index.php", "/export/index.php", "/reports/view.php?id=%d" % hr_report_id)]
+    check("人財管理者は、管理の画面・提出状況・出力・ほかの人の報告を開けない", all(code in (403, 404) for code in forbidden_status_list), forbidden_status_list)
+
+    section("G-03", "あなたの役割と権限（人財管理者・部長以上）")
+
+    def role_card(client):
+        """ホームの「あなたの役割と権限」: (札の一覧, 担当の文, できることの一覧)。欄がなければ None。"""
+        _, _, page_html = client.get("/index.php")
+        card = re.search(r'<section class="card role-summary">(.*?)</section>', page_html, re.S)
+        if card is None:
+            return None
+        duty = re.search(r"<p>担当: (.*?)</p>", card.group(1), re.S)
+        return (re.findall(r'<span class="tag">([^<]*)</span>', card.group(1)), duty.group(1) if duty else "", re.findall(r"<li>(.*?)</li>", card.group(1), re.S))
+
+    survey_manage_text = "全課共通の臨時の調査を作り、結果（集計だけ）を見て出力する"
+    survey_view_text = "全課共通の臨時の調査の結果（集計だけ）を見て出力する"
+    hr_card = role_card(hr_client)
+    check("人財管理者: 役職と「人財管理者」の札、自分の報告と全課共通の調査だけ", hr_card == (["一般", "人財管理者"], "", ["自分の月次報告を作って提出する", survey_manage_text]), hr_card)
+    executive_card = role_card(executive_client)
+    check("課のない部長以上: 「部長以上」の札と、調査の結果を見ること（報告を作ることは出ない）",
+          executive_card is not None and executive_card[0] == ["主任", "部長以上"] and survey_view_text in executive_card[2] and "自分の月次報告を作って提出する" not in executive_card[2], executive_card)
+    viewer_card = role_card(viewer_client)
+    check("調査ごとに指定された人: 「指定された」調査の結果", viewer_card is not None and "指定された" + survey_view_text in viewer_card[2], viewer_card)
+
+    # 課のない人財管理者: ホームはエラーでなく入口を出す
+    hr_writable_database.execute("UPDATE users SET department_id = NULL, team_id = NULL WHERE id = ?", (hr_user_id,))
+    _, _, hr_home_html = hr_client.get("/index.php")
+    check("課のない人財管理者のホームは、エラーではなく「臨時の調査」の入口",
+          "所属の課が設定されていません" not in hr_home_html and "見られるもの" in hr_home_html and hr_home_html.count("/surveys/manage.php") >= 2)
+    hr_writable_database.execute("UPDATE users SET department_id = ? WHERE id = ?", (seed["dept_b"], hr_user_id))
+    hr_writable_database.close()
+    status_code, flag_row = save_hr_flag(False)
+    check("印を外すと、ログインし直さなくても開けなくなり、記録に残る",
+          status_code == 303 and flag_row == (0, 0, 0, 0) and hr_log_count("hr_manager_off") == 1
+          and hr_client.get("/surveys/manage.php")[0] == 403 and hr_client.get("/surveys/survey_edit.php?id=%d" % hr_survey_id)[0] == 403
+          and hr_client.get("/surveys/result.php?id=%d" % hr_survey_id)[0] == 403, (status_code, flag_row))
+    check("印を外すと、ホームの札と権限からも消える", role_card(hr_client) == (["一般"], "", ["自分の月次報告を作って提出する"]), role_card(hr_client))
+
     return summary()
 
 

@@ -17,6 +17,12 @@ function require_system_manager(array $user): void
 /** システム管理者補佐の上限（設計製造開発者とそのサポート役。G-14 §6.9） */
 const ADMIN_DEPUTY_MAX_COUNT = 3;
 
+/** 有効な補佐のうち、開発担当でない人の人数（$exceptUserId の人は数えない。1 名以上置く。K-075） */
+function admin_deputy_plain_count(?int $exceptUserId = null): int
+{
+    return (int) db_val('SELECT COUNT(*) FROM users WHERE is_admin_deputy = 1 AND is_admin_deputy_lead = 0 AND is_active = 1 AND id IS NOT ?', [$exceptUserId]);
+}
+
 /** 有効な補佐（開発担当。K-059）の人数（$exceptUserId の人は数えない。1 名まで） */
 function admin_deputy_lead_count(?int $exceptUserId = null): int
 {

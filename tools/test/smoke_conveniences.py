@@ -99,7 +99,7 @@ def main():
     check("J: 課長・確認者には、探す前から送る欄を隠して置いておく（チャットで「解決しない」と出す）", 'id="faq-ask"' in chat_html and 'value="ask"' in chat_html and 'data-ask-role="ask"' in chat_html)
     status_code, _location, search_html = member_client.get("/faq.php?q=" + urllib.parse.quote("スマホを機種変更した"))
     check("J: 「スマホ」で「スマートフォン」の質問が出る", "2段階認証のスマートフォンを買い替えたら" in search_html.split("すべての質問")[0])
-    check("J: 部下には送る欄を出さず、課長・確認者に聞くよう案内する", 'value="ask"' not in search_html and "課長・確認者（課長代理・リーダー）に聞いてください" in search_html)
+    check("J: 部下には送る欄を出さず、課長・確認者に聞くよう案内する", 'value="ask"' not in search_html and "課長・確認者（課長代理・主任）に聞いてください" in search_html)
     status_code, _location, _page_html = member_client.post("/faq.php", {"csrf_token": csrf(search_html), "request_key": os.urandom(16).hex(), "action": "ask", "question": "x", "screen_code": "", "source_path": ""})
     check("J: 部下は質問を送れない（403）", status_code == 403, status_code)
     status_code, _location, search_html = kacho_client.get("/faq.php?q=" + urllib.parse.quote("システムの稼働時間帯はいつまでか"))

@@ -146,7 +146,7 @@ function auth_verify_second_factor(array $user, string $code): bool
         $rows = db_all('SELECT id, code_hash FROM user_backup_codes WHERE user_id = ? AND used_at IS NULL', [(int) $user['id']]);
         foreach ($rows as $r) {
             if (password_verify($code, $r['code_hash'])) {
-                db_exec('UPDATE user_backup_codes SET used_at = ? WHERE id = ?', [now(), (int) $r['id']]);
+                db_exec('UPDATE user_backup_codes SET used_at = ?' . (security_is_supported() ? ', code_enc = NULL' : '') . ' WHERE id = ?', [now(), (int) $r['id']]);
                 return true;
             }
         }
@@ -154,7 +154,7 @@ function auth_verify_second_factor(array $user, string $code): bool
     return false;
 }
 
-/** 予備のコードを作り直す。表示用の値を返す（DB にはハッシュだけを入れる） */
+/** 予備のコードを作り直す。表示用の値を返す（DB にはハッシュと暗号文を入れる。K-075） */
 function auth_regenerate_backup_codes(int $userId): array
 {
     $alphabet = 'abcdefghjkmnpqrstuvwxyz23456789';
@@ -169,6 +169,11 @@ function auth_regenerate_backup_codes(int $userId): array
             'INSERT INTO user_backup_codes (user_id, code_hash, created_at) VALUES (?, ?, ?)',
             [$userId, password_hash($c, PASSWORD_DEFAULT), now()]
         );
+        if (security_is_supported()) {
+            // 管理者と補佐（開発担当）が確認できるよう、暗号文も残す（K-075）
+            $backupCodeId = (int) db()->lastInsertId();
+            db_exec('UPDATE user_backup_codes SET code_enc = ? WHERE id = ?', [enc($c, 'bkcode:' . $userId . ':' . $backupCodeId), $backupCodeId]);
+        }
         $codes[] = substr($c, 0, 4) . '-' . substr($c, 4);
     }
     return $codes;

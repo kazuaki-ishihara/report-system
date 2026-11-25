@@ -49,7 +49,7 @@ def variant_label(variant_key):
     theme_name, _separator, vision_name = variant_key.partition("@")
     return THEME_LABEL_BY_NAME.get(theme_name, theme_name) + ("・" + VISION_LABEL_BY_NAME.get(vision_name, vision_name) if vision_name else "")
 ROLE_LABEL_BY_LOGIN_ID = {
-    "ippan_a1": "部下（A課）", "leader_a": "確認者（A課 リーダー）", "dairi_a": "確認者（A課 課長代理）",
+    "ippan_a1": "部下（A課）", "leader_a": "確認者（A課 主任）", "dairi_a": "確認者（A課 課長代理）",
     "kacho_a": "課長（A課・管理担当）", "kacho_b": "課長（B課）", "ippan_b1": "部下（B課）", "admin01": "管理者",
     "hosa01": "システム管理者補佐",
 }

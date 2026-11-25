@@ -6,7 +6,7 @@
 /** @var array $departmentBreakdownList */
 /** @var string $responseRateText */
 /** @var bool $isMobile */
-/** @var bool $canManage 管理する人（管理者・補佐）。部長以上・依頼元の担当は false */
+/** @var bool $canManage 管理する人（管理者・補佐・人財管理者）。部長以上・依頼元の担当は false */
 ?>
 <section class="card wide">
   <?php if ($canManage): ?>

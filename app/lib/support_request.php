@@ -104,7 +104,7 @@ const SUPPORT_REQUEST_SCREEN_CODE_BY_TEMPLATE = [
     'survey_answer' => 'G-11', 'survey_edit' => 'G-11', 'survey_manage' => 'G-11', 'survey_result' => 'G-11', 'survey_result_all' => 'G-11', 'survey_results' => 'G-11',
     'status_index' => 'G-08', 'status_compare' => 'G-09', 'export_index' => 'G-10',
     'admin_fields' => 'G-12', 'admin_field_edit' => 'G-12', 'admin_field_options' => 'G-12', 'admin_field_preview' => 'G-12',
-    'admin_projects' => 'G-13', 'admin_org' => 'G-14', 'admin_user_edit' => 'G-14', 'admin_logs' => 'G-15', 'admin_trash' => 'G-15',
+    'admin_projects' => 'G-13', 'admin_org' => 'G-14', 'admin_user_edit' => 'G-14', 'admin_security' => 'G-14', 'admin_logs' => 'G-15', 'admin_trash' => 'G-15',
     'account' => 'G-16', 'admin_messages' => 'G-17', 'comment_list' => 'G-18', 'comment_templates' => 'G-19', 'search' => 'G-20',
     'admin_home' => 'G-21', 'department_manage' => 'G-23', 'admin_notices' => 'G-24', 'faq' => 'G-25', 'admin_faq_logs' => 'G-25',
 ];
@@ -221,7 +221,7 @@ function support_request_create(array $user, array $requestValueByName): int
     return $createdRequestId;
 }
 
-/** 要望・依頼を出せるか: 課長と確認者（課長代理・リーダー）。部下は課長を通す（K-044） */
+/** 要望・依頼を出せるか: 課長と確認者（課長代理・主任）。部下は課長を通す（K-044） */
 function support_request_can_submit(array $user): bool
 {
     return (bool) reviewer_departments((int) $user['id']);

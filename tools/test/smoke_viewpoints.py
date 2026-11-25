@@ -222,7 +222,7 @@ def main():
     _status_code, _location, survey_html = manager_client.get("/surveys/survey_edit.php?id=%d" % survey_id)
     manager_client.post("/surveys/survey_edit.php?id=%d" % survey_id, {"csrf_token": csrf(survey_html), "request_key": rkey(survey_html), "action": "publish"})
     check("A一般1 の回答の初期値に、自分の月次報告の値が入る（前提）", 'value="build_unit" selected' in client_of("ippan_a1").get("/surveys/answer.php?id=%d" % survey_id)[2])
-    check("月次報告のない人（リーダー）の回答には、ほかの人の値が入らない", 'value="build_unit" selected' not in leader_client.get("/surveys/answer.php?id=%d" % survey_id)[2])
+    check("月次報告のない人（主任）の回答には、ほかの人の値が入らない", 'value="build_unit" selected' not in leader_client.get("/surveys/answer.php?id=%d" % survey_id)[2])
 
     # ================================================================ G-08
     section("G-08", "提出状況（部下・「変更なし」の印）")

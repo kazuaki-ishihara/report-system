@@ -147,7 +147,7 @@ def main():
     check("報告がない月の横並び", "HTTP" not in page("kacho_a", "/status/compare.php?period=2020-01&dept=%d" % seed["dept_a"]))
     db.execute("UPDATE report_field_options SET is_active = 0 WHERE field_id = ? AND code = 'other'", (ids["phase"],))
     check("無効の選択肢は、検索の条件に出さない", "HTTP" not in page("kacho_a", "/reports/search.php"))
-    check("検索: 見られない報告は出ない（課長代理・リーダーのラインなど）", "HTTP" not in page("leader_a", "/reports/search.php?search=1&from=%s&to=%s&q=%s" % (previous, period, urllib.parse.quote("前の担当"))))
+    check("検索: 見られない報告は出ない（課長代理・主任のラインなど）", "HTTP" not in page("leader_a", "/reports/search.php?search=1&from=%s&to=%s&q=%s" % (previous, period, urllib.parse.quote("前の担当"))))
     check("検索: 自分の報告だけ", "view.php?id=%d" % current_id in page("ippan_a1", "/reports/search.php?search=1&from=%s&to=%s&q=%s" % (previous, period, urllib.parse.quote("前の担当"))))
 
     # ---- 臨時の調査 ----

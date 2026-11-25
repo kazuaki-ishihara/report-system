@@ -127,7 +127,7 @@ def main():
         said("関係がありそうな質問")
         check("「この中にない」で詳しく聞き直す", choose("この中にない") and said("もう少し詳しく"))
         mock(match="related=", json={"ok": True, "matches": []})
-        check("「だれに聞けばよいか」の案内", choose("だれに聞けばよいか") and said("課長・確認者（課長代理・リーダー）に聞いて"))
+        check("「だれに聞けばよいか」の案内", choose("だれに聞けばよいか") and said("課長・確認者（課長代理・主任）に聞いて"))
         for kind in ("empty", "network"):
             open_faq()
             mock(match="format=json", json=answer(matches=[faq]))

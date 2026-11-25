@@ -12,8 +12,8 @@ if (!survey_can_use_manage_screens($user)) {
     error_page(403);
 }
 $depts = final_departments($user);
-// 全課共通の調査（K-066）: システム管理者・補佐が作る。DB が古い（migrate.php の前）ときは作らせない
-$canCreateAllDepartments = can_manage_system($user) && survey_all_departments_supported();
+// 全課共通の調査（K-066・K-071）: システム管理者・補佐・人財管理者が作る。DB が古い（migrate.php の前）ときは作らせない
+$canCreateAllDepartments = survey_can_manage_all_departments($user) && survey_all_departments_supported();
 
 $id = isset($_GET['id']) ? input_id('id') : null;
 $req = null;
@@ -35,7 +35,7 @@ $members = function (?int $deptId): array {
     if ($deptId === null) {
         return survey_all_departments_members();
     }
-    return db_all('SELECT id, display_name, login_id FROM users WHERE department_id = ? AND is_active = 1 ORDER BY display_name', [$deptId]);
+    return db_all('SELECT id, display_name, login_id FROM users WHERE department_id = ? AND is_active = 1 AND id NOT IN (' . specialist_unviewable_id_sql(true) . ') ORDER BY display_name', [$deptId]);
 };
 
 if (is_post()) {

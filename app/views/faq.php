@@ -156,7 +156,7 @@ $renderCategoryChoices = static function () use ($categoryCountList, $categoryUr
         <?php elseif ($isStaff): ?>
           <p><?= h_phrases('システム管理者・補佐は質問を受ける側のため、ここからは送れません。答えを「＋ 質問を載せる」で足してください。') ?></p>
         <?php else: ?>
-          <p><?= h_phrases('答えが見つからないときは、課長・確認者（課長代理・リーダー）に聞いてください。課長・確認者が、この画面からシステム管理者に質問を送れます。') ?></p>
+          <p><?= h_phrases('答えが見つからないときは、課長・確認者（課長代理・主任）に聞いてください。課長・確認者が、この画面からシステム管理者に質問を送れます。') ?></p>
         <?php endif; ?>
       </div>
     </div>

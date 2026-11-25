@@ -198,7 +198,7 @@ if (is_post() && post_str('action') === 'bulk_preview') {
         rk_done('/admin/org.php?tab=departments&edit=' . $successorDepartmentId . '#dept-succession');
 
     } elseif ($action === 'final_save') {
-        // 課長（最終確認者）を決める。課長代理・リーダー・項目管理者・ラインは、その課の課長が「課の管理」で決める（K-042）
+        // 課長（最終確認者）を決める。課長代理・主任・項目管理者・ラインは、その課の課長が「課の管理」で決める（K-042）
         $deptId = input_id('dept_id', 'POST');
         if (db_one('SELECT id FROM departments WHERE id = ?', [$deptId]) === null) {
             error_page(404);
@@ -209,6 +209,9 @@ if (is_post() && post_str('action') === 'bulk_preview') {
             if (preg_match('/\A\d{1,10}\z/', $finalUserIdText) !== 1 || db_one('SELECT id FROM users WHERE id = ? AND is_active = 1', [(int) $finalUserIdText]) === null) {
                 error_page(400);
             }
+            if (specialist_title_of((int) $finalUserIdText) !== '') {
+                error_page(400, msg('専門職の人は、課長・確認者・項目管理者にできません。'));
+            }
             $finalUserId = (int) $finalUserIdText;
         }
         // 役職が課長・部長でない人を新しく課長にするときは、確かめの画面を出してから保存する（K-069。課長の代わり・お試しなどで任せることはある）
@@ -218,7 +221,7 @@ if (is_post() && post_str('action') === 'bulk_preview') {
             redirect('/admin/org.php?tab=departments&edit=' . $deptId . '&final_check=' . $finalUserId . '#dept-final');
         }
         tx(function () use ($deptId, $finalUserId): void {
-            // 今の課長は、課長の役を外す（課長代理・リーダーの役には残さない）
+            // 今の課長は、課長の役を外す（課長代理・主任の役には残さない）
             db_exec('DELETE FROM department_reviewers WHERE department_id = ? AND is_final = 1', [$deptId]);
             if ($finalUserId !== null) {
                 db_exec('DELETE FROM department_reviewers WHERE department_id = ? AND user_id = ?', [$deptId, $finalUserId]);
@@ -282,6 +285,9 @@ if ($tab === 'departments') {
               ORDER BY (u.department_id = ?) DESC, u.display_name',
             [$editId, $editId]
         );
+        $vars['candidates'] = array_values(array_filter($vars['candidates'], function (array $candidateRow): bool {
+            return specialist_title_of((int) $candidateRow['id']) === '';   // 専門職は課長にしない（K-074）
+        }));
         // 役職が課長・部長でない人を課長に選んだときの確かめ（final_save から戻る。K-069）
         $vars['finalCheckCandidate'] = null;
         if (isset($_GET['final_check'])) {

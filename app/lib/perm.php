@@ -37,10 +37,83 @@ function has_admin_authority(array $user): bool
     return is_admin($user) || is_admin_deputy_lead($user);
 }
 
+/** システムの役割の名前（G-16 に本人だけに出す）。役割のない人は空の文字列 */
+function system_role_label(array $user): string
+{
+    if (is_admin($user)) {
+        return 'システム管理者';
+    }
+    if (is_admin_deputy_lead($user)) {
+        return 'システム管理者補佐（開発担当）';
+    }
+    return is_admin_deputy($user) ? 'システム管理者補佐' : '';
+}
+
 /** システム全体の管理（課・ユーザー・組織の改訂・項目・案件・注意の言葉）ができるか: 管理者と補佐 */
 function can_manage_system(array $user): bool
 {
     return is_admin($user) || is_admin_deputy($user);
+}
+
+/** 専門職（K-074）。ラインを管理せず、ラインや課に属する。下位の人のものを見られず、課長・確認者・項目管理者になれない */
+const SPECIALIST_TITLE_LIST = ['技師', '担当課長', '担当部長'];
+
+/** 本人のほかはだれも見ない専門職（課長も見ない。確認の対象・提出状況の人数・課の調査の対象に入れない） */
+const SPECIALIST_HIDDEN_TITLE = '担当部長';
+
+/**
+ * 専門職の人（利用者 ID => 専門職の名前）。列のない DB（migrate.php の前）では空。
+ *
+ * @return array<int, string>
+ */
+function specialist_title_by_user_id(): array
+{
+    static $hasColumn = null;
+    if ($hasColumn === null) {
+        $hasColumn = in_array('specialist_title', array_column(db_all('PRAGMA table_info(users)'), 'name'), true);
+    }
+    $titleByUserId = [];
+    foreach ($hasColumn ? db_all("SELECT id, specialist_title FROM users WHERE specialist_title <> ''") : [] as $specialistRow) {
+        $titleByUserId[(int) $specialistRow['id']] = (string) $specialistRow['specialist_title'];
+    }
+    return $titleByUserId;
+}
+
+/** 専門職の名前（専門職でなければ空） */
+function specialist_title_of(int $userId): string
+{
+    return specialist_title_by_user_id()[$userId] ?? '';
+}
+
+/** 表示する役職（専門職の人は、専門職の名前） */
+function display_role_title(int $userId, string $roleTitle): string
+{
+    $specialistTitle = specialist_title_of($userId);
+    return $specialistTitle !== '' ? $specialistTitle : $roleTitle;
+}
+
+/** 専門職の人のもの（報告・調査の回答・目標管理）を、その課の担当として見られるか。見られるのは課長だけ、担当部長はだれも見られない */
+function specialist_viewable_as(string $specialistTitle, bool $isFinal): bool
+{
+    return $specialistTitle === '' || ($isFinal && $specialistTitle !== SPECIALIST_HIDDEN_TITLE);
+}
+
+/**
+ * その課の担当（課長か、ほかの確認者か）として見られない専門職の人の ID
+ *
+ * @return int[]
+ */
+function specialist_unviewable_user_id_list(bool $isFinal): array
+{
+    return array_keys(array_filter(specialist_title_by_user_id(), function (string $specialistTitle) use ($isFinal): bool {
+        return !specialist_viewable_as($specialistTitle, $isFinal);
+    }));
+}
+
+/** SQL の NOT IN に入れる、見られない専門職の人の ID の並び（いなければ 0） */
+function specialist_unviewable_id_sql(bool $isFinal): string
+{
+    return implode(',', specialist_unviewable_user_id_list($isFinal) ?: [0]);
 }
 
 /** 自分が確認者の課（課ID => is_final） */
@@ -58,14 +131,14 @@ function is_reviewer_of(int $userId, int $departmentId): bool
     return db_val('SELECT 1 FROM department_reviewers WHERE user_id = ? AND department_id = ?', [$userId, $departmentId]) !== null;
 }
 
-/** その課でチェックする確認者か（課長は常に。課長代理・リーダーは課長が決める。K-039） */
+/** その課でチェックする確認者か（課長は常に。課長代理・主任は課長が決める。K-039） */
 function reviewer_does_check(int $userId, int $departmentId): bool
 {
     return db_val('SELECT 1 FROM department_reviewers WHERE user_id = ? AND department_id = ? AND (does_check = 1 OR is_final = 1)', [$userId, $departmentId]) !== null;
 }
 
 /**
- * 新しく確認者にしたときの「チェックする」の既定（K-039）: 課長と、役職が課長代理の人は「する」、ほか（リーダーなど）は「しない」。
+ * 新しく確認者にしたときの「チェックする」の既定（K-039）: 課長と、役職が課長代理の人は「する」、ほか（主任など）は「しない」。
  */
 function reviewer_default_does_check(int $userId, bool $isFinal): int
 {
@@ -140,7 +213,8 @@ function report_view_grants(int $userId): array
         return $grantListByUserId[$userId];
     }
     $grantList = [];
-    foreach (db_all(
+    // 専門職はラインを管理しないので、設定が残っていても、ほかの人の報告を見られない（K-074）
+    foreach (specialist_title_of($userId) !== '' ? [] : db_all(
         'SELECT r.department_id, r.is_final, r.team_id, d.review_scope
            FROM department_reviewers r JOIN departments d ON d.id = r.department_id
           WHERE r.user_id = ?',
@@ -189,6 +263,7 @@ function user_current_placement(int $userId): array
 function reviewer_can_see_report(int $viewerUserId, array $report, bool $isFinalRequired, bool $isOwnerDepartmentIncluded = true): bool
 {
     $ownerPlacement = user_current_placement((int) $report['user_id']);
+    $ownerSpecialistTitle = specialist_title_of((int) $report['user_id']);
     $relevantDepartmentIdSet = [];
     if ($report['department_id'] !== null) {
         $relevantDepartmentIdSet[(int) $report['department_id']] = true;
@@ -198,6 +273,10 @@ function reviewer_can_see_report(int $viewerUserId, array $report, bool $isFinal
     }
     foreach (report_view_grants($viewerUserId) as $grant) {
         if ($isFinalRequired && !$grant['isFinal']) {
+            continue;
+        }
+        // 専門職の報告は課長だけ。担当部長の報告は本人だけ（K-074）
+        if (!specialist_viewable_as($ownerSpecialistTitle, $grant['isFinal'])) {
             continue;
         }
         if (!array_intersect_key($grant['coveredDepartmentIdSet'], $relevantDepartmentIdSet)) {
@@ -250,7 +329,7 @@ function can_view_restricted(array $user, array $report): bool
 function report_expected_reviewer_ids(array $report): array
 {
     $expectedReviewerIdList = [];
-    // 「チェックしない」の課長代理・リーダーは数えない（K-039。課長は常にチェックする）
+    // 「チェックしない」の課長代理・主任は数えない（K-039。課長は常にチェックする）
     foreach (db_all('SELECT DISTINCT r.user_id FROM department_reviewers r JOIN users u ON u.id = r.user_id AND u.is_active = 1
                       WHERE r.user_id <> ? AND (r.does_check = 1 OR r.is_final = 1)', [(int) $report['user_id']]) as $reviewerRow) {
         if (reviewer_can_see_report((int) $reviewerRow['user_id'], $report, false, false)) {
@@ -348,8 +427,8 @@ function menu_items(array $user): array
     if ($isReviewer || $isAdmin) {
         $items[] = ['/status/index.php', '提出状況', '確認'];
     }
-    if ($isFinalReviewer || $isAdmin) {
-        $items[] = ['/surveys/manage.php', '臨時の調査', '確認'];   // 管理者・補佐は全課共通の調査（K-066）
+    if ($isFinalReviewer || survey_can_manage_all_departments($user)) {
+        $items[] = ['/surveys/manage.php', '臨時の調査', '確認'];   // 管理者・補佐・人財管理者は全課共通の調査（K-066）
     }
     if ($isFinalReviewer) {
         $items[] = ['/export/index.php', '出力', '確認'];
@@ -380,6 +459,9 @@ function menu_items(array $user): array
         $items[] = ['/admin/projects.php', '案件の管理', '管理'];
         $items[] = ['/admin/org.php', '組織・ユーザー', '管理'];
         $items[] = ['/admin/logs.php', '記録・削除データ', '管理'];
+        if (has_admin_authority($user)) {
+            $items[] = ['/admin/security.php', 'アカウントの凍結', '管理'];   // G-14 §6.11（管理者・補佐（開発担当）。K-075）
+        }
     }
     // 管理の画面が 1 つでもあれば、管理のトップ（G-21）を管理の先頭に置く
     $firstAdminItemIndex = null;

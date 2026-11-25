@@ -43,6 +43,7 @@ const ADMIN_SECTION_PATH_BY_TEMPLATE = [
     'admin_faq_logs'      => '/admin/faq_logs.php',
     'admin_user_edit'     => '/admin/org.php',
     'admin_logs'          => '/admin/logs.php',
+    'admin_security'      => '/admin/security.php',
     'admin_trash'         => '/admin/logs.php',
 ];
 

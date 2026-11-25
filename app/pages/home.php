@@ -50,7 +50,7 @@ foreach (reviewer_departments($uid) as $deptId => $isFinal) {
         continue;
     }
     // 未チェック: その課・対象月の、自分が見られる（ラインごとの課では担当のラインの）報告のうち、チェックしていない・更新ありのもの
-    // 「チェックしない」の課長代理・リーダーは数えない（K-039）
+    // 「チェックしない」の課長代理・主任は数えない（K-039）
     $doesCheck = reviewer_does_check($uid, (int) $deptId);
     $unchecked = 0;
     foreach (!$doesCheck ? [] : db_all(
@@ -66,14 +66,15 @@ foreach (reviewer_departments($uid) as $deptId => $isFinal) {
     $answered = (int) db_val(
         "SELECT COUNT(*) FROM report_field_comments c JOIN report_records r ON r.id = c.report_id
           WHERE c.user_id = ? AND r.department_id = ? AND c.parent_id IS NULL
-            AND c.thread_status = 'answered' AND c.deleted_at IS NULL AND r.deleted_at IS NULL",
+            AND c.thread_status = 'answered' AND c.deleted_at IS NULL AND r.deleted_at IS NULL
+            AND r.user_id NOT IN (" . specialist_unviewable_id_sql($isFinal) . ')',
         [$uid, $deptId]
     );
     $notSubmitted = null;
     if ($isFinal) {
         $notSubmitted = (int) db_val(
             "SELECT COUNT(*) FROM users u
-              WHERE u.department_id = ? AND u.is_active = 1
+              WHERE u.department_id = ? AND u.is_active = 1 AND u.id NOT IN (" . specialist_unviewable_id_sql(true) . ")
                 AND NOT EXISTS (SELECT 1 FROM report_records r WHERE r.user_id = u.id AND r.period = ?
                                 AND r.status IN ('submitted', 'confirmed') AND r.is_legacy = 0 AND r.deleted_at IS NULL)",
             [$deptId, $period]
@@ -106,7 +107,22 @@ $unknownLoginCount = can_manage_system($user) ? auth_unknown_login_unchecked_cou
 $hasNoBackupCode = $user['totp_enabled_at'] !== null
     && (int) db_val('SELECT COUNT(*) FROM user_backup_codes WHERE user_id = ? AND used_at IS NULL', [(int) $user['id']]) === 0;
 
+// あなたの役割と権限（本人だけ。§4.4）
+$roleDutyList = role_summary_duty_list($uid);
+// 総入れ替えの 2 人（管理者・補佐（開発担当）。いないときは別の補佐。K-075）
+$isMassResetMember = security_is_supported() && security_is_mass_reset_member($user);
+
 render('home', [
+    'securityNoticeList'          => security_notices_of($uid),
+    'openFreezeCount'             => has_admin_authority($user) ? count(security_open_freezes()) : 0,
+    'isMassResetNeeded'           => $isMassResetMember && security_mass_reset_state()['isNeeded'],
+    'hasMassResetRequest'         => $isMassResetMember && security_mass_reset_request() !== null,
+    'isDeputyMissing'             => can_manage_system($user) && admin_deputy_plain_count() === 0,
+    'hasLeadRecoveryRequest'      => (is_admin($user) || is_admin_deputy($user)) && security_lead_recovery_request() !== null,
+    'hasUnreadableBackupCode'     => security_has_unreadable_backup_codes($uid),
+    'roleLabelList'               => role_summary_label_list($user),
+    'roleDutyTextList'            => array_map('role_summary_duty_text', $roleDutyList),
+    'rolePermissionList'          => role_summary_permission_list($user, $roleDutyList),
     'hasNoBackupCode'             => $hasNoBackupCode,
     'activeNoticeList'            => notices_active(5),   // 更新のお知らせ（便利機能 A）
     'supportRequestAnsweredCount' => $supportRequestAnsweredCount,

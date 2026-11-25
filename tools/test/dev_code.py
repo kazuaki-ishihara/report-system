@@ -15,7 +15,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib_http import totp  # noqa: E402
 
 ROLES = {
-    "admin01": "管理者", "kacho_a": "A課 課長", "dairi_a": "A課 確認者（課長代理）", "leader_a": "A課 確認者（リーダー）",
+    "admin01": "管理者", "kacho_a": "A課 課長", "dairi_a": "A課 確認者（課長代理）", "leader_a": "A課 確認者（主任）",
     "ippan_a1": "A課 部下", "ippan_a2": "A課 部下", "kacho_b": "B課 課長", "ippan_b1": "B課 部下", "hosa01": "システム管理者補佐",
 }
 

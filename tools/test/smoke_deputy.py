@@ -14,6 +14,7 @@ import argparse
 import datetime
 import json
 import os
+import re
 import sqlite3
 import sys
 
@@ -50,6 +51,117 @@ def main():
 
     deputy_client = login(arguments.base, "hosa01", user_info_by_login_id["hosa01"])
     admin_client = login(arguments.base, "admin01", user_info_by_login_id["admin01"])
+
+    # ---- アカウント設定に出す自分のシステムの役割（役割のある本人だけ） ----
+    def shown_system_role(client, tab_name="totp"):
+        """アカウント設定に出ている役割の名前の一覧（出ていなければ空）。200 でなければ None。"""
+        status_code, _location, account_html = client.get("/account.php?tab=" + tab_name)
+        if status_code != 200 or "<h1>アカウント設定</h1>" not in account_html:
+            return None
+        if "システムの役割" not in account_html:
+            return []
+        return re.findall(r'<p>システムの役割: <span class="tag">([^<]*)</span></p>', account_html)
+
+    section("G-16", "自分のシステムの役割（役割のある本人だけ）")
+    for tab_name in ["totp", "codes", "devices", "password", "theme"]:
+        for client, expected_roles, person in [(admin_client, ["システム管理者"], "管理者"), (deputy_client, ["システム管理者補佐"], "補佐")]:
+            shown_roles = shown_system_role(client, tab_name)
+            check("%sの役割が出る（タブ %s）" % (person, tab_name), shown_roles == expected_roles, shown_roles)
+    for login_id in ["ippan_a1", "kacho_a"]:
+        shown_roles = shown_system_role(login(arguments.base, login_id, user_info_by_login_id[login_id]))
+        check("役割のない人（%s）には出ない" % login_id, shown_roles == [], shown_roles)
+    hosa_id = user_id_of("hosa01")
+    database.execute("UPDATE users SET must_change_password = 1 WHERE id = ?", (hosa_id,))
+    shown_roles = shown_system_role(deputy_client)
+    database.execute("UPDATE users SET must_change_password = 0 WHERE id = ?", (hosa_id,))
+    check("補佐でも、仮のパスワードの間は出ない", shown_roles == [], shown_roles)
+    totp_row = database.execute("SELECT totp_secret_enc, totp_enabled_at FROM users WHERE id = ?", (hosa_id,)).fetchone()
+    database.execute("UPDATE users SET totp_secret_enc = NULL, totp_enabled_at = NULL WHERE id = ?", (hosa_id,))
+    setup_client = Client(arguments.base)
+    _status_code, _location, login_html = setup_client.get("/login.php")
+    setup_client.post("/login.php", {"csrf_token": csrf(login_html), "action": "password", "login_id": "hosa01",
+                                     "password": user_info_by_login_id["hosa01"]["password"]})
+    _status_code, _location, setup_html = setup_client.get("/account.php?tab=totp")
+    database.execute("UPDATE users SET totp_secret_enc = ?, totp_enabled_at = ? WHERE id = ?", (totp_row[0], totp_row[1], hosa_id))
+    check("補佐でも、2 段階認証の設定の前は出ない", "はじめてのログインです" in setup_html and "システムの役割" not in setup_html)
+
+    # ---- ホームの「あなたの役割と権限」（役職・システムの役割・課ごとの担当。§4.4） ----
+    section("G-03", "あなたの役割と権限（役職・システムの役割・課ごとの担当）")
+
+    role_client_by_login_id = {"admin01": admin_client, "hosa01": deputy_client}
+
+    def role_card(login_id):
+        """ホームの「あなたの役割と権限」: (札の一覧, 担当の文, できることの一覧)。欄がなければ None。"""
+        if login_id not in role_client_by_login_id:
+            role_client_by_login_id[login_id] = login(arguments.base, login_id, user_info_by_login_id[login_id])
+        _status_code, _location, page_html = role_client_by_login_id[login_id].get("/index.php")
+        card = re.search(r'<section class="card role-summary">(.*?)</section>', page_html, re.S)
+        if card is None:
+            return None
+        duty = re.search(r"<p>担当: (.*?)</p>", card.group(1), re.S)
+        return (re.findall(r'<span class="tag">([^<]*)</span>', card.group(1)), duty.group(1) if duty else "", re.findall(r"<li>(.*?)</li>", card.group(1), re.S))
+
+    has_goals = os.path.exists(os.path.join(test_dir, "..", "..", "app", "lib", "goal.php"))
+    own_report = "自分の月次報告を作って提出する"
+    goal_boss = ["目標管理: A課の人のシートを見て、上長評価を入れる"] if has_goals else []
+    goal_deputy = ["目標管理: 同じ課の一般・主任の人のシートを見る"] if has_goals else []
+    for login_id, role_title in (("ippan_a1", "一般"), ("leader_a", "主任"), ("dairi_a", "課長代理"), ("kacho_a", "課長")):
+        database.execute("UPDATE users SET role_title = ? WHERE id = ?", (role_title, user_id_of(login_id)))
+    database.execute("UPDATE department_reviewers SET does_check = 1 WHERE user_id = ?", (user_id_of("dairi_a"),))
+    database.execute("UPDATE department_reviewers SET does_check = 0 WHERE user_id = ?", (user_id_of("leader_a"),))
+    card = role_card("ippan_a1")
+    check("一般: 札は「一般」だけ、担当なし、自分の報告だけ", card == (["一般"], "", [own_report]), card)
+    card = role_card("leader_a")
+    check("主任（チェックしない確認者）: 「主任」の札・確認者・チェックしない",
+          card == (["主任"], "A課（確認者）", [own_report, "A課: 課の全員の報告を見てコメントする（チェックはしない設定）"]), card)
+    card = role_card("dairi_a")
+    check("課長代理（チェックする確認者）: チェックする",
+          card == (["課長代理"], "A課（確認者）", [own_report, "A課: 課の全員の報告を見てコメントする・チェックする"] + goal_deputy), card)
+    kacho_permissions = [own_report, "A課: 課の全員の報告を見る（「限定」の項目を含む）", "A課: 報告の確認を完了にする・出力する・課の臨時の調査を作る・課の管理をする"] + goal_boss
+    card = role_card("kacho_a")
+    check("課長: 課長の担当と権限", card == (["課長"], "A課（課長）", kacho_permissions), card)
+    database.execute("UPDATE users SET role_title = '主任' WHERE id = ?", (user_id_of("kacho_a"),))
+    card = role_card("kacho_a")
+    check("役職が主任でも、課長を任されていれば課長の権限が出る（役職ではなく設定で決まる）", card == (["主任"], "A課（課長）", kacho_permissions), card)
+    database.execute("UPDATE users SET role_title = '課長' WHERE id = ?", (user_id_of("ippan_a2"),))
+    database.execute("UPDATE users SET role_title = '部長' WHERE id = ?", (user_id_of("kacho_a"),))
+    card = role_card("kacho_a")
+    check("部長: 「部長」の札（課長を兼ねれば課長の権限）", card == (["部長"], "A課（課長）", kacho_permissions), card)
+    # 「ラインごと」の課で担当のラインがある確認者
+    team_id = database.execute("INSERT INTO department_teams (department_id, name, sort_order, is_active, created_at, updated_at) VALUES (?, '山田ライン', 1, 1, datetime('now'), datetime('now'))", (department_a_id,)).lastrowid
+    database.execute("UPDATE departments SET review_scope = 'team' WHERE id = ?", (department_a_id,))
+    database.execute("UPDATE department_reviewers SET team_id = ? WHERE user_id = ?", (team_id, user_id_of("dairi_a")))
+    card = role_card("dairi_a")
+    check("ラインごとの課: 担当のラインの名前と範囲が出る",
+          card == (["課長代理"], "A課（確認者・山田ライン）", [own_report, "A課: 担当のライン（山田ライン）の報告を見てコメントする・チェックする"] + goal_deputy), card)
+    card = role_card("leader_a")
+    check("ラインごとの課でも、担当のラインがない確認者は課の全員", card is not None and card[1] == "A課（確認者）" and any("課の全員" in text for text in card[2]), card)
+    database.execute("UPDATE department_reviewers SET team_id = NULL WHERE user_id = ?", (user_id_of("dairi_a"),))
+    database.execute("UPDATE departments SET review_scope = 'department' WHERE id = ?", (department_a_id,))
+    database.execute("DELETE FROM department_teams WHERE id = ?", (team_id,))
+    database.execute("INSERT INTO department_admins (department_id, user_id) VALUES (?, ?)", (department_a_id, user_id_of("ippan_a1")))
+    card = role_card("ippan_a1")
+    check("項目管理者: 課の項目の変更が出る", card is not None and "A課: 課の項目を変更する（項目管理者）" in card[2], card)
+    database.execute("DELETE FROM department_admins WHERE user_id = ?", (user_id_of("ippan_a1"),))
+    # 無効の課の担当は、見ることだけ
+    database.execute("UPDATE departments SET is_active = 0 WHERE id = ?", (department_a_id,))
+    card = role_card("kacho_a")
+    check("無効の課の課長: 「無効の課」と出て、確認の完了・管理は出ない",
+          card is not None and card[1] == "A課（課長・無効の課）" and card[2] == kacho_permissions[:2], card)
+    database.execute("UPDATE departments SET is_active = 1 WHERE id = ?", (department_a_id,))
+    survey_manage_text = "全課共通の臨時の調査を作り、結果（集計だけ）を見て出力する"
+    deputy_text = "システム管理者の管理の仕事を代行する（確認者でない課の報告の中身などの、個々の情報は見ない）"
+    admin_text = "システム全体の管理（課・ユーザー・項目・案件・記録・削除データなど）をする。報告の中身は、確認者の課の分だけ見る"
+    card = role_card("admin01")
+    check("システム管理者: 「システム管理者」の札と管理の権限（課がないので報告は出ない）", card is not None and "システム管理者" in card[0] and card[2] == [survey_manage_text, admin_text], card)
+    card = role_card("hosa01")
+    check("補佐: 「システム管理者補佐」の札と代行", card is not None and "システム管理者補佐" in card[0] and card[2] == [survey_manage_text, deputy_text], card)
+    database.execute("UPDATE users SET is_admin_deputy_lead = 1 WHERE id = ?", (hosa_id,))
+    card = role_card("hosa01")
+    check("補佐（開発担当）: 管理者と同じ権限", card is not None and "システム管理者補佐（開発担当）" in card[0] and card[2] == [survey_manage_text, admin_text], card)
+    database.execute("UPDATE users SET is_admin_deputy_lead = 0 WHERE id = ?", (hosa_id,))
+    for login_id, role_title in (("ippan_a1", "一般"), ("ippan_a2", "一般"), ("kacho_a", "課長")):
+        database.execute("UPDATE users SET role_title = ? WHERE id = ?", (role_title, user_id_of(login_id)))
 
     # ---- 代行できる管理の画面 ----
     section("G-21", "代行できる管理の画面")
@@ -166,6 +278,8 @@ def main():
     status_code, _location, _page_html = save_user(deputy_client, "ippan_a1", {"is_admin_deputy_lead": "1"})
     check("補佐は、補佐（開発担当）の印を付けられない",
           database.execute("SELECT is_admin_deputy_lead FROM users WHERE id = ?", (user_id_of("ippan_a1"),)).fetchone()[0] == 0, status_code)
+    # 開発担当のほかに補佐が要る（K-075）ので、この間だけ補佐をもう 1 人置く
+    database.execute("UPDATE users SET is_admin_deputy = 1 WHERE id = ?", (user_id_of("kacho_b"),))
     status_code, _location, _page_html = save_user(admin_client, "hosa01", {"is_admin_deputy": "1", "is_admin_deputy_lead": "1"})
     check("管理者は、補佐に補佐（開発担当）の印を付けられる",
           database.execute("SELECT is_admin_deputy_lead FROM users WHERE id = ?", (user_id_of("hosa01"),)).fetchone()[0] == 1, status_code)
@@ -192,8 +306,13 @@ def main():
           "知らせる質問（人への暴力・ID やパスワードを求める質問）" in lead_faq_logs_html and "心の不調・退職" not in lead_faq_logs_html)
     _status_code, _location, users_html = admin_client.get("/admin/org.php?tab=users")
     check("ユーザーの一覧に「補佐（開発担当）」と出る", "補佐（開発担当）" in users_html)
+    section("G-16", "自分のシステムの役割（補佐（開発担当））")
+    shown_roles = shown_system_role(deputy_client)
+    check("補佐（開発担当）の役割が 1 つだけ出る", shown_roles == ["システム管理者補佐（開発担当）"], shown_roles)
+    section("G-14", "管理者・補佐の利用者と役は変えられない（CSV）")
     # 以降の確かめは、ふつうの補佐として行う（印を外してログインし直す。1 名だけの確かめは最後に付け直す）
     save_user(admin_client, "hosa01", {"is_admin_deputy": "1"})
+    database.execute("UPDATE users SET is_admin_deputy = 0 WHERE id = ?", (user_id_of("kacho_b"),))
     deputy_client = login(arguments.base, "hosa01", user_info_by_login_id["hosa01"])
 
     # CSV: 補佐は管理者の行を変えられない

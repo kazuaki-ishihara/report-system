@@ -1,7 +1,7 @@
 <?php
 /** @var array|null $req */
 /** @var array $depts */
-/** @var bool $canCreateAllDepartments 全課共通の調査を作れる（システム管理者・補佐。K-066） */
+/** @var bool $canCreateAllDepartments 全課共通の調査を作れる（システム管理者・補佐・人財管理者。K-066・K-071） */
 /** @var bool $isAllDepartments この調査が全課共通 */
 /** @var array $viewerCandidates 結果を見られる人の候補（全課共通の調査のとき。survey_viewer_candidates()） */
 /** @var int[] $viewerIds 今の「結果を見られる人」 */
@@ -133,7 +133,7 @@ $statusLabel = $req === null ? '新規' : ((int) $req['is_template'] === 1 ? '�
 <?php if ($isAllDepartments): ?>
 <section class="card" id="survey-viewers">
   <h2>結果を見られる人</h2>
-  <p class="note"><?= h_phrases('結果（全課の集計と課ごとのまとめ。個人の回答と名前は出しません）を見て出力できる人を選びます。依頼元の担当者などを選んでください。「部長以上」の印の人は、選ばなくても見られます。公開の後でも変えられます。') ?></p>
+  <p class="note"><?= h_phrases('結果（全課の集計と課ごとのまとめ。個人の回答と名前は出しません）を見て出力できる人を選びます。依頼元の担当者などを選んでください。「部長以上」と「人財管理者」の印の人は、選ばなくても見られます。公開の後でも変えられます。') ?></p>
   <form method="post" action="<?= h(url($self)) ?>" class="form">
     <?= form_hidden() ?>
     <input type="hidden" name="action" value="save_viewers">
@@ -147,7 +147,7 @@ $statusLabel = $req === null ? '新規' : ((int) $req['is_template'] === 1 ? '�
           <td><?= h($candidate['display_name']) ?><?php if ((int) $candidate['is_executive'] === 1): ?> <span class="tag">部長以上</span><?php endif; ?></td>
           <td><?= h($candidate['login_id']) ?></td>
           <td><?= h($candidate['department_name'] === '' ? '（なし）' : $candidate['department_name']) ?></td>
-          <td><?= h($candidate['role_title']) ?></td>
+          <td><?= h(display_role_title((int) $candidate['id'], (string) $candidate['role_title'])) ?></td>
         </tr>
       <?php endforeach; ?>
       </tbody>

@@ -238,9 +238,9 @@ def main():
     status_code, _location, comment_list_html = member_b1_client.get("/reports/comments.php?tab=sent")
     check("確認者でない人が「自分が出したコメント」を開いても、他人のコメントは出ない", status_code == 200 and "#comment-" not in comment_list_html, status_code)
     # ================================================================
-    # G-19 コメントの定型文（リーダーを確認者から外す前に確かめる）
+    # G-19 コメントの定型文（主任を確認者から外す前に確かめる）
     # ================================================================
-    section("G-19", "G-19 コメントの定型文（リーダーを確認者から外す前に確かめる）")
+    section("G-19", "G-19 コメントの定型文（主任を確認者から外す前に確かめる）")
     templates_path = "/admin/comment_templates.php?scope=department&dept=%d" % department_a_id
 
     def post_template(client, action, body_text=None, template_id=None):

@@ -101,6 +101,8 @@ ALTER TABLE users ADD COLUMN ui_theme         TEXT NOT NULL DEFAULT 'auto';   --
 ALTER TABLE users ADD COLUMN ui_custom_colors TEXT NOT NULL DEFAULT '';   -- 自分の色（G-16 §4.6。JSON: base・accent・background）
 ALTER TABLE users ADD COLUMN is_admin_deputy  INTEGER NOT NULL DEFAULT 0 CHECK (is_admin_deputy IN (0, 1));   -- システム管理者補佐（G-14 §6.9）
 ALTER TABLE users ADD COLUMN is_executive INTEGER NOT NULL DEFAULT 0 CHECK (is_executive IN (0, 1));   -- 部長以上: すべての全課共通の調査の結果（集計だけ）を見られる（G-11 §10。G-14。K-067）
+ALTER TABLE users ADD COLUMN specialist_title TEXT NOT NULL DEFAULT '' CHECK (specialist_title IN ('', '技師', '担当課長', '担当部長'));   -- 専門職（G-14。K-074）。department_reviewers・department_admins に入れるとトリガーが RAISE(ABORT)、付けると役割の行を消す
+ALTER TABLE users ADD COLUMN is_hr_manager INTEGER NOT NULL DEFAULT 0 CHECK (is_hr_manager IN (0, 1));   -- 人財管理者: 全課共通の調査を作り、結果（集計だけ）を見られる（G-11 §10。G-14。K-071）
 ALTER TABLE users ADD COLUMN is_admin_deputy_lead INTEGER NOT NULL DEFAULT 0 CHECK (is_admin_deputy_lead IN (0, 1));   -- 補佐（開発担当）。補佐のうち有効な人で 1 名（G-14 §6.9。K-059。トリガー tr_users_admin_deputy_lead_*）
 -- 補佐は有効な人で 3 名まで、管理者と兼ねない（トリガー tr_users_admin_deputy_insert・tr_users_admin_deputy_update が RAISE(ABORT)）
 CREATE UNIQUE INDEX IF NOT EXISTS ux_users_login_id ON users (login_id);
@@ -701,3 +703,17 @@ tomato の DB は、この DB と同じ名前で中身の違う表（`users`・`
 |---|---|
 | `php app/bin/seed_template.php [--dept-a=<課ID>] [--dept-b=<課ID>]` | 初期の様式を登録する。共通項目（案件、担当内容、作業フェーズ、進捗、進捗の補足（表示の条件あり）、案件の継続見込み、終了予定、人員の動き、人員の動きの詳細（限定））は常に、課別項目は課の ID を渡したときだけ（A課 3 項目、B課 1 項目）。同じコードがあれば飛ばす |
 | `php app/bin/create_user.php --login=<ID> --name=<表示名> [--admin] [--dept=<課名>] [--reviewer｜--final]` | 利用者を作る（最初の管理者など）。課がなければ作る。12 文字の仮のパスワードを一度だけ出し、`must_change_password = 1` にする |
+
+### 予備のコードの確認・凍結など（K-075。G-14 §6.11）
+
+| 表・列 | 内容 |
+|---|---|
+| `user_backup_codes.code_enc` | 予備のコードの暗号文（古いコードは NULL。使ったら NULL） |
+| `users.frozen_at`・`users.is_credential_reset` | 凍結した日時・総入れ替えの途中 |
+| `security_notices` | 本人への知らせ（種類・操作した人の ID・名前・役割・理由・「心当たりがない」を押した日時） |
+| `user_recovery_codes` | 復旧コードのハッシュ・期限・使った日時・発行の知らせ |
+| `user_blocked_passwords` | 使えないパスワードのハッシュ |
+| `account_freezes` | 凍結（本人・もとの知らせ・操作した人・ログインを止めたか・再初期化した日時と人） |
+| `users.was_admin_deputy_lead` | 一度でも補佐（開発担当）になった印（トリガー `tr_users_was_lead_*` で付き、外れない） |
+| `lead_recovery_requests` | 補佐（開発担当）の復旧の申請（対象・申請した管理者の名前と役割・理由・仮のパスワードの前半の暗号文・状態・承認した補佐） |
+| `mass_reset_requests`・`mass_credential_resets` | 総入れ替えの申請と承認・実施 |

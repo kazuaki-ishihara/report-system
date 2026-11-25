@@ -48,7 +48,7 @@
     </form>
     </section>
     <section id="dept-final" data-tab-title="課長">
-    <p class="note"><?= h_phrases('この課の課長（最終確認者）を決めます。課長代理・リーダー（確認者）・チェックする人・項目管理者・ライン・締め日・管理の仕方は、この課の課長が「課の管理」の画面で決めます（システム管理者は、個々の課の管理はしません）。') ?></p>
+    <p class="note"><?= h_phrases('この課の課長（最終確認者）を決めます。課長代理・主任（確認者）・チェックする人・項目管理者・ライン・締め日・管理の仕方は、この課の課長が「課の管理」の画面で決めます（システム管理者は、個々の課の管理はしません）。') ?></p>
     <?php $currentFinalCandidate = null; foreach ($candidates as $candidateRow) { if ((int) $candidateRow['is_final'] === 1) { $currentFinalCandidate = $candidateRow; } } ?>
     <p>今の課長: <strong><?= $currentFinalCandidate === null ? h(msg('課長がいません（確認を完了にできません）')) : h($currentFinalCandidate['display_name']) ?></strong></p>
     <?php if (!empty($finalCheckCandidate)): /* 役職が課長・部長でない人を課長に選んだときの確かめ（K-069） */ ?>
@@ -144,7 +144,7 @@
     <?php foreach ($users as $u): ?>
       <tr class="<?= (int) $u['is_active'] === 1 ? '' : 'muted' ?>">
         <td><?= h((string) $u['login_id']) ?></td>
-        <td><?= h($u['display_name']) ?><?= (int) $u['is_admin'] === 1 ? ' <span class="tag">管理者</span>' : '' ?><?= (int) $u['is_admin_deputy'] === 1 ? ' <span class="tag">' . ((int) ($u['is_admin_deputy_lead'] ?? 0) === 1 ? '補佐（開発担当）' : '補佐') . '</span>' : '' ?></td>
+        <td><?= h($u['display_name']) ?><?= (int) $u['is_admin'] === 1 ? ' <span class="tag">管理者</span>' : '' ?><?= (int) $u['is_admin_deputy'] === 1 ? ' <span class="tag">' . ((int) ($u['is_admin_deputy_lead'] ?? 0) === 1 ? '補佐（開発担当）' : '補佐') . '</span>' : '' ?><?= ($u['specialist_title'] ?? '') !== '' ? ' <span class="tag">' . h((string) $u['specialist_title']) . '</span>' : '' ?><?= (int) ($u['is_hr_manager'] ?? 0) === 1 ? ' <span class="tag">人財管理者</span>' : '' ?></td>
         <td><?= h((string) $u['dept_name']) ?></td>
         <td><?= h((string) ($u['team_name'] ?? '')) ?></td>
         <td><?= h((string) $u['roles']) ?><?php if ((int) $u['final_department_count'] > 0 && !role_title_fits_final((string) $u['role_title'])): ?>

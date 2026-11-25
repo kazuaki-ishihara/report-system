@@ -144,6 +144,10 @@ function org_csv_plan(string $csvText, int $operatorUserId): array
             $plan['errorTextList'][] = msg('{line} 行目: 所属の課がない人に、ライン・役割は付けられません', ['line' => $lineNumber]);
             continue;
         }
+        if (($roleCode !== '' || $cells['項目管理者'] === '1') && specialist_title_of($userId) !== '') {
+            $plan['errorTextList'][] = msg('{line} 行目: 専門職の人は、課長・確認者・項目管理者にできません', ['line' => $lineNumber]);
+            continue;
+        }
         if ($roleCode !== 'reviewer' && $cells['担当のライン'] !== '') {
             $plan['errorTextList'][] = msg('{line} 行目: 担当のラインは「確認者」のときだけ入れてください', ['line' => $lineNumber]);
             continue;
@@ -240,6 +244,16 @@ function org_csv_plan(string $csvText, int $operatorUserId): array
     }
     if ($remainingAdminCount === 0) {
         $plan['errorTextList'][] = msg('管理者が 1 人もいなくなるため、反映できません');
+    }
+    // 開発担当でない補佐も 1 名以上置く（K-075）。もともといないときは、ほかの人の取り込みを止めない
+    $activeDeputyRowList = db_all('SELECT id FROM users WHERE is_admin_deputy = 1 AND is_admin_deputy_lead = 0 AND is_active = 1');
+    $remainingDeputyCount = 0;
+    foreach ($activeDeputyRowList as $deputyRow) {
+        $deputyPlan = $plan['planByUserId'][(int) $deputyRow['id']] ?? null;
+        $remainingDeputyCount += ($deputyPlan === null || $deputyPlan['isActive']) ? 1 : 0;
+    }
+    if ($activeDeputyRowList && $remainingDeputyCount === 0) {
+        $plan['errorTextList'][] = msg('開発担当のほかに補佐が 1 人もいなくなるため、反映できません');
     }
     return $plan;
 }

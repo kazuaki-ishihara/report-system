@@ -50,7 +50,8 @@ function reminder_has_submitted(int $userId, string $period): bool
  */
 function reminder_banner_list(array $user): array
 {
-    if ($user['department_id'] === null) {
+    // 担当部長は確認の対象でないので、知らせない（K-074）
+    if ($user['department_id'] === null || specialist_title_of((int) $user['id']) === SPECIALIST_HIDDEN_TITLE) {
         return [];
     }
     $userId = (int) $user['id'];
