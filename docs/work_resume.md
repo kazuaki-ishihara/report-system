@@ -149,7 +149,7 @@ python tools\lib\ui_watch.py --keep-open      # 終わったあともブラウ�
 ## 8. 次の作業
 
 > **2026-11-25 の区切り（ここから再開）**
-> - **状態: 実装・検証は済み、未コミット・未 push。** 両ブランチとも、変更に関わる全工程の検証（画面の自動操作を含む）が成功（dev_ono_check: OK 3668 / NG 0、dev_ono_check8_3: OK 3345 / NG 0。未実施 1 は LibreOffice）。操作マニュアルの画像も撮り直し済み（dev 95 枚・dev8_3 76 枚、--check OK）。検証で開いたポート・ブラウザーは閉じたことを確認済み。直下の `画面の目視確認_*.txt` は入れない。
+> - **状態: 実装・検証・コミット・push 済み（dev_ono_check 015596b・dev_ono_check8_3 c3a6e08。main・本番・デモ用サイトには未配備）。** 両ブランチとも、変更に関わる全工程の検証（画面の自動操作を含む）が成功（dev_ono_check: OK 3668 / NG 0、dev_ono_check8_3: OK 3345 / NG 0。未実施 1 は LibreOffice）。UI を省いた全工程の流し直しも NG 0。未検証の分岐は 0（coverage_exceptions.tsv で仕分け）。A-1（緩い確かめの締め直し）・A-2（操作の検証を画面ごとに強化・抜け move_down を発見し修正）・A-4（migrate 前の古い DB でも画面が開くことを写しで確認）も済み。操作マニュアルの画像も撮り直し済み（dev 95 枚・dev8_3 76 枚、--check OK）。検証で開いたポート・ブラウザーは閉じたことを確認済み。直下の `画面の目視確認_*.txt` は入れない。
 > - **反映には `migrate.php` が要る**（古い DB の写しで確認済み）。足す列: `users` の `is_hr_manager`・`specialist_title`・`frozen_at`・`is_credential_reset`・`was_admin_deputy_lead`、`user_backup_codes.code_enc`。足す表: `security_notices`・`user_recovery_codes`・`user_blocked_passwords`・`account_freezes`・`mass_reset_requests`・`mass_credential_resets`・`lead_recovery_requests`。足すトリガー: 専門職の役割禁止（`tr_department_*_specialist_*`・`tr_users_specialist_update`）、開発担当だった印（`tr_users_was_lead_*`）。
 > - **この日に実装したもの（両ブランチ。課題管理 APP-124〜129、仮設定 K-071〜K-075）**:
 >   - APP-124: アカウント設定（G-16）の見出しの下に、自分のシステムの役割（システム管理者／補佐／補佐（開発担当））を本人だけに表示（`system_role_label()`）。
@@ -165,7 +165,7 @@ python tools\lib\ui_watch.py --keep-open      # 終わったあともブラウ�
 >     - 必ず置く人数: 管理者 1 名以上、開発担当のほかに補佐 1 名以上（`admin_deputy_plain_count()`。最後の 1 人は外す・無効・開発担当にできない。CSV も）。
 >   - **設計書・マニュアルを更新**: G-16・G-03・G-11・G-14（§6.11）・G-27・共通編 §10・DB 編・操作マニュアル（9.9・9.10・10 章）。
 > - **足した検証**（`tools/test/`。`verify_all.py` に組み込み済み）: `smoke_specialist.py`（専門職）、`smoke_security.py`（予備のコード・復旧コード・凍結・総入れ替え・開発担当の保護。209 件）。`smoke_surveys_all.py`・`smoke_deputy.py` に人財管理者・役割表示を追加。
-> - **次にすること**: (1) push の指示を待つ（commit はローカル可。細かい変更はまとめる）。(2) `migrate.php` を流す前の DB で画面が開くか。(3) 本番・デモ用サイトへの反映は課長代理のチェック待ちのまま（下の 2026-11-24 を参照）。(4) 分岐の未検証の数え直し（下の 2026-11-24 夜）は引き続き残っている。
+> - **次にすること**: ここから先は保留の B〜D 群のみ。(1) 本番・デモ用サイトへの反映は課長代理のチェック・課長の連絡待ち（下の 2026-11-24）。本番移行は `php app/bin/migrate.php` を流してもらう方式（追加のみ・データ保持・2FA/予備コードそのまま）。(2) 会社・上長の判断待ち（HSTS・IP ロック、K-063〜075 の正式決定、管理者 2 名の検討）。(3) 外部要因（さくら API 確認・スマホアプリ化・実機確認）。※ push 済み・未検証分岐 0・A-1/A-2/A-4 完了は上の「状態」に記載。
 > - **この日の決定（運用。仮設定 K-075）**: 2 人の承認で歯止めをかける形は意図どおり維持。心の不調・退職の知らせは管理者だけ（組織管理の仕事。開発担当には見せない＝K-059 のまま）。管理者が全員凍結中はこの知らせをだれも見られないので、管理者 2 名を勧める。
 
 > **2026-11-24 夜の区切り**
