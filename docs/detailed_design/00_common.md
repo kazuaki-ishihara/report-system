@@ -55,6 +55,20 @@ report-system/                       ← リポジトリ
     │   ├── html.php                 エスケープ、render、error_page、flash、共通の画面部品
     │   ├── message.php              画面の文言（msg()。課長が変えた文言を出す。G-17）
     │   ├── messages_catalog.php     変えられる文言の一覧（tools/lib/msg_catalog.py が作る）
+    │   ├── account_security.php    予備のコードの確認・復旧コード・凍結・総入れ替え（G-14 §6.11）
+    │   ├── backup.php              DB のバックアップ
+    │   ├── expense.php             通勤定期代の精算（G-26）
+    │   ├── faq_chat_log.php        よくある質問のチャットの記録（G-25）
+    │   ├── faq_standard.php        標準のよくある質問
+    │   ├── goal.php                目標管理（G-27）
+    │   ├── goal_criteria.php       コンピテンシー評価基準の表（自動生成）
+    │   ├── goal_templates.php      目標管理の様式の定数（自動生成）
+    │   ├── maintenance.php         メンテナンス中の表示（G-21 §7）
+    │   ├── notice.php              更新のお知らせ・よくある質問・画面ごとの使い方（G-24・G-25）
+    │   ├── org_csv.php             組織の一括の入れ替え（G-14 §6.8）
+    │   ├── role.php                ホームの「あなたの役割と権限」（G-03 §4.4）
+    │   ├── support_request.php     要望・依頼（G-22）
+    │   ├── user_theme.php          自分の色（G-16 §4.6）
     │   └── export.php               xlsx、CSV の作成
     ├── pages/                       画面ごとの処理
     ├── views/                       画面ごとのテンプレート（layout.php・error.php は共通）
@@ -473,6 +487,12 @@ POST のフォーム（ログアウト・別のタブで開くものを除く）
 | `free_text_retention_months` | 12 | 確認完了から自由記述を消すまで |
 | `report_retention_years` | 3 | 報告を消すまで |
 | `search_decrypt_limit` | 2000 | 検索（G-20）でキーワードを探すために復号する報告の上限（§8.3） |
+| `backup_dir` | `app/backups/`（絶対パス） | バックアップの置き場所（公開ディレクトリの外） |
+| `backup_keep` | 14 | 残すバックアップの数 |
+| `backup_warn_days` | 7 | これより古いと管理のトップで知らせる |
+| `notice_default_days` | 14 | 更新のお知らせを出す日数の既定 |
+| `dev_skip_2fa` | false | 開発用: 2 段階認証を飛ばす（`https` が false のときだけ効く） |
+| `verify_mode` | false | 自動検証の印（`MR_VERIFY_DB` のときだけ true） |
 | `report_period_rule` | `previous` | 報告の対象月の決め方（今は読まれていない） |
 
 - 保管期限の値は会社の判断で決める（基本設計書 §16）。
