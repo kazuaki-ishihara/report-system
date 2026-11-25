@@ -288,6 +288,22 @@ def main():
         if has_goals and login_id == "dairi_a":
             check("元の役職が課長代理でも、専門職は目標管理でほかの人のシートを見られない", client_of(login_id).get("/goals/edit.php?id=%d" % goal_id)[0] == 404)
 
+    section("G-14", "新規作成で専門職・人財管理者を付ける")
+    def create_user(login_id_new, extra):
+        form = {"action": "save", "login_id": login_id_new, "display_name": login_id_new, "role_title": "一般", "department_id": str(department_id)}
+        form.update(extra)
+        return post("admin01", "/admin/user_edit.php", form)
+    create_user("spec_new1", {"specialist_title": "担当課長"})
+    new_specialist_id = one("SELECT id FROM users WHERE login_id = ?", "spec_new1")
+    check("新規作成で専門職を付けられ、記録に残る",
+          one("SELECT specialist_title FROM users WHERE id = ?", new_specialist_id) == "担当課長"
+          and one("SELECT COUNT(*) FROM access_logs WHERE target = ?", "user:%d:specialist_on" % new_specialist_id) == 1, new_specialist_id)
+    create_user("hr_new1", {"is_hr_manager": "1"})
+    new_hr_id = one("SELECT id FROM users WHERE login_id = ?", "hr_new1")
+    check("新規作成で人財管理者を付けられ、記録に残る",
+          one("SELECT is_hr_manager FROM users WHERE id = ?", new_hr_id) == 1
+          and one("SELECT COUNT(*) FROM access_logs WHERE target = ?", "user:%d:hr_manager_on" % new_hr_id) == 1, new_hr_id)
+
     return summary()
 
 
