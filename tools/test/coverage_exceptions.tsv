@@ -1,0 +1,78 @@
+# 通せない分岐（ファイル<TAB>コードの中身<TAB>理由）。branch_coverage.py が引いて件数を出す（K-075・work_resume §8）。
+app/bin/import_tomato.php	foreach (db_all('SELECT login_id FROM users WHERE login_id IS NOT NULL') as $existingUserRow) {	移行・取り込みの道具の、データの状態に応じた分岐（本番データの形では通らない）
+app/bin/import_tomato.php	if (!auth_is_valid_login_id($baseLoginId)) {	移行・取り込みの道具の、データの状態に応じた分岐（本番データの形では通らない）
+app/bin/migrate_legacy.php	if (!is_dir($backupDir)) {	初回のフォルダー作成の守り（環境が整うと通らない）
+app/bin/migrate_legacy.php	if (!auth_is_valid_login_id($cand)) {	移行・取り込みの道具の、データの状態に応じた分岐（本番データの形では通らない）
+app/lib/account_security.php	if (!security_is_supported()) {	migrate.php の前の古い DB 用の守り（表がある環境では常に false 側）
+app/lib/account_security.php	if (!security_is_supported()) {	migrate.php の前の古い DB 用の守り（表がある環境では常に false 側）
+app/lib/account_security.php	if (!has_admin_authority($operator) || $operatorId === $frozenUserId) {	最初の条件で弾くための二重の守り（権限なしは smoke で確認済み）
+app/lib/account_security.php	if (!security_is_supported()) {	migrate.php の前の古い DB 用の守り（表がある環境では常に false 側）
+app/lib/account_security.php	if (!security_is_supported()) {	migrate.php の前の古い DB 用の守り（表がある環境では常に false 側）
+app/lib/account_security.php	if ((int) db_val('SELECT changes()') !== 1) {	同時に操作したときだけ通る二重の守り（境目は smoke で確認済み）
+app/lib/account_security.php	if (!security_is_supported()) {	migrate.php の前の古い DB 用の守り（表がある環境では常に false 側）
+app/lib/account_security.php	if ((int) db_val('SELECT changes()') !== 1 || $firstHalf === null || $firstHalf === '') {	同時に操作したときだけ通る二重の守り（境目は smoke で確認済み）
+app/lib/auth.php	} catch (Throwable $e) {	例外の捕捉（正常系では起きない。異常系は別の確かめで扱う）
+app/lib/crypto.php	if ($ct === false) {	暗号化が失敗したときの保険（正常系では起きない）
+app/lib/db.php	if (!is_dir($dir)) {	初回のフォルダー作成の守り（環境が整うと通らない）
+app/lib/faq_chat_log.php	if (!in_array('conversation_id', $columnNameList, true)) {	migrate.php の前の列の守り（列がある環境では通らない）
+app/lib/form.php	if ($hasEncryptedValue) {	暗号化された値があるときの表示（検証データに暗号化項目がない）
+app/lib/html.php	if (headers_sent()) {	出力が始まった後の保険（正常系では通らない）
+app/lib/html.php	} else {	管理画面の道しるべ・レイアウトの分岐（該当しないテンプレートでは通らない）
+app/lib/html.php	} catch (Throwable $e) {	例外の捕捉（正常系では起きない。異常系は別の確かめで扱う）
+app/lib/message.php	} catch (Throwable $dbError) {	例外の捕捉（正常系では起きない。異常系は別の確かめで扱う）
+app/lib/org_csv.php	if ($claimStatement->rowCount() !== 1) {	同時に操作したときだけ通る二重の守り（境目は smoke で確認済み）
+app/lib/report.php	&& !(in_array($pf['type'], ['select', 'radio'], true) && in_array($f['type'], ['select', 'radio'], true))) {	前月と項目の種類が変わったときの差分の除外（種類変更という稀なデータ）
+app/lib/report.php	if (!$arr) {	複数選択の無効な選択肢を除いて空になったとき
+app/lib/report.php	if (!isset($projectIdByReportProjectId[$reportProjectId])) {	報告の案件ブロックの対応が取れないときの守り（データ不整合）
+app/lib/report.php	if ($p !== null) {	案件をまとめ読みの網から漏れた分だけ個別に読むとき
+app/lib/request_key.php	} catch (PDOException $e) {	例外の捕捉（正常系では起きない。異常系は別の確かめで扱う）
+app/lib/role.php	if ($departmentRow === null) {	確認者の課が消えていたときの守り
+app/lib/role.php	if ($duty['isFinal'] && $duty['isActive'] && function_exists('goal_viewer_role')) {	目標管理のある版だけ通る分岐（8.3 の版には goal.php がない）
+app/lib/role.php	&& !is_final_reviewer_of((int) $user['id'], (int) $user['department_id'])) {	目標管理のある版だけ通る分岐（8.3 の版には goal.php がない）
+app/lib/schema.php	if ($rowCountAfter !== $rowCountBefore || $foreignKeyProblemList) {	表を作り直したときだけ通る検証（作り直しが起きない環境では通らない）
+app/lib/schema.php	} catch (Throwable $rebuildError) {	例外の捕捉（正常系では起きない。異常系は別の確かめで扱う）
+app/lib/session.php	if (session_status() === PHP_SESSION_ACTIVE) {	セッションが開いているときだけ閉じる守り
+app/lib/session.php	if ($base !== '' && strpos($next, $base) === 0) {	base_path があるときの next の切り出し（検証は base_path なしで動く）
+app/lib/user_theme.php	if (user_theme_contrast_ratio($colors['accent'], user_theme_text_on($colors['accent'])) < 4.5) {	自分の色の強調色のコントラスト不足の警告（読みやすさの境目は別の確かめ済み）
+app/lib/util.php	if (!is_safe_local_path($path)) {	安全でないパスのときの守り
+app/lib/util.php	if (!is_string($v)) {	値が文字列でないときの守り
+app/lib/util.php	if (preg_match('//u', $v) !== 1) {	不正な UTF-8 のときの守り
+app/pages/account.php	if ($stage !== 'full') {	心当たりがないの知らせは通常の段階だけ（設定中・仮パスワード中は通らない守り）
+app/pages/admin_faq_logs.php	if (!$canReceiveNotice) {	よくある質問の記録の表示条件（通知を受けない補佐・隠した質問・空の質問・ID なし）
+app/pages/admin_faq_logs.php	if ($logRow['question_text'] === '' || $logRow['is_hidden']) {	よくある質問の記録の表示条件（通知を受けない補佐・隠した質問・空の質問・ID なし）
+app/pages/admin_security.php	if (!in_array($action, ['freeze_reinit', 'lead_recovery_request', 'lead_recovery_approve', 'lead_recovery_cancel', 'mass_request', 'mass_approve', 'ma	知らない action のときの 400（正しい action は smoke で確認済み）
+app/pages/admin_security.php	if ($leadRecovery === null || (int) $leadRecovery['id'] !== input_id('request_id', 'POST')) {	申請がない・権限がないときの守り（復旧・総入れ替えの正常系は smoke で確認済み）
+app/pages/admin_security.php	if (!is_admin($user) && !security_can_approve_lead_recovery($user, $leadRecovery) && (int) $user['id'] !== (int) $leadRecovery['user_id']) {	申請がない・権限がないときの守り（復旧・総入れ替えの正常系は smoke で確認済み）
+app/pages/admin_security.php	if (!security_is_mass_reset_member($user)) {	申請がない・権限がないときの守り（復旧・総入れ替えの正常系は smoke で確認済み）
+app/pages/comment_templates.php	if ($templateScope === 'mine' && !$isReviewer) {	確認者でない人が自分の定型文を見ようとしたときの守り
+app/pages/login.php	if (cfg('dev_skip_2fa') === true && !cfg('https')) {	開発用の設定（本番・自動検証では無効）
+app/pages/report_act.php	if ((int) $c['user_id'] !== $uid) {	ほかの人のコメントを消したときの記録（本人が消すのが通常）
+app/pages/report_save.php	if (!$conflict && !($report === null && $e instanceof PDOException && report_find_own($uid, $period) !== null)) {	同時に保存したときの競合の守り
+app/pages/report_save.php	if ($existing === null) {	同時に保存したときの競合の守り
+app/pages/survey_edit.php	if ($conf === 'restricted' && !is_final_reviewer_of($uid, (int) $req['department_id'])) {	課長でない人が『限定』の質問を足そうとしたときの守り（403）
+app/views/admin_faq_logs.php	if (!$canSeeAskedUser) {	よくある質問の記録の表示条件（通知を受けない補佐・隠した質問・空の質問・ID なし）
+app/views/admin_faq_logs.php	if ($faqId === null) {	よくある質問の記録の表示条件（通知を受けない補佐・隠した質問・空の質問・ID なし）
+app/views/admin_field_edit.php	<?php foreach ($candidateField['options'] as $candidateOption): if (!$candidateOption['active']) { continue; } ?>	無効な選択肢を飛ばす表示の守り
+app/views/department_manage.php	<td><?php if ($isDepartmentMember): ?><select name="member_team[<?= $memberUserId ?>]" aria-label="<?= h($memberRow['display_name']) ?>のライン"><?= $rend	ラインごとの課・専門職の表示の分岐（組み合わせで通らない分）
+app/views/department_manage.php	<td><?php if ($isFinalMember): ?>課全体<?php elseif ($isSpecialistMember): ?>—<?php else: ?><select name="reviewer_team[<?= $memberUserId ?>]" aria-label	ラインごとの課・専門職の表示の分岐（組み合わせで通らない分）
+app/views/faq.php	<?php if ($matchedFaqList): ?>	要配慮の返事に、関連する質問も出るとき（稀な組み合わせ）
+app/views/report_view.php	<?php if ($previousComparison['previousReport'] !== null && !isset($previousComparison['previousProjectCodeById'][(int) $b['project_id']])): ?><span c	前月の案件の対応が取れないときの差分表示の守り
+app/views/search.php	<?php foreach ($choiceField['options'] as $choiceOption): if (!$choiceOption['active']) { continue; } ?>	無効な選択肢を飛ばす表示の守り
+app/views/support_request_list.php	<?php if ($isStaff && $canSubmit): ?>	管理者で、かつ要望を出せる人のときのタブ（通常は別々の役割）
+public/js/app.js	if (contrastRatio(accentColor, textOn(accentColor)) < 4.5) { problemTextList.push(M('ボタンの文字が読みにくくなります')); }	自分の色の強調色のコントラスト不足の警告（読みやすさの境目は別の確かめ済み）
+public/js/app.js	if (!replyArea || templateSelect.value === '') { return; }	返信の定型文: 対象がない・未選択のときの守り
+public/js/app.js	if (!newBlockFieldset) { return; }	案件ブロックの複製: 元がないときの守り
+public/js/app.js	} else {	分岐の else 側（主要な経路は検証済み）
+public/js/app.js	if (!dirty || stopped || form.dataset.submitting === '1') { return; }	自動保存: 変更なし・停止中・送信中は送らない守り
+public/js/app.js	Array.prototype.forEach.call(categoryRow.querySelectorAll('.chosen'), function (choiceLink) { choiceLink.classList.remove('chosen'); choiceLink.remove	選択のやり直しの表示（選択済みがあるときだけ通る）
+public/js/app.js	if (!logId || !csrfInput) { return; }	チャットの記録の送信の守り（送れない状態では通らない）
+public/js/app.js	fetch(chatForm.getAttribute('action'), { method: 'POST', body: feedbackData, credentials: 'same-origin', headers: { Accept: 'application/json' } }).ca	チャットの解決・エラーの送信（ネットワーク呼び出し。自動検証では呼ばない）
+public/js/app.js	if (!csrfInput) { return; }	チャットの記録の送信の守り（送れない状態では通らない）
+public/js/app.js	fetch(chatForm.getAttribute('action'), { method: 'POST', body: errorData, credentials: 'same-origin', headers: { Accept: 'application/json' } }).catch	例外の捕捉（正常系では起きない。異常系は別の確かめで扱う）
+public/js/app.js	Array.prototype.forEach.call(categoryRowTemplate.querySelectorAll('.chosen'), function (choiceLink) { choiceLink.classList.remove('chosen'); choiceLin	選択のやり直しの表示（選択済みがあるときだけ通る）
+public/js/app.js	if (askTextarea) { askTextarea.value = ''; }	質問欄をクリアする分岐
+public/js/app.js	if (askLogInput) { askLogInput.value = ''; }	質問欄をクリアする分岐
+public/js/app.js	if (askTextarea && lastQuestionText === '') { askTextarea.focus(); }	質問欄に焦点を当てる分岐
+public/js/app.js	return { label: faqEntry.question, onChoose: function () { addBubble('user', faqEntry.question); showAnswer(faqEntry); askSolved(logId, faqEntry.id); 	関連する質問の選択肢の組み立て
+public/js/app.js	if (!waitingBubble.parentNode) { return; }	待ちの表示が消えていたときの守り
+public/js/app.js	if (!isTimedOut || !waitingBubble.parentNode) { return; }	待ちの表示が消えていたときの守り
