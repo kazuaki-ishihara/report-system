@@ -110,7 +110,7 @@ require APP_DIR . '/pages/home.php';
 | 順 | 処理 | 失敗したとき |
 |---|---|---|
 | 1 | 共通のヘッダーを付ける（§4） | — |
-| 2 | セッションの開始 | — |
+| 2 | セッションの開始。サイトの印の確認（§5） | 新しいセッション |
 | 3 | DB に接続し、`PRAGMA foreign_keys = ON`、`PRAGMA busy_timeout = 5000`、`PRAGMA journal_mode = WAL` | 503 |
 | 4 | ログイン不要の画面（ログイン・再設定）は、POST なら CSRF の確認をしてここで終わる | 403 |
 | 5 | ログインの確認。自動ログアウト（操作がない時間・最長の時間）、`is_active`、`session_version` の確認（§5） | ログイン画面へ |
@@ -158,6 +158,8 @@ require APP_DIR . '/pages/home.php';
 | 項目 | 値 |
 |---|---|
 | Cookie | 名前は `mr_session`（端末の記憶は `mr_device`）。`HttpOnly`、`SameSite=Lax`。`Secure` は設定 `https` に従う。パスは `base_path` ＋ `/`（`base_path` が空なら `/`）。`session.use_strict_mode` と `use_only_cookies` を有効にする |
+| 置き場所 | `session_dir`（既定 `app/data/sessions`。なければ 0700 で作る）。PHP の既定の場所は、同じサーバーの別のサイトと共通のことがあるので使わない。作れない・書けないときは、`app.log` に WARN を残して PHP の既定の場所で続ける。古いものは PHP の掃除で消す（`gc_maxlifetime` = `session_max_hours`） |
+| サイトの印 | セッションの `site` に、暗号化の鍵と、`app/` の場所・`base_path`・`db_path` から作った値（HMAC-SHA256）を入れ、`session_boot()` で比べる。違う・無いときは、そのセッションの中身は変えずに手放し、新しいセッションにする（ログイン済み・コード待ち・設定待ちのどれも引き継がない。元のサイトのログインは切れない）。デモ用と本番のように同じサーバーにあるサイトの間で、ログインを流用させないため |
 | ID の作り直し | パスワードが合ったとき、ログインの完了時（2 段階認証が未設定の `setup` の段階を含む）、2 段階認証の設定の完了時、パスワード変更時に `session_regenerate_id(true)` |
 | 操作がないときのログアウト | 30 分。「一定時間操作がなかったため、ログアウトしました。」と出す |
 | ログインの最長 | 12 時間。同上 |
@@ -445,6 +447,7 @@ POST のフォーム（ログアウト・別のタブで開くものを除く）
 | `db_path` | `app/data/reports.sqlite`（絶対パス） | DB |
 | `key_dir` | `app/keys/`（絶対パス） | 暗号化の鍵 |
 | `log_dir` | `app/logs/`（絶対パス） | エラーのログ |
+| `session_dir` | `app/data/sessions/`（絶対パス） | セッションの置き場所（§5）。`config.php` には書かず、なければ既定の値を使う |
 | `pw_stage_minutes` | 5 | パスワードのあと、コードの入力を待つ時間 |
 | `session_idle_minutes` | 30 | 操作がないときのログアウト |
 | `session_max_hours` | 12 | ログインの最長 |

@@ -11,6 +11,42 @@ declare(strict_types=1);
 //   'full'  ログイン済み
 // ====================================================================
 
+/**
+ * このサイトの印。同じサーバーの別のサイト（デモ用と本番など）でできたセッションを見分ける。
+ * 利用者の番号（uid）は DB ごとのものなので、DB の場所も入れる。
+ */
+function session_site_stamp(): string
+{
+    try {
+        $encryptionKey = crypto_key();
+    } catch (RuntimeException $e) {
+        $encryptionKey = ''; // 鍵を作る前（初期設定）でも、ログイン画面は開けるようにする
+    }
+    return hash_hmac('sha256', implode("\n", ['session-site', APP_DIR, (string) cfg('base_path'), (string) cfg('db_path')]), $encryptionKey);
+}
+
+/** セッションの置き場所をこのサイトだけのものにする。使えなければ PHP の既定の場所で続ける（そのときもサイトの印で断る） */
+function session_use_site_dir(): void
+{
+    // 設定になければ app/data/sessions（config.php はサイトごとに直して置かれているので、差分で上げなくて済むように）
+    $sessionDir = (string) ($GLOBALS['APP_CONFIG']['session_dir'] ?? APP_DIR . '/data/sessions');
+    if ($sessionDir === '' || ini_get('session.save_handler') !== 'files') {
+        return;
+    }
+    if (!is_dir($sessionDir)) {
+        @mkdir($sessionDir, 0700, true);
+    }
+    if (!is_dir($sessionDir) || !is_writable($sessionDir)) {
+        app_log('WARN セッションの置き場所が使えません（PHP の既定の場所を使います）: ' . $sessionDir);
+        return;
+    }
+    session_save_path($sessionDir);
+    // 自分の置き場所は、サーバーの定期の掃除の対象にならないので、ここで古いものが消えるようにする
+    ini_set('session.gc_probability', '1');
+    ini_set('session.gc_divisor', '100');
+    ini_set('session.gc_maxlifetime', (string) (3600 * (int) cfg('session_max_hours')));
+}
+
 function session_boot(): void
 {
     if (session_status() === PHP_SESSION_ACTIVE) {
@@ -27,7 +63,18 @@ function session_boot(): void
     ]);
     ini_set('session.use_strict_mode', '1');
     ini_set('session.use_only_cookies', '1');
+    session_use_site_dir();
     session_start();
+    $siteStamp = session_site_stamp();
+    if (!hash_equals($siteStamp, (string) ($_SESSION['site'] ?? ''))) {
+        if ($_SESSION !== []) {
+            // 別のサイトのセッション: 中身は変えずに手放し（相手のログインは切らない）、新しいセッションにする
+            session_abort();
+            session_id((string) session_create_id());
+            session_start();
+        }
+        $_SESSION = ['site' => $siteStamp];
+    }
 }
 
 function session_login(array $user, string $stage): void

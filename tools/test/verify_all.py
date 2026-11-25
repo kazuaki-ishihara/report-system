@@ -87,9 +87,10 @@ def free_port():
     return p
 
 
-# 検証で立てる PHP の組み込みサーバーのセッションのファイル（sess_<ID>）の置き場所。
-# 指定しないと一時フォルダー（%TEMP%）の直下に溜まるので、リポジトリに入らない検証の出力の下にまとめる
-PHP_SESSION_DIR = os.path.join(ROOT, "tools", "test", "output", "php_sessions")
+# セッションのファイル（sess_<ID>）の置き場所（app/lib/session.php の既定。リポジトリに入らない）
+PHP_SESSION_DIR = os.path.join(ROOT, "app", "data", "sessions")
+# PHP の既定の置き場所（session.save_path）。アプリは上の場所を使うので、ふだんはここに置かれない
+PHP_INI_SESSION_DIR = os.path.join(ROOT, "tools", "test", "output", "php_sessions")
 PHP_SESSION_KEEP_SECONDS = 24 * 60 * 60
 
 
@@ -97,6 +98,7 @@ def php_server_command(php_path, port_number):
     """検証用の PHP の組み込みサーバーを立てるコマンド（セッションは PHP_SESSION_DIR に置く）。
     前回までに溜まった 1 日より古いセッションのファイルは、ここで消す"""
     os.makedirs(PHP_SESSION_DIR, exist_ok=True)
+    os.makedirs(PHP_INI_SESSION_DIR, exist_ok=True)
     oldest_kept_time = time.time() - PHP_SESSION_KEEP_SECONDS
     for session_file_path in glob.glob(os.path.join(PHP_SESSION_DIR, "sess_*")):
         try:
@@ -104,7 +106,7 @@ def php_server_command(php_path, port_number):
                 os.remove(session_file_path)
         except OSError:
             pass
-    return [php_path, "-d", "session.save_path=" + PHP_SESSION_DIR,
+    return [php_path, "-d", "session.save_path=" + PHP_INI_SESSION_DIR,
             "-S", "127.0.0.1:%d" % port_number, "-t", os.path.join(ROOT, "public")]
 
 
@@ -307,6 +309,7 @@ STEP_TABLE = [
     {"key": "deputy", "name": "システム管理者補佐（代行できること・見られないもの）", "script": "smoke_deputy.py", "screen": "G-14"},
     {"key": "specialist", "name": "専門職（技師・担当課長・担当部長。見られる人・役割）", "script": "smoke_specialist.py", "screen": "G-14"},
     {"key": "security", "name": "予備のコードの確認・復旧コード・凍結・総入れ替え", "script": "smoke_security.py", "screen": "G-14", "secrets": True},
+    {"key": "session_site", "name": "別のサイトのログインの流用（セッションの置き場所・サイトの印）", "script": "smoke_session_site.py", "screen": "G-01"},
     {"key": "theme", "name": "自分の色（土台・強調・背景、読めない組み合わせを断る）", "script": "smoke_theme.py", "screen": "G-16"},
     {"key": "messages", "name": "メッセージ（課長が文言を変える）", "script": "smoke_messages.py", "screen": "G-17"},
     {"key": "requests", "name": "要望・依頼（課長・確認者 → システム管理者の返信）", "script": "smoke_requests.py", "screen": "G-22", "secrets": True},
@@ -477,7 +480,7 @@ def main():
                         command.append("--show")
                     if a.browser_port:
                         command += ["--browser-port", str(a.browser_port)]
-                elif step["key"] in ("edges", "cli", "rest", "limits"):
+                elif step["key"] in ("edges", "cli", "rest", "limits", "session_site"):
                     # 同時の新規作成で、同じ DB のサーバーをもう 1 本立てるので PHP を渡す
                     command = [py, "-I", os.path.join(HERE, step["script"]), "--base", base, "--db", db, "--php", php]
                 else:
