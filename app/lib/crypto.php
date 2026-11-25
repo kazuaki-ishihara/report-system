@@ -9,10 +9,35 @@ declare(strict_types=1);
 // ====================================================================
 
 const CRYPTO_CIPHER = 'aes-256-gcm';
-const CRYPTO_VERSION = 'v1';
+const CRYPTO_VERSION = 'v1';   // はじめの鍵の版
 
-function crypto_key(string $version = CRYPTO_VERSION): string
+/**
+ * 今の鍵の版。鍵の入れ替え（app/bin/rotate_key.php）が、全件の暗号化し直しと同じトランザクションで app_state に書く。
+ * 一度も入れ替えていなければ（表がまだないときも）はじめの版。
+ */
+function crypto_version(): string
 {
+    if (!isset($GLOBALS['CRYPTO_CURRENT_VERSION'])) {
+        $storedVersion = db_val("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'app_state'") === null
+            ? null : db_val("SELECT value FROM app_state WHERE name = 'crypto_version'");
+        $version = $storedVersion === null ? CRYPTO_VERSION : (string) $storedVersion;
+        if (preg_match('/\Av[1-9][0-9]{0,5}\z/', $version) !== 1) {
+            throw new RuntimeException('encryption key version is invalid');
+        }
+        $GLOBALS['CRYPTO_CURRENT_VERSION'] = $version;
+    }
+    return $GLOBALS['CRYPTO_CURRENT_VERSION'];
+}
+
+/** 覚えている鍵の版を忘れる（入れ替えのあとに読み直す） */
+function crypto_version_forget(): void
+{
+    unset($GLOBALS['CRYPTO_CURRENT_VERSION']);
+}
+
+function crypto_key(?string $version = null): string
+{
+    $version = $version ?? crypto_version();
     static $keys = [];
     if (isset($keys[$version])) {
         return $keys[$version];
@@ -30,8 +55,9 @@ function crypto_key(string $version = CRYPTO_VERSION): string
 }
 
 /** 鍵を作る（app/bin/gen_key.php から呼ぶ。既にあれば作らない） */
-function crypto_generate_key(string $version = CRYPTO_VERSION): string
+function crypto_generate_key(?string $version = null): string
 {
+    $version = $version ?? crypto_version();
     $dir = cfg('key_dir');
     if (!is_dir($dir)) {
         mkdir($dir, 0700, true);
@@ -45,15 +71,16 @@ function crypto_generate_key(string $version = CRYPTO_VERSION): string
     return $file;
 }
 
-function enc(string $plain, string $aad): string
+function enc(string $plain, string $aad, ?string $version = null): string
 {
+    $version = $version ?? crypto_version();
     $iv = random_bytes(12);
     $tag = '';
-    $ct = openssl_encrypt($plain, CRYPTO_CIPHER, crypto_key(), OPENSSL_RAW_DATA, $iv, $tag, $aad, 16);
+    $ct = openssl_encrypt($plain, CRYPTO_CIPHER, crypto_key($version), OPENSSL_RAW_DATA, $iv, $tag, $aad, 16);
     if ($ct === false) {
         throw new RuntimeException('encrypt failed');
     }
-    return CRYPTO_VERSION . ':' . base64_encode($iv . $tag . $ct);
+    return $version . ':' . base64_encode($iv . $tag . $ct);
 }
 
 /** 復号できなければ null（呼び出し側で「この内容は表示できません」と出す） */
