@@ -78,6 +78,19 @@ def collect_actions():
     return found
 
 
+def page_url_map():
+    """app/pages/<名前>.php => その画面の URL の一覧（public/ がどのページを呼ぶかから作る）。"""
+    url_by_page = {}
+    public_dir = os.path.join(REPOSITORY_ROOT, "public")
+    for public_path in glob.glob(os.path.join(public_dir, "**", "*.php"), recursive=True):
+        page_match = re.search(r"pages/([a-z_0-9]+\.php)", read(public_path))
+        if page_match is None:
+            continue
+        url = "/" + os.path.relpath(public_path, public_dir).replace(os.sep, "/")
+        url_by_page.setdefault(page_match.group(1), set()).add(url)
+    return url_by_page
+
+
 def main():
     for output_stream in (sys.stdout, sys.stderr):
         if hasattr(output_stream, "reconfigure"):
@@ -88,13 +101,34 @@ def main():
         test_text[os.path.basename(path)] = read(path)
     failed = passed = 0
 
+    url_by_page = page_url_map()
     actions = collect_actions()
     for value in sorted(actions):
-        files = [name for name, text in test_text.items() if re.search(r"[\"'=]%s[\"'&\\]" % re.escape(value), text)]
-        if files:
+        action_pattern = re.compile(r"""['"=]""" + re.escape(value) + r"""['"&]""")
+        files_with_action = [name for name, text in test_text.items() if action_pattern.search(text)]
+        required_urls = set()
+        for source in actions[value]:
+            if source.startswith("app/pages/"):
+                for url in url_by_page.get(os.path.basename(source), ()):
+                    required_urls.add(url)
+        if required_urls:
+            missing_urls = [url for url in sorted(required_urls)
+                            if not any(url in text and action_pattern.search(text) for text in test_text.values())]
+            if missing_urls:
+                failed += 1
+                print("NG  操作 %s が、画面ごとの検証にない（%s）" % (value, ", ".join(missing_urls)))
+                continue
             passed += 1
             if show_list:
-                print("OK  %s（%s）: %s" % (value, ", ".join(sorted(actions[value])), ", ".join(sorted(files))))
+                print("OK  操作 %s（%s）: %s" % (value, ", ".join(sorted(required_urls)), ", ".join(sorted(files_with_action))))
+            else:
+                print("OK  操作 %s（%s）" % (value, ", ".join(sorted(required_urls))))
+        elif files_with_action:
+            passed += 1
+            if show_list:
+                print("OK  操作 %s（%s）: %s" % (value, ", ".join(sorted(actions[value])), ", ".join(sorted(files_with_action))))
+            else:
+                print("OK  操作 %s（%s）" % (value, ", ".join(sorted(actions[value]))))
         else:
             failed += 1
             print("NG  操作 %s が検証にない（%s）" % (value, ", ".join(sorted(actions[value]))))
