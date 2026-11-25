@@ -122,14 +122,15 @@ def main():
         rows = {
             "lead_recovery_requests": {"user_id": 1, "requester_id": 1, "requester_name": "x", "requester_role": "x", "reason": "x", "status": "pending", "first_half_enc": "x"},
             "report_value_history": {"report_id": report_id, "field_id": field_id, "revision": 1, "old_value": "x", "new_value": "x", "is_encrypted": 1, "user_id": 1},
-            "report_field_comments": {"report_id": report_id, "comment_enc": "x"},
-            "adhoc_requests": {"department_id": 1, "title": "x", "created_by": 1},
+            "report_field_comments": {"report_id": report_id, "user_id": 2, "comment_enc": "x"},
+            "adhoc_requests": {"department_id": 1, "title": "x", "created_by": 2, "status": "open", "result_visibility": "detail"},
             "adhoc_request_fields": {"request_id": 1, "label": "x", "field_type": "single_text"},
-            "adhoc_responses": {"request_id": 1, "user_id": 1},
+            "adhoc_request_targets": {"request_id": 1, "user_id": 5},
+            "adhoc_responses": {"request_id": 1, "user_id": 5, "submitted_at": "2026-11-01 00:00:00"},
             "adhoc_response_values": {"response_id": 1, "request_field_id": 1, "value_text": "x", "is_encrypted": 1},
-            "support_requests": {"kind": "bug", "title_enc": "x", "body_enc": "x"},
-            "support_request_messages": {"request_id": 1, "body_enc": "x"},
-            "faq_chat_logs": {"question_enc": "x", "role": "member", "result": "matched"},
+            "support_requests": {"kind": "bug", "user_id": 2, "department_id": 1, "title_enc": "x", "body_enc": "x"},
+            "support_request_messages": {"request_id": 1, "user_id": 1, "body_enc": "x"},
+            "faq_chat_logs": {"question_enc": "x", "user_id": 5, "conversation_id": "verify", "role": "member", "result": "matched"},
             "expense_sheets": {"user_id": 5, "data_enc": "x"},
             "goal_sheets": {"user_id": 5, "fiscal_year": 2026, "kind": "general", "data_enc": "x"},
             "goal_sheet_comments": {"sheet_id": 1, "body_enc": "x"},
@@ -147,10 +148,55 @@ def main():
         execute("UPDATE user_backup_codes SET code_enc = 'x' WHERE code_enc IS NULL")
         code = ""
         for number, (table, column, condition, aad) in enumerate(present_targets()):
-            code += ("foreach (db_all(\"SELECT rowid AS rr, * FROM %s WHERE %s AND %s = 'x'\") as $r) { db_exec('UPDATE %s SET %s = ? WHERE rowid = ?', [enc('平文%d-' . $r['rr'], %s), $r['rr']]); }"
-                     % (table, condition, column, table, column, number, aad))
+            plain = "'平文%d-' . $r['rr']" % number
+            if table == "user_backup_codes":
+                plain = "sprintf('ab%08d', $r['rr'])"   # 予備のコードは半角 10 文字
+            if table in ("expense_sheets", "goal_sheets"):
+                plain = "json_encode(['full_name' => %s], JSON_UNESCAPED_UNICODE)" % plain
+            code += ("foreach (db_all(\"SELECT rowid AS rr, * FROM %s WHERE %s AND %s = 'x'\") as $r) { db_exec('UPDATE %s SET %s = ? WHERE rowid = ?', [enc(%s, %s), $r['rr']]); }"
+                     % (table, condition, column, table, column, plain, aad))
         status, text = run_code(code)
         check("準備: 暗号文を入れる", status == 0, text[-300:])
+
+    def check_screens(title, texts):
+        """暗号化した値が出る画面を、役割ごとに開き、平文が読めることを確かめる（平文は texts のもの）"""
+        execute("UPDATE users SET totp_last_step = NULL")
+        clients = {login_id: login(base, login_id, users[login_id]) for login_id in ("ippan_a1", "kacho_a", "admin01")}
+        report_id = execute("SELECT MIN(id) FROM report_records")[0][0]
+        screens = [
+            ("報告の詳細の値", "ippan_a1", "/reports/view.php?id=%d" % report_id, "report_field_values.value_text"),
+            ("報告の詳細のコメント", "ippan_a1", "/reports/view.php?id=%d" % report_id, "report_field_comments.comment_enc"),
+            ("変更履歴の変更前", "ippan_a1", "/reports/view.php?id=%d" % report_id, "report_value_history.old_value"),
+            ("変更履歴の変更後", "ippan_a1", "/reports/view.php?id=%d" % report_id, "report_value_history.new_value"),
+            ("調査の回答", "ippan_a1", "/surveys/answer.php?id=1", "adhoc_response_values.value_text"),
+            ("調査の結果", "kacho_a", "/surveys/result.php?id=1&detail=1", "adhoc_response_values.value_text"),
+            ("要望・依頼の件名", "admin01", "/requests/view.php?id=1", "support_requests.title_enc"),
+            ("要望・依頼の本文", "admin01", "/requests/view.php?id=1", "support_requests.body_enc"),
+            ("要望・依頼のやり取り", "admin01", "/requests/view.php?id=1", "support_request_messages.body_enc"),
+            ("要望・依頼の一覧", "admin01", "/requests/index.php", "support_requests.title_enc"),
+            ("チャットの記録", "admin01", "/admin/faq_logs.php?conversation=verify", "faq_chat_logs.question_enc"),
+            ("通勤定期代の精算書", "ippan_a1", "/expenses/edit.php?id=1", "expense_sheets.data_enc"),
+            ("目標管理シート", "ippan_a1", "/goals/edit.php?id=1", "goal_sheets.data_enc"),
+            ("目標管理のコメント", "ippan_a1", "/goals/edit.php?id=1", "goal_sheet_comments.body_enc"),
+            ("目標管理の面談", "ippan_a1", "/goals/edit.php?id=1", "goal_sheet_meetings.note_enc"),
+        ]
+        for name, login_id, path, label in screens:
+            if label not in texts:
+                continue   # 表がないブランチ
+            plain = texts[label][0]
+            match = re.search(r"平文[0-9]+-[0-9]+", plain)
+            expected = match.group(0) if match else plain
+            status, _, body = clients[login_id].get(path)
+            check("%s: %s が読める" % (title, name), status == 200 and expected in body and "この内容は表示できません" not in body and "（読み出せません）" not in body,
+                  (status, expected, expected in body))
+        edit_path = "/admin/user_edit.php?id=%d" % users["ippan_a1"]["id"]
+        _, _, page = clients["admin01"].get(edit_path)
+        clients["admin01"].post(edit_path, {"csrf_token": csrf(page), "request_key": os.urandom(16).hex(), "action": "view_backup_codes", "reason": "確かめ",
+                                            "operator_password": users["admin01"]["password"]})
+        _, _, page = clients["admin01"].get(edit_path)
+        own_numbers = [index for index, row in enumerate(execute("SELECT user_id FROM user_backup_codes WHERE code_enc IS NOT NULL ORDER BY rowid")) if row[0] == users["ippan_a1"]["id"]]
+        expected_codes = [code[:4] + "-" + code[4:] for code in (texts["user_backup_codes.code_enc"][index] for index in own_numbers)]
+        check("%s: 予備のコードの確認で読める" % title, expected_codes != [] and all(code in page for code in expected_codes), (expected_codes, re.findall(r"<li>(.{0,30})</li>", page)[:3]))
 
     def set_maintenance(is_on):
         execute("DELETE FROM app_state WHERE name = 'maintenance'")
@@ -190,6 +236,7 @@ def main():
         filled = {"%s.%s" % (t, c) for t, c, _, _ in present_targets()}
         check("準備: すべての暗号化の列に値がある", set(before_texts) == filled, sorted(filled - set(before_texts)))
         check("準備: すべて復号できる", all(value is not None for values in before_texts.values() for value in values))
+        check_screens("入れ替えの前", before_texts)
         before_blobs = blobs()
         total = sum(1 for rows in before_blobs.values() for _, blob in rows if blob)
 
@@ -251,6 +298,8 @@ def main():
         check("古い鍵を外しても、すべて読める", plain_texts() == before_texts)
         check("古い鍵を外して migrate.php を流しても、古い版の鍵を作り直さない", php(os.path.join("app", "bin", "migrate.php"))[0] == 0 and keys() == ["field_v2.key"], keys())
         set_maintenance(False)
+        execute("UPDATE users SET totp_last_step = NULL")
+        check_screens("入れ替えのあと", before_texts)
         execute("UPDATE users SET totp_last_step = NULL")
         client = login(base, "ippan_a1", users["ippan_a1"])
         check("2 段階認証でログインできる", client.get("/index.php")[0] == 200)
