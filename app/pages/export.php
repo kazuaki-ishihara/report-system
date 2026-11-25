@@ -60,7 +60,7 @@ if ($type === 'report') {
     if (!in_array($content, ['table', 'summary', 'both'], true)) {
         error_page(400);
     }
-    $data = compare_dataset($deptId, $from, $to, $withFree, $withRestricted, false);
+    $data = compare_dataset($deptId, $from, $to, $withFree, $withRestricted, false, $user);
     if (!$data['rows']) {
         error_page(404, msg('出力する報告がありません。'));
     }
@@ -108,10 +108,10 @@ if ($type === 'report') {
         error_page(404);
     }
     $questions = survey_fields($sid);
-    $responses = db_all('SELECT a.id, u.display_name FROM adhoc_responses a JOIN users u ON u.id = a.user_id WHERE a.request_id = ? AND a.submitted_at IS NOT NULL ORDER BY u.display_name', [$sid]);
+    $responses = db_all('SELECT a.id, u.display_name FROM adhoc_responses a JOIN users u ON u.id = a.user_id WHERE a.request_id = ? AND a.submitted_at IS NOT NULL AND a.user_id NOT IN (' . specialist_unviewable_id_sql(true) . ') ORDER BY u.display_name', [$sid]);
     $answers = survey_answers($sid);
     $title = '臨時の調査 ' . $req['title'] . ($req['requester'] !== '' ? '（依頼元: ' . $req['requester'] . '）' : '');
-    $targetCount = (int) db_val('SELECT COUNT(*) FROM adhoc_request_targets WHERE request_id = ?', [$sid]);
+    $targetCount = (int) db_val('SELECT COUNT(*) FROM adhoc_request_targets WHERE request_id = ? AND user_id NOT IN (' . specialist_unviewable_id_sql(true) . ')', [$sid]);
     $responseRateText = survey_response_rate_text($targetCount, count($responses)) . '  割合は回答者数に対する %（複数回答の質問は、足すと 100% を超えます）';
     $visibleQuestions = array_values(array_filter($questions, function ($q) use ($withRestricted) {
         return $q['conf'] !== 'restricted' || $withRestricted;

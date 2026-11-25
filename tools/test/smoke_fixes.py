@@ -85,7 +85,7 @@ def main():
     s, _, vb = leader.get("/reports/view.php?id=%d" % rid)
     leader.post("/reports/act.php", {"csrf_token": csrf(vb), "request_key": rkey(vb), "action": "check", "report_id": rid})
     s, _, mb = a1.get("/reports/mine.php")
-    check("前提: リーダーのチェックが数えられる（1/3）", "チェック 1/3" in mb, re.findall(r"チェック \d+/\d+", mb))
+    check("前提: 主任のチェックが数えられる（1/3）", "チェック 1/3" in mb, re.findall(r"チェック \d+/\d+", mb))
     db.execute("DELETE FROM department_reviewers WHERE user_id = ?", (U["leader_a"]["id"],))
     s, _, mb = a1.get("/reports/mine.php")
     section("G-06", "APP-012 確認者から外れた人のチェックを数えない")

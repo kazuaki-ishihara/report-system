@@ -67,6 +67,8 @@ a { color: var(--primary); }
 h1 { font-size: 1.3rem; margin: 0 0 12px; }
 h2 { font-size: 1.1rem; margin: 0 0 8px; }
 .greeting { margin: 0 0 12px; color: var(--muted); }
+.role-summary summary { cursor: pointer; min-height: 32px; }
+.role-permission-list { margin: 4px 0 0; padding-left: 1.4em; }
 .form { display: flex; flex-direction: column; gap: 6px; }
 .form label { font-weight: 600; margin-top: 8px; }
 .form label.check { font-weight: 400; display: flex; gap: 8px; align-items: center; }

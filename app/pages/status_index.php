@@ -22,8 +22,12 @@ if (!isset($depts[$deptId])) {
     error_page(403);
 }
 $isReviewerOfDept = is_reviewer_of($uid, $deptId);
-$doesCheckInDept = $isReviewerOfDept && reviewer_does_check($uid, $deptId);   // 「チェックしない」の課長代理・リーダー（K-039）
+$doesCheckInDept = $isReviewerOfDept && reviewer_does_check($uid, $deptId);   // 「チェックしない」の課長代理・主任（K-039）
 // 補佐は、確認者でない課では人ごとの行を出さない（課ごとの件数だけ。K-043）
+// 専門職（K-074）: 担当部長はだれにも出さず、人数にも入れない。ほかの専門職は、課長でない確認者には出さない（件数には入れる）
+$hiddenSpecialistIdSet = array_fill_keys(specialist_unviewable_user_id_list(true), true);
+$isFinalOfDept = is_final_reviewer_of($uid, $deptId);
+$unlistedSpecialistIdSet = $isReviewerOfDept && !$isFinalOfDept ? array_fill_keys(specialist_unviewable_user_id_list(false), true) : $hiddenSpecialistIdSet;
 $isPersonRowsShown = has_admin_authority($user) || !is_admin_deputy($user) || $isReviewerOfDept;   // 補佐（開発担当）は管理者と同じ（K-059）
 
 // ---- 「変更なし」の報告をまとめてチェック（G-08 §6.2） ----
@@ -41,10 +45,10 @@ if (is_post() && post_str('action') === 'remind') {
     rk_begin('status.remind', $uid);
     $alreadySentToday = reminder_last_sent_map($deptId, $period);
     $remindedCount = 0;
-    tx(function () use ($deptId, $period, $uid, $alreadySentToday, &$remindedCount): void {
+    tx(function () use ($deptId, $period, $uid, $alreadySentToday, $unlistedSpecialistIdSet, &$remindedCount): void {
         foreach (db_all('SELECT id FROM users WHERE department_id = ? AND is_active = 1 AND id <> ?', [$deptId, $uid]) as $memberRow) {
             $memberUserId = (int) $memberRow['id'];
-            if (reminder_has_submitted($memberUserId, $period)) {
+            if (isset($unlistedSpecialistIdSet[$memberUserId]) || reminder_has_submitted($memberUserId, $period)) {
                 continue;
             }
             if (isset($alreadySentToday[$memberUserId]) && substr($alreadySentToday[$memberUserId], 0, 10) === date('Y-m-d')) {
@@ -125,6 +129,10 @@ $rows = db_all(
     [$deptId, $period, $deptId, $uid, $deptId]
 );
 
+$rows = array_values(array_filter($rows, function (array $row) use ($hiddenSpecialistIdSet): bool {
+    return !isset($hiddenSpecialistIdSet[(int) $row['user_id']]);
+}));
+
 $stats = ['members' => count($rows), 'submitted' => 0, 'confirmed' => 0, 'unchecked' => 0];
 $lastRemindedAtByUserId = $isReviewerOfDept ? reminder_last_sent_map($deptId, $period) : [];   // 提出を促した日時（課長・確認者にだけ出す）
 $canRemind = $isReviewerOfDept && reminder_period_allowed($period);
@@ -152,7 +160,8 @@ foreach ($rows as $r) {
         $bulkCandidateCount++;
     }
     $r['last_reminded_at'] = $lastRemindedAtByUserId[(int) $r['user_id']] ?? null;
-    if (!$submitted && !$mine && (int) $r['is_member'] === 1) {
+    $isUnlisted = isset($unlistedSpecialistIdSet[(int) $r['user_id']]);
+    if (!$submitted && !$mine && (int) $r['is_member'] === 1 && !$isUnlisted) {
         $remindCandidateCount++;
     }
     if ($submitted) {
@@ -177,7 +186,7 @@ foreach ($rows as $r) {
     } elseif ($filter === 'warning') {
         $keep = $submitted && (int) $r['warnings'] > 0;
     }
-    if ($keep) {
+    if ($keep && !$isUnlisted) {
         $list[] = $r;
     }
 }

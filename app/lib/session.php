@@ -70,7 +70,7 @@ function session_user(): ?array
         return null;
     }
     $user = db_one('SELECT * FROM users WHERE id = ?', [(int) $_SESSION['uid']]);
-    if ($user === null || (int) $user['is_active'] !== 1 || (int) $user['session_version'] !== (int) ($_SESSION['sv'] ?? -1)) {
+    if ($user === null || (int) $user['is_active'] !== 1 || security_is_frozen($user) || (int) $user['session_version'] !== (int) ($_SESSION['sv'] ?? -1)) {
         session_logout();
         session_boot();
         return null;

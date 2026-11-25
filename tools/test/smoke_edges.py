@@ -276,7 +276,7 @@ def main():
 
     save_report(leader_client, previous_period, "submit", [("案件なし", {"progress": "on_track", "continuation": "continuing"})], report_values={"trouble_note": "特になし"})
     leader_report = report_row("leader_a", previous_period)
-    check("リーダー（確認者）の自分の報告を提出（前提）", leader_report is not None and leader_report[1] == "submitted", leader_report)
+    check("主任（確認者）の自分の報告を提出（前提）", leader_report is not None and leader_report[1] == "submitted", leader_report)
     _status_code, _location, own_view_html = leader_client.get("/reports/view.php?id=%d" % (leader_report[0] if leader_report else 0))
     check("自分の報告には、自分のチェックのボタンが出ない", 'value="check"' not in own_view_html and "チェックする" not in own_view_html)
 
@@ -365,7 +365,7 @@ def main():
 
     count_before, home_target_period = home_unchecked_count()
     check("ホームに A課の未チェックの件数が出る（前提）", count_before >= 0 and home_target_period != "", (count_before, home_target_period))
-    submit_full(leader_client, home_target_period, "リーダー自身の作業")
+    submit_full(leader_client, home_target_period, "主任自身の作業")
     count_after_own, _period = home_unchecked_count()
     check("自分の報告を提出しても、自分の未チェックには数えない", report_row("leader_a", home_target_period)[1] == "submitted" and count_after_own == count_before, (count_before, count_after_own))
     member_b_client = login(arguments.base, "dairi_a", user_info_by_login_id["dairi_a"])

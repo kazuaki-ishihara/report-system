@@ -84,11 +84,11 @@ if (survey_is_all_departments($req)) {
 
 $responses = db_all(
     'SELECT a.id, a.user_id, a.submitted_at, u.display_name FROM adhoc_responses a JOIN users u ON u.id = a.user_id
-      WHERE a.request_id = ? AND a.submitted_at IS NOT NULL ORDER BY u.display_name',
+      WHERE a.request_id = ? AND a.submitted_at IS NOT NULL AND a.user_id NOT IN (' . specialist_unviewable_id_sql(true) . ') ORDER BY u.display_name',
     [$id]
 );
 $targets = db_all(
-    'SELECT u.id, u.display_name FROM adhoc_request_targets t JOIN users u ON u.id = t.user_id WHERE t.request_id = ? ORDER BY u.display_name',
+    'SELECT u.id, u.display_name FROM adhoc_request_targets t JOIN users u ON u.id = t.user_id WHERE t.request_id = ? AND t.user_id NOT IN (' . specialist_unviewable_id_sql(true) . ') ORDER BY u.display_name',
     [$id]
 );
 $answered = array_map(function ($r) { return (int) $r['user_id']; }, $responses);

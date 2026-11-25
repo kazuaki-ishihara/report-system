@@ -5,7 +5,7 @@ declare(strict_types=1);
 // ====================================================================
 // G-23 課の管理（課長が自分の課を管理する。詳細設計書 G23_department_manage.md。K-042）
 //   基本: 締め日・管理の仕方（課全体／ラインごと）
-//   確認者と課員: 課長代理・リーダー（確認者）・担当のライン・チェックする／しない（K-039）・項目管理者・課員のライン
+//   確認者と課員: 課長代理・主任（確認者）・担当のライン・チェックする／しない（K-039）・項目管理者・課員のライン
 //   ライン: ラインの追加・名前・有効
 // システム管理者は個々の課を管理しない（課の追加・名前・課長・引き継ぎは G-14）。
 // ====================================================================
@@ -60,7 +60,7 @@ if (is_post()) {
         }
 
     } elseif ($action === 'members_save') {
-        // 課長代理・リーダー（確認者）・担当のライン・チェックする・項目管理者・課員のラインをまとめて保存する（課長の行は変えない）
+        // 課長代理・主任（確認者）・担当のライン・チェックする・項目管理者・課員のラインをまとめて保存する（課長の行は変えない）
         $memberRowList = department_manage_member_rows($departmentId);
         $memberById = [];
         foreach ($memberRowList as $memberRow) {
@@ -88,6 +88,13 @@ if (is_post()) {
             }
             return (int) $teamIdText;
         };
+        foreach (['reviewer', 'does_check', 'field_admin'] as $postedName) {
+            foreach (array_keys($postedArrayByName[$postedName]) as $postedUserId) {
+                if (specialist_title_of((int) $postedUserId) !== '') {
+                    error_page(400, msg('専門職の人は、課長・確認者・項目管理者にできません。'));
+                }
+            }
+        }
         $savePlanList = [];
         foreach ($memberById as $memberUserId => $memberRow) {
             $isFinalMember = (int) $memberRow['is_final'] === 1;

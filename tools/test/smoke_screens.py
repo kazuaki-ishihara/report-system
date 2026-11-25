@@ -291,7 +291,7 @@ def main():
     owner_client.post("/account.php?tab=devices", {"csrf_token": csrf(devices_html), "request_key": rkey(devices_html), "action": "device_revoke", "device_id": str(own_device_id)})
     check("自分の端末の記憶は、同じ送り方で解除できる（上の確かめが空振りでないこと）", database.execute("SELECT COUNT(*) FROM remembered_devices WHERE id = ?", (own_device_id,)).fetchone()[0] == 0)
     backup_hash_list = [row[0] for row in database.execute("SELECT code_hash FROM user_backup_codes")]
-    check("予備のコードは DB にハッシュでしか入っていない", backup_hash_list != [] and all(code_hash.startswith("$2y$") or code_hash.startswith("$argon") for code_hash in backup_hash_list)
+    check("予備のコードは DB に平文で入っていない", backup_hash_list != [] and all(code_hash.startswith("$2y$") or code_hash.startswith("$argon") for code_hash in backup_hash_list)
           and not any(user_info["backup_code"].replace("-", "") in code_hash for user_info in user_info_by_login_id.values() for code_hash in backup_hash_list))
 
     return summary()

@@ -85,7 +85,7 @@ def main():
     status_code, _location, _page_html = member_client.get("/requests/index.php")
     check("部下は要望・依頼の画面を開けない（課長を通す）", status_code == 403, status_code)
     status_code, leader_request_id, _page_html = create_request(leader_client, "コメントの定型文を増やしたい", "30 件では足りません。")
-    check("確認者（リーダー）も出せる", status_code in (302, 303) and leader_request_id > 0, status_code)
+    check("確認者（主任）も出せる", status_code in (302, 303) and leader_request_id > 0, status_code)
     status_code, _location, _page_html = leader_client.get("/requests/view.php?id=%d" % request_id)
     check("ほかの人が出した要望・依頼は見られない", status_code == 403, status_code)
     status_code, _location, _page_html = member_client.get("/requests/view.php?id=%d" % request_id)

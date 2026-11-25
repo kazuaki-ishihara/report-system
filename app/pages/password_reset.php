@@ -22,7 +22,7 @@ if (is_post()) {
     // 利用者の有無・ロックの有無で文言や確かめる順番を変えない（ID の推測を防ぐ）
     // ロックの文言は、この端末（IP）がロックされたときだけ出す
     $user = auth_find_user($loginId);
-    $valid = $user !== null && (int) $user['is_active'] === 1 && $user['totp_enabled_at'] !== null;
+    $valid = $user !== null && (int) $user['is_active'] === 1 && $user['totp_enabled_at'] !== null && !security_is_frozen($user);
     $pwError = auth_validate_new_password($new, $loginId);
     if (auth_ip_is_locked()) {
         auth_dummy_verify($code);
@@ -45,6 +45,12 @@ if (is_post()) {
         $locked = auth_register_failure((int) $user['id']);
         audit_log('auth', $locked ? 'password:reset_locked' : 'password:reset_fail', (int) $user['id']);
         $errors[] = $fail;
+    } elseif (security_password_is_blocked((int) $user['id'], $new)) {
+        // 本人と確かめたあとにだけ知らせる（前のパスワードを当てる手がかりにしない。K-075）
+        $errors[] = '前に使えなくなったパスワードです。別のパスワードを決めてください';
+    } elseif ((int) ($user['is_credential_reset'] ?? 0) === 1) {
+        // 総入れ替えの途中は、ログインして変える（2 段階認証の設定し直しを飛ばさない）
+        $errors[] = 'ログインしてから、パスワードを変えてください';
     } else {
         auth_set_password((int) $user['id'], $new);
         audit_log('auth', 'password:reset', (int) $user['id']);

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 // ====================================================================
 // G-11 臨時の調査の管理: 一覧（詳細設計書 G11_survey_manage.md）
-// 課長は自分が課長の課の調査、システム管理者・補佐は全課共通の調査（K-066）を出す。両方の人は両方
+// 課長は自分が課長の課の調査、システム管理者・補佐・人財管理者は全課共通の調査（K-066・K-071）を出す。両方の人は両方
 // ====================================================================
 
 $user = page_start();
@@ -12,7 +12,7 @@ if (!survey_can_use_manage_screens($user)) {
     error_page(403);
 }
 $depts = final_departments($user);
-$canManageAllDepartments = can_manage_system($user);
+$canManageAllDepartments = survey_can_manage_all_departments($user);
 survey_close_expired();
 
 $state = (string) ($_GET['state'] ?? 'all');

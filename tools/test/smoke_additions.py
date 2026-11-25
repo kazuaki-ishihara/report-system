@@ -176,7 +176,7 @@ def main():
     _, page = kacho.follow_get(loc) if loc else (s, "")
     check("同じ日に 2 回は促さない", "促す人はいません" in page and db.execute("SELECT COUNT(*) FROM report_reminders WHERE user_id = ? AND period = ?", (a2_id, cur)).fetchone()[0] == 1, page[:0])
     s, _, sb = leader.get("/status/index.php?period=%s&dept=%d" % (cur, dept_a))
-    check("確認者（リーダー）も促せる", 'value="remind"' in sb, s)
+    check("確認者（主任）も促せる", 'value="remind"' in sb, s)
     s, _, sb = a1.get("/index.php")
     s, loc, _ = a1.post("/status/index.php?period=%s&dept=%d" % (cur, dept_a), {"csrf_token": csrf(sb), "request_key": rkey(sb), "action": "remind"})
     check("部下は促せない（403）", s == 403, s)

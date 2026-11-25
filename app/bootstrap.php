@@ -34,6 +34,8 @@ require_once APP_DIR . '/lib/reminder.php';
 require_once APP_DIR . '/lib/admin.php';
 require_once APP_DIR . '/lib/form.php';
 require_once APP_DIR . '/lib/survey.php';
+require_once APP_DIR . '/lib/role.php';
+require_once APP_DIR . '/lib/account_security.php';
 require_once APP_DIR . '/lib/search.php';
 require_once APP_DIR . '/lib/org_csv.php';
 require_once APP_DIR . '/lib/export.php';

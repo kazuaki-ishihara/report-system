@@ -79,6 +79,7 @@ if (is_post()) {
             $next = (string) ($_SESSION['after_setup_next'] ?? '/index.php');
             unset($_SESSION['after_setup_next']);
             session_login($fresh, 'full');
+            $_SESSION['totp_renewed'] = true;   // 総入れ替えの途中で復旧コードを使った人に、2 回設定させない
             if (($_POST['remember'] ?? '') === '1') {
                 auth_remember_device($uid);
             }
@@ -122,6 +123,29 @@ if (is_post()) {
         flash('success', msg('端末の記憶を解除しました'));
         redirect('/account.php?tab=devices');
 
+    // ---- 心当たりがない操作を知らせて凍結する（K-075） ----
+    } elseif ($action === 'security_report') {
+        if ($stage !== 'full') {
+            error_page(403);
+        }
+        $noticeId = input_id('notice_id', 'POST');
+        $reportedNotice = null;
+        foreach (security_notices_of($uid) as $ownNotice) {
+            if ((int) $ownNotice['id'] === $noticeId && in_array($ownNotice['kind'], SECURITY_REPORTABLE_KINDS, true) && $ownNotice['reported_at'] === null) {
+                $reportedNotice = $ownNotice;
+            }
+        }
+        if ($reportedNotice === null) {
+            error_page(404);
+        }
+        $isLoginStopped = security_freeze($user, $reportedNotice);
+        session_logout();
+        session_boot();
+        flash('info', $isLoginStopped
+            ? msg('システム管理者と補佐（開発担当）に知らせ、アカウントを一時凍結しました。再初期化が済むまでログインできません')
+            : msg('コードと端末をすべて無効にしました。ほかに管理者がいないため、ログインは止めていません。ログインして、パスワードを変えてください'));
+        redirect('/login.php');
+
     // ---- 画面のテーマ（G-16 §4.5） ----
     } elseif ($action === 'theme_save') {
         if ($stage !== 'full' || (int) $user['must_change_password'] === 1) {
@@ -162,7 +186,8 @@ if (is_post()) {
             error_page(403);
         }
         $mustChange = (int) $user['must_change_password'] === 1;
-        $ok = $mustChange ? true : $requireCurrentPassword($user);
+        $isCredentialReset = (int) ($user['is_credential_reset'] ?? 0) === 1;   // 総入れ替え（K-075）: 今のパスワードで確かめ、2 段階認証も設定し直す
+        $ok = $mustChange && !$isCredentialReset ? true : $requireCurrentPassword($user);
         if ($ok) {
             $new = post_str('new_password', false);
             $confirm = post_str('new_password_confirm', false);
@@ -170,14 +195,31 @@ if (is_post()) {
             if ($pwError === null && password_verify($new, (string) $user['password_hash'])) {
                 $pwError = msg('今と同じパスワードは使えません');
             }
+            if ($pwError === null && security_password_is_blocked($uid, $new)) {
+                $pwError = msg('前に使えなくなったパスワードです。別のパスワードを決めてください');
+            }
             if ($pwError !== null) {
                 $errors[] = $pwError;
             } elseif ($new !== $confirm) {
                 $errors[] = msg('確認のパスワードが一致しません');
             } else {
+                $isTotpRedoNeeded = $isCredentialReset && empty($_SESSION['totp_renewed']);
                 auth_set_password($uid, $new);
-                session_login(db_one('SELECT * FROM users WHERE id = ?', [$uid]), 'full');
+                if ($isCredentialReset) {
+                    tx(function () use ($uid, $isTotpRedoNeeded): void {
+                        db_exec('UPDATE users SET is_credential_reset = 0 WHERE id = ?', [$uid]);
+                        if ($isTotpRedoNeeded) {
+                            security_clear_second_factor($uid);
+                        }
+                    });
+                }
+                unset($_SESSION['totp_renewed']);
+                session_login(db_one('SELECT * FROM users WHERE id = ?', [$uid]), $isTotpRedoNeeded ? 'setup' : 'full');
                 audit_log('auth', 'password:change', $uid);
+                if ($isTotpRedoNeeded) {
+                    flash('success', msg('パスワードを変更しました。続けて、2 段階認証を設定し直してください'));
+                    redirect('/account.php?tab=totp');
+                }
                 flash('success', msg('パスワードを変更しました。ほかの端末はログアウトしました'));
                 redirect('/index.php');
             }

@@ -32,7 +32,7 @@
     <input type="hidden" name="action" value="code">
     <p><?= h_phrases('スマートフォンの認証アプリ（Google Authenticator など）に表示される 6 桁の数字を入れてください。') ?></p>
     <label for="code">認証アプリの 6 桁のコード</label>
-    <input id="code" name="code" type="text" inputmode="numeric" autocomplete="one-time-code" autocapitalize="none" autocorrect="off" spellcheck="false" maxlength="12" required autofocus>
+    <input id="code" name="code" type="text" inputmode="numeric" autocomplete="one-time-code" autocapitalize="none" autocorrect="off" spellcheck="false" maxlength="16" required autofocus>
     <button type="button" class="small use-backup-code" data-target="code">予備のコードを入れる（英字のキーボードにする）</button>
     <label class="check"><input type="checkbox" name="remember" value="1" checked> この端末を <?= (int) cfg('remember_device_days') ?> 日間記憶する</label>
     <button type="submit" class="primary">確認</button>

@@ -59,6 +59,11 @@ function goal_creatable_years(): array
 function goal_selectable_kinds(array $user): array
 {
     $roleTitle = (string) ($user['role_title'] ?? '');
+    // 専門職（K-074）: 技師はリーダー・課長代理、担当課長・担当部長は課長以上・営業・間接部門
+    $specialistTitle = specialist_title_of((int) $user['id']);
+    if ($specialistTitle !== '') {
+        return $specialistTitle === '技師' ? ['leader'] : ['manager', 'sales', 'indirect'];
+    }
     if ($roleTitle === '課長' || $roleTitle === '部長') {
         return ['manager', 'sales', 'indirect'];
     }
@@ -146,7 +151,7 @@ function goal_sheet(int $sheetId): ?array
 function goal_new_sheet_data(array $owner, string $kindCode): array
 {
     $departmentName = !empty($owner['department_id']) ? (string) db_val('SELECT name FROM departments WHERE id = ?', [(int) $owner['department_id']]) : '';
-    return goal_normalize(['department_name' => $departmentName, 'full_name' => (string) ($owner['display_name'] ?? ''), 'position' => (string) ($owner['role_title'] ?? '')], $kindCode);
+    return goal_normalize(['department_name' => $departmentName, 'full_name' => (string) ($owner['display_name'] ?? ''), 'position' => display_role_title((int) $owner['id'], (string) ($owner['role_title'] ?? ''))], $kindCode);
 }
 
 /**
@@ -163,6 +168,11 @@ function goal_viewer_role(array $viewer, int $ownerUserId): ?string
     if ($owner === null || empty($owner['department_id'])) {
         return null;
     }
+    // 専門職（K-074）: ほかの人のシートを見られない。専門職のシートを見るのは課長だけ（担当部長は本人だけ）
+    $ownerSpecialistTitle = specialist_title_of($ownerUserId);
+    if (specialist_title_of($viewerUserId) !== '' || !specialist_viewable_as($ownerSpecialistTitle, true)) {
+        return null;
+    }
     $departmentId = (int) $owner['department_id'];
     if (is_final_reviewer_of($ownerUserId, $departmentId)) {
         return null;   // 課長のシートは、本人だけ（課長の上長はこのシステムにいない）
@@ -171,7 +181,7 @@ function goal_viewer_role(array $viewer, int $ownerUserId): ?string
         return 'boss';
     }
     if ((string) ($viewer['role_title'] ?? '') === '課長代理' && (int) ($viewer['department_id'] ?? 0) === $departmentId
-        && in_array((string) $owner['role_title'], ['一般', '主任'], true)) {
+        && $ownerSpecialistTitle === '' && in_array((string) $owner['role_title'], ['一般', '主任'], true)) {
         return 'deputy';
     }
     return null;
@@ -188,7 +198,7 @@ function goal_member_overview(array $viewer, int $fiscalYear): array
     foreach (db_all('SELECT department_id FROM department_reviewers WHERE user_id = ? AND is_final = 1', [(int) $viewer['id']]) as $reviewerRow) {
         $departmentIdList[] = (int) $reviewerRow['department_id'];
     }
-    if ((string) ($viewer['role_title'] ?? '') === '課長代理' && !empty($viewer['department_id'])) {
+    if ((string) ($viewer['role_title'] ?? '') === '課長代理' && specialist_title_of((int) $viewer['id']) === '' && !empty($viewer['department_id'])) {
         $departmentIdList[] = (int) $viewer['department_id'];
     }
     $overviewList = [];
@@ -203,7 +213,7 @@ function goal_member_overview(array $viewer, int $fiscalYear): array
             $memberList[] = [
                 'user_id'  => (int) $memberRow['id'],
                 'name'     => (string) $memberRow['display_name'],
-                'role'     => (string) $memberRow['role_title'],
+                'role'     => display_role_title((int) $memberRow['id'], (string) $memberRow['role_title']),
                 'sheet'    => $memberSheet,
                 'progress' => $memberSheet !== null ? goal_progress($memberSheet) : null,
             ];

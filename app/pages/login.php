@@ -10,6 +10,7 @@ page_start(['auth' => 'none']);
 housekeeping_daily();
 
 const LOGIN_MSG_FAIL = 'ログイン ID またはパスワードが違います';
+const LOGIN_MSG_FROZEN = 'このアカウントは一時凍結しています。システム管理者か補佐（開発担当）に連絡してください';
 const LOGIN_MSG_LOCK = 'ログインに続けて失敗したため、しばらくログインできません。15 分ほど待ってからお試しください';
 
 if (($_SESSION['stage'] ?? '') === 'full' && session_user() !== null) {
@@ -33,7 +34,7 @@ $pwUser = function (): ?array {
         return null;
     }
     $u = db_one('SELECT * FROM users WHERE id = ?', [$uid]);
-    return ($u !== null && (int) $u['is_active'] === 1) ? $u : null;
+    return ($u !== null && (int) $u['is_active'] === 1 && !security_is_frozen($u)) ? $u : null;
 };
 
 $finishLogin = function (array $user, string $next): void {
@@ -73,6 +74,10 @@ if (is_post()) {
                 $locked = auth_register_failure((int) $user['id']);
                 audit_log('auth', $locked ? 'login:locked' : 'login:fail', (int) $user['id']);
                 $errors[] = $locked ? LOGIN_MSG_LOCK : LOGIN_MSG_FAIL;
+            } elseif (security_is_frozen($user)) {
+                // 凍結中（K-075）。パスワードが合った人にだけ知らせる
+                audit_log('auth', 'login:frozen_attempt', (int) $user['id']);
+                $errors[] = LOGIN_MSG_FROZEN;
             } else {
                 if (password_needs_rehash((string) $user['password_hash'], PASSWORD_DEFAULT)) {
                     db_exec('UPDATE users SET password_hash = ? WHERE id = ?', [password_hash($password, PASSWORD_DEFAULT), (int) $user['id']]);
@@ -120,6 +125,16 @@ if (is_post()) {
                 auth_remember_device((int) $user['id']);
             }
             $finishLogin($user, is_safe_local_path($next) ? $next : '/index.php');
+        }
+        if (security_use_recovery_code($user, $code)) {
+            // 復旧コード（K-075）: 2 段階認証の設定からやり直す
+            $next = (string) ($_SESSION['pw_next'] ?? '/index.php');
+            unset($_SESSION['pw_next']);
+            auth_reset_failures((int) $user['id']);
+            session_login(db_one('SELECT * FROM users WHERE id = ?', [(int) $user['id']]), 'setup');
+            $_SESSION['after_setup_next'] = is_safe_local_path($next) ? $next : '/index.php';
+            audit_log('auth', 'login:recovery_code', (int) $user['id']);
+            redirect('/account.php?tab=totp');
         }
         $locked = auth_register_failure((int) $user['id']);
         audit_log('auth', $locked ? 'login:locked' : 'login:2fa_fail', (int) $user['id']);

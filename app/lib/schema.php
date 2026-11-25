@@ -61,6 +61,11 @@ function schema_ensure(PDO $pdo): array
         'team_id'              => 'INTEGER REFERENCES department_teams(id)',   // 今のライン（「ラインごと」の課。G-14 §6.7）
         'is_admin_deputy'      => 'INTEGER NOT NULL DEFAULT 0 CHECK (is_admin_deputy IN (0, 1))',
         'is_executive'         => 'INTEGER NOT NULL DEFAULT 0 CHECK (is_executive IN (0, 1))',   // 部長以上: すべての全課共通の調査の結果（集計）を見られる（K-067）
+        'frozen_at'            => 'TEXT',   // 一時凍結した日時（本人が「心当たりがない」と知らせた。K-075）
+        'is_credential_reset'  => 'INTEGER NOT NULL DEFAULT 0 CHECK (is_credential_reset IN (0, 1))',   // 総入れ替えの途中（今のパスワードで変更し、2 段階認証を設定し直す。K-075）
+        'was_admin_deputy_lead' => 'INTEGER NOT NULL DEFAULT 0 CHECK (was_admin_deputy_lead IN (0, 1))',   // 一度でも補佐（開発担当）になった（管理者だけではパスワード・2 段階認証を初期化できない。K-075）
+        'specialist_title'     => "TEXT NOT NULL DEFAULT '' CHECK (specialist_title IN ('', '技師', '担当課長', '担当部長'))",   // 専門職（K-074）。表示する役職。ラインを管理しない
+        'is_hr_manager'        => 'INTEGER NOT NULL DEFAULT 0 CHECK (is_hr_manager IN (0, 1))',   // 人財管理者: 全課共通の調査を作り、結果（集計）を見られる（K-071）
         'is_admin_deputy_lead' => 'INTEGER NOT NULL DEFAULT 0 CHECK (is_admin_deputy_lead IN (0, 1))',   // 補佐（開発担当）。補佐のうち 1 名。管理者・補佐の予備のコードも初期化できる（G-14 §6.9。K-059）
         'ui_custom_colors'     => "TEXT NOT NULL DEFAULT ''",   // 自分の色（G-16 §4.6。JSON: base・accent・background）   // システム管理者補佐（G-14 §6.9。最大 3 名）
     ];
@@ -82,6 +87,74 @@ function schema_ensure(PDO $pdo): array
             user_id INTEGER NOT NULL REFERENCES users(id),
             code_hash TEXT NOT NULL,
             used_at TEXT,
+            created_at TEXT NOT NULL
+        )",
+        // 予備のコードの確認・復旧コード・凍結・総入れ替え（K-075）
+        "CREATE TABLE IF NOT EXISTS security_notices (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL REFERENCES users(id),
+            kind TEXT NOT NULL CHECK (kind IN ('codes_view', 'recovery_issue', 'recovery_used', 'reinit', 'mass_reset')),
+            actor_id INTEGER NOT NULL REFERENCES users(id),
+            actor_name TEXT NOT NULL,
+            actor_role TEXT NOT NULL,
+            reason TEXT NOT NULL,
+            reported_at TEXT,
+            created_at TEXT NOT NULL
+        )",
+        "CREATE INDEX IF NOT EXISTS ix_security_notices_user ON security_notices (user_id, created_at)",
+        "CREATE TABLE IF NOT EXISTS user_recovery_codes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL REFERENCES users(id),
+            code_hash TEXT NOT NULL,
+            notice_id INTEGER NOT NULL REFERENCES security_notices(id),
+            expires_at TEXT NOT NULL,
+            used_at TEXT,
+            created_at TEXT NOT NULL
+        )",
+        "CREATE TABLE IF NOT EXISTS user_blocked_passwords (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL REFERENCES users(id),
+            password_hash TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        )",
+        "CREATE TABLE IF NOT EXISTS account_freezes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL REFERENCES users(id),
+            notice_id INTEGER NOT NULL REFERENCES security_notices(id),
+            operator_id INTEGER NOT NULL REFERENCES users(id),
+            is_login_stopped INTEGER NOT NULL DEFAULT 1,
+            created_at TEXT NOT NULL,
+            resolved_at TEXT,
+            resolved_by INTEGER REFERENCES users(id)
+        )",
+        "CREATE TABLE IF NOT EXISTS mass_credential_resets (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            request_id INTEGER NOT NULL REFERENCES mass_reset_requests(id),
+            user_count INTEGER NOT NULL,
+            created_at TEXT NOT NULL
+        )",
+        "CREATE TABLE IF NOT EXISTS lead_recovery_requests (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL REFERENCES users(id),
+            requester_id INTEGER NOT NULL REFERENCES users(id),
+            requester_name TEXT NOT NULL,
+            requester_role TEXT NOT NULL,
+            reason TEXT NOT NULL,
+            first_half_enc TEXT,
+            status TEXT NOT NULL CHECK (status IN ('pending', 'approved', 'cancelled', 'expired')),
+            approver_id INTEGER REFERENCES users(id),
+            decided_at TEXT,
+            created_at TEXT NOT NULL
+        )",
+        "CREATE TABLE IF NOT EXISTS mass_reset_requests (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            requester_id INTEGER NOT NULL REFERENCES users(id),
+            requester_name TEXT NOT NULL,
+            requester_role TEXT NOT NULL,
+            reason TEXT NOT NULL,
+            status TEXT NOT NULL CHECK (status IN ('pending', 'approved', 'cancelled', 'expired')),
+            approver_id INTEGER REFERENCES users(id),
+            decided_at TEXT,
             created_at TEXT NOT NULL
         )",
         "CREATE TABLE IF NOT EXISTS remembered_devices (
@@ -578,6 +651,39 @@ function schema_ensure(PDO $pdo): array
     }
 
     // システム管理者補佐: 有効な人で最大 3 名。管理者と補佐は兼ねない（G-14 §6.9。画面でも確かめるが、DB でも止める）
+    // 予備のコードの暗号文（管理者と補佐（開発担当）が確認するため。古いコードは NULL。使ったら消す。K-075）
+    if (!in_array('code_enc', array_column($pdo->query('PRAGMA table_info(user_backup_codes)')->fetchAll(), 'name'), true)) {
+        $pdo->exec('ALTER TABLE user_backup_codes ADD COLUMN code_enc TEXT');
+        $log[] = 'user_backup_codes.code_enc を追加';
+    }
+
+    // 一度でも補佐（開発担当）になった人の印（外れない。K-075）
+    $pdo->exec('UPDATE users SET was_admin_deputy_lead = 1 WHERE is_admin_deputy_lead = 1 AND was_admin_deputy_lead = 0');
+    foreach (['INSERT ON users', 'UPDATE OF is_admin_deputy_lead ON users'] as $leadMarkNumber => $leadMarkEvent) {
+        $pdo->exec("CREATE TRIGGER IF NOT EXISTS tr_users_was_lead_{$leadMarkNumber} AFTER {$leadMarkEvent}
+           WHEN NEW.is_admin_deputy_lead = 1 AND NEW.was_admin_deputy_lead = 0
+           BEGIN
+             UPDATE users SET was_admin_deputy_lead = 1 WHERE id = NEW.id;
+           END");
+    }
+
+    // 専門職（K-074）: 課長・確認者・項目管理者にしない。専門職にしたら、それまでの役割を外す
+    foreach (['department_reviewers', 'department_admins'] as $roleTableName) {
+        foreach (['INSERT', 'UPDATE'] as $roleOperation) {
+            $pdo->exec("CREATE TRIGGER IF NOT EXISTS tr_{$roleTableName}_specialist_" . strtolower($roleOperation) . " BEFORE {$roleOperation} ON {$roleTableName}
+               WHEN (SELECT specialist_title FROM users WHERE id = NEW.user_id) <> ''
+               BEGIN
+                 SELECT RAISE(ABORT, 'specialist: no line role');
+               END");
+        }
+    }
+    $pdo->exec("CREATE TRIGGER IF NOT EXISTS tr_users_specialist_update AFTER UPDATE OF specialist_title ON users
+       WHEN NEW.specialist_title <> ''
+       BEGIN
+         DELETE FROM department_reviewers WHERE user_id = NEW.id;
+         DELETE FROM department_admins WHERE user_id = NEW.id;
+       END");
+
     foreach ([
         "CREATE TRIGGER IF NOT EXISTS tr_users_admin_deputy_insert AFTER INSERT ON users
            WHEN NEW.is_admin_deputy = 1

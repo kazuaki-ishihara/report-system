@@ -27,7 +27,7 @@ function seed_password(string $loginId): string
 
 /**
  * 利用者を作る。2 段階認証は設定済み、予備のコードも 1 つ持たせる（dev_seed.php と同じ）。
- * $reviewerRole: null（確認者でない）・'final'（課長）・'reviewer'（課長代理・リーダー）
+ * $reviewerRole: null（確認者でない）・'final'（課長）・'reviewer'（課長代理・主任）
  */
 function seed_create_user(string $loginId, string $displayName, string $roleTitle, ?int $departmentId, ?int $teamId = null, ?string $reviewerRole = null, ?int $reviewerTeamId = null): int
 {

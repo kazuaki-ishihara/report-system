@@ -311,6 +311,8 @@ STEP_TABLE = [
     {"key": "viewpoints", "name": "設計書の検証の観点の突き合わせで見つかった残り（G-03〜G-16）", "script": "smoke_viewpoints.py", "screen": "共通"},
     {"key": "org", "name": "組織（ラインごと・異動・管理担当・課長がいない課）", "script": "smoke_org.py", "screen": "G-14"},
     {"key": "deputy", "name": "システム管理者補佐（代行できること・見られないもの）", "script": "smoke_deputy.py", "screen": "G-14"},
+    {"key": "specialist", "name": "専門職（技師・担当課長・担当部長。見られる人・役割）", "script": "smoke_specialist.py", "screen": "G-14"},
+    {"key": "security", "name": "予備のコードの確認・復旧コード・凍結・総入れ替え", "script": "smoke_security.py", "screen": "G-14", "secrets": True},
     {"key": "theme", "name": "自分の色（土台・強調・背景、読めない組み合わせを断る）", "script": "smoke_theme.py", "screen": "G-16"},
     {"key": "messages", "name": "メッセージ（課長が文言を変える）", "script": "smoke_messages.py", "screen": "G-17"},
     {"key": "requests", "name": "要望・依頼（課長・確認者 → システム管理者の返信）", "script": "smoke_requests.py", "screen": "G-22", "secrets": True},

@@ -11,6 +11,40 @@
 /** @var array $reviewSections */
 $editUrl = url('/reports/edit.php?period=' . rawurlencode($period));
 ?>
+<?php /** @var array $securityNoticeList 本人への知らせ（予備のコードの確認など。30 日。消せない） */ ?>
+<?php foreach ($securityNoticeList as $securityNotice): ?>
+  <div class="flash flash-error security-notice" role="alert">
+    <p><?= h_phrases(security_notice_text($securityNotice)) ?></p>
+    <?php if (in_array($securityNotice['kind'], SECURITY_REPORTABLE_KINDS, true) && $securityNotice['reported_at'] === null): ?>
+    <form method="post" action="<?= h(url('/account.php')) ?>" class="inline" data-confirm="<?= h(msg('システム管理者と補佐（開発担当）に知らせ、あなたのアカウントを一時凍結します。再初期化が済むまでログインできません。よろしいですか？')) ?>">
+      <?= form_hidden(false) ?>
+      <input type="hidden" name="action" value="security_report">
+      <input type="hidden" name="notice_id" value="<?= (int) $securityNotice['id'] ?>">
+      <button type="submit">心当たりがない（知らせて凍結する）</button>
+    </form>
+    <?php endif; ?>
+  </div>
+<?php endforeach; ?>
+<?php /** @var int $openFreezeCount 再初期化を待っている凍結（管理者・補佐（開発担当）だけ） */ ?>
+<?php if ($openFreezeCount > 0): ?>
+  <div class="flash flash-error" role="alert"><a href="<?= h(url('/admin/security.php')) ?>"><?= h_phrases(msg('心当たりがないと知らせて凍結したアカウントがあります（{count} 件）。本人に確かめて、再初期化してください', ['count' => $openFreezeCount])) ?></a></div>
+<?php endif; ?>
+<?php /** @var bool $isMassResetNeeded 全員の総入れ替えを考える状態（管理者・補佐（開発担当）だけ） */ ?>
+<?php if ($isMassResetNeeded): ?>
+  <div class="flash flash-error" role="alert"><a href="<?= h(url('/admin/security.php#mass-reset')) ?>"><?= h_phrases($hasMassResetRequest ? msg('全員の総入れ替えの申請があります。申請した人と連絡を取り合い、承認するかを決めてください') : msg('凍結が続いています。システム管理者と補佐（開発担当）で連絡を取り合い、全員の総入れ替えが要るかを確かめてください')) ?></a></div>
+<?php endif; ?>
+<?php /** @var bool $hasLeadRecoveryRequest 開発担当の復旧の申請（管理者・補佐） */ ?>
+<?php if ($hasLeadRecoveryRequest): ?>
+  <div class="flash flash-error" role="alert"><a href="<?= h(url('/admin/security.php#lead-recovery')) ?>"><?= h_phrases(msg('補佐（開発担当）の復旧の申請があります。本人と連絡を取り、心当たりがなければ取り消してください')) ?></a></div>
+<?php endif; ?>
+<?php /** @var bool $isDeputyMissing 開発担当でない補佐が 1 人もいない（管理者・補佐だけ） */ ?>
+<?php if ($isDeputyMissing): ?>
+  <div class="flash flash-error" role="alert"><a href="<?= h(url('/admin/org.php?tab=users')) ?>"><?= h_phrases(msg('開発担当のほかに、システム管理者補佐がいません。システム管理者と、開発担当でない補佐を、1 名ずつ以上置いてください')) ?></a></div>
+<?php endif; ?>
+<?php /** @var bool $hasUnreadableBackupCode 古い形の予備のコード（管理者が確認できない） */ ?>
+<?php if ($hasUnreadableBackupCode): ?>
+  <div class="flash flash-info"><a href="<?= h(url('/account.php?tab=codes')) ?>"><?= h_phrases(msg('予備のコードを作り直してください（なくしたときに、システム管理者が確認できる形になります）')) ?></a></div>
+<?php endif; ?>
 <?php /** @var array<int, array{id: int|string, name: string}> $departmentsWithoutFinal 課長がいない課（管理者だけ） */ ?>
 <?php if ($departmentsWithoutFinal): ?>
   <div class="flash flash-error" role="alert">
@@ -48,6 +82,22 @@ $editUrl = url('/reports/edit.php?period=' . rawurlencode($period));
   <div class="flash flash-error" role="alert"><a href="<?= h(url('/admin/faq_logs.php#distress')) ?>"><?= h_phrases(msg('よくある質問のチャットに、ID・パスワードを求める質問があります（未対応 {count} 件）。なりすましのおそれがないか確かめてください', ['count' => $faqDistressCounts['credential']])) ?></a></div>
 <?php endif; ?>
 <p class="greeting"><?= h($user['display_name'] !== '' ? $user['display_name'] : $user['login_id']) ?> さん</p>
+<?php /** @var string[] $roleLabelList 役割の札 */ ?>
+<?php /** @var string[] $roleDutyTextList 課ごとの担当 */ ?>
+<?php /** @var string[] $rolePermissionList できること */ ?>
+<section class="card role-summary">
+  <h2>あなたの役割と権限</h2>
+  <p><?php foreach ($roleLabelList as $roleLabel): ?><span class="tag"><?= h($roleLabel) ?></span><?php endforeach; ?></p>
+  <?php if ($roleDutyTextList): ?><p>担当: <?= h_phrases(implode('、', $roleDutyTextList)) ?></p><?php endif; ?>
+  <?php if ($rolePermissionList): ?>
+  <details>
+    <summary>できること</summary>
+    <ul class="role-permission-list">
+      <?php foreach ($rolePermissionList as $rolePermission): ?><li><?= h_phrases($rolePermission) ?></li><?php endforeach; ?>
+    </ul>
+  </details>
+  <?php endif; ?>
+</section>
 <?php /** @var array<int, array<string, int|float|string|null>> $activeNoticeList 出している更新のお知らせ */ ?>
 <?php if ($activeNoticeList): ?>
 <section class="card update-notices">
@@ -61,7 +111,7 @@ $editUrl = url('/reports/edit.php?period=' . rawurlencode($period));
 </section>
 <?php endif; ?>
 
-<?php if ($user['department_id'] === null && (can_manage_system($user) || survey_has_result_viewing_menu($user))): ?>
+<?php if ($user['department_id'] === null && (survey_can_manage_all_departments($user) || survey_has_result_viewing_menu($user))): ?>
 <?php // 課のない管理者・補佐と、課のない部長以上・依頼元の担当（全課共通の調査の結果を見る人。K-067）は、エラーではなく入口を出す ?>
 <section class="card">
   <h2><?= can_manage_system($user) ? '管理' : '見られるもの' ?></h2>

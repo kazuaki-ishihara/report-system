@@ -101,7 +101,7 @@ foreach ($adminMenuItemList as $adminMenuItem) {
             $statusList[] = ['text' => '不適切な表現（7 日） ' . $abusiveCount . ' 件', 'isAttention' => true];
         }
     } elseif ($sectionPath === '/admin/department.php') {
-        $descriptionText = '自分の課の締め日・管理の仕方・確認者（課長代理・リーダー）・チェックする人・項目管理者・ライン';
+        $descriptionText = '自分の課の締め日・管理の仕方・確認者（課長代理・主任）・チェックする人・項目管理者・ライン';
         $finalDepartmentCount = (int) db_val('SELECT COUNT(*) FROM department_reviewers r JOIN departments d ON d.id = r.department_id AND d.is_active = 1 WHERE r.user_id = ? AND r.is_final = 1', [(int) $user['id']]);
         $statusList[] = ['text' => '管理する課 ' . $finalDepartmentCount, 'isAttention' => false];
     } elseif ($sectionPath === '/requests/index.php') {
@@ -114,6 +114,10 @@ foreach ($adminMenuItemList as $adminMenuItem) {
     } elseif ($sectionPath === '/admin/projects.php') {
         $descriptionText = '案件コードと社内向けの呼び名（客先名は入れない）。案件台帳との突き合わせ用の CSV';
         $statusList[] = ['text' => '有効な案件 ' . (int) db_val('SELECT COUNT(*) FROM projects WHERE is_active = 1') . ' 件', 'isAttention' => false];
+    } elseif ($sectionPath === '/admin/security.php') {
+        $descriptionText = '「心当たりがない」と知らせて凍結したアカウントの再初期化、全員の総入れ替え';
+        $openFreezeCount = count(security_open_freezes());
+        $statusList[] = ['text' => '凍結中 ' . $openFreezeCount . ' 件', 'isAttention' => $openFreezeCount > 0];
     } elseif ($sectionPath === '/admin/org.php') {
         $descriptionText = '課・ライン・ユーザー・確認者・組織の一括の入れ替え（CSV）';
         $departmentWithoutFinalCount = (int) db_val(
