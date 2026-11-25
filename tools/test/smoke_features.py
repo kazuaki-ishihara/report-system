@@ -266,6 +266,8 @@ def main():
     second_template_id = database.execute("SELECT id FROM comment_templates WHERE body = ?", ("客先との調整の状況を教えてください",)).fetchone()[0]
     post_template(kacho_a_client, "move_up", template_id=second_template_id)
     check("並べ替えられる", template_body_list()[0] == "客先との調整の状況を教えてください", template_body_list())
+    post_template(kacho_a_client, "move_down", template_id=second_template_id)
+    check("下にも並べ替えられる", template_body_list()[0] == "完了の見込みを教えてください", template_body_list())
     post_template(kacho_a_client, "update", "調整の状況を教えてください", second_template_id)
     check("編集できる", "調整の状況を教えてください" in template_body_list(), template_body_list())
     status_code, _location, view_html = leader_client.get("/reports/view.php?id=%d" % report_a1_id)

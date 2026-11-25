@@ -97,7 +97,8 @@ def main():
     with_rest["b[1][f][%d]" % ids["progress"]] = "on_track"
     with_rest["b[1][f][%d]" % ids["continuation"]] = "continuing"
     post("ippan_a1", "/reports/save.php", "draft", with_rest)
-    check("下書きのあるホームに「続きを書く」か前月の案内が出る", "続きを書く" in page("ippan_a1", "/index.php") or "報告がまだです" in page("ippan_a1", "/index.php"))
+    home_html = page("ippan_a1", "/index.php")
+    check("下書きがあり、ホームに「続きを書く」か前月の案内が出る", one("SELECT COUNT(*) FROM report_records WHERE user_id = ? AND status = 'draft' AND deleted_at IS NULL", owner) >= 1 and ("続きを書く" in home_html or "報告がまだです" in home_html))
     post("ippan_a1", "/reports/save.php", "submit", with_rest)
     previous_id = one("SELECT id FROM report_records WHERE user_id = ? AND period = ? AND deleted_at IS NULL", owner, previous)
     check("準備: 前月の提出", one("SELECT status FROM report_records WHERE id = ?", previous_id) == "submitted")
@@ -136,7 +137,8 @@ def main():
     post("ippan_a2", "/reports/save.php", "draft", many)
     status, _, body = clients["ippan_a2"].get("/reports/edit.php?period=%s&copy_target=%d-%d" % (period, copy_id, project))
     check("案件 10 件のとき、もう 1 件だけ写すのを断る", status == 400 and "10 件" in body, status)
-    check("ホームの「続きを書く」", "続きを書く" in page("ippan_a2", "/index.php") or "報告がまだです" in page("ippan_a2", "/index.php"))
+    home_html_a2 = page("ippan_a2", "/index.php")
+    check("ippan_a2 に下書きがあり、ホームに続きの案内が出る", one("SELECT COUNT(*) FROM report_records r JOIN users u ON u.id = r.user_id WHERE u.login_id = 'ippan_a2' AND r.status = 'draft' AND r.deleted_at IS NULL") >= 1 and ("続きを書く" in home_html_a2 or "報告がまだです" in home_html_a2))
     for number in range(30):
         month = (today.replace(day=1) - datetime.timedelta(days=31 * (number + 8))).strftime("%Y-%m")
         db.execute("INSERT INTO report_records (user_id, department_id, period, status, is_legacy, created_at, updated_at) SELECT ?, ?, ?, 'confirmed', 0, ?, ? WHERE NOT EXISTS (SELECT 1 FROM report_records WHERE user_id = ? AND period = ? AND deleted_at IS NULL)",
@@ -144,10 +146,12 @@ def main():
     check("自分の報告が多いとき、続きのリンクが出る", "more" in page("ippan_a1", "/reports/mine.php") or "page=" in page("ippan_a1", "/reports/mine.php") or "すべて" in page("ippan_a1", "/reports/mine.php"))
 
     section("G-09", "横並び・検索の表示")
-    check("報告がない月の横並び", "HTTP" not in page("kacho_a", "/status/compare.php?period=2020-01&dept=%d" % seed["dept_a"]))
+    check("報告がない月の横並びに、空の知らせが出る", "提出済みの報告がありません" in page("kacho_a", "/status/compare.php?period=2020-01&dept=%d" % seed["dept_a"]))
     db.execute("UPDATE report_field_options SET is_active = 0 WHERE field_id = ? AND code = 'other'", (ids["phase"],))
-    check("無効の選択肢は、検索の条件に出さない", "HTTP" not in page("kacho_a", "/reports/search.php"))
-    check("検索: 見られない報告は出ない（課長代理・主任のラインなど）", "HTTP" not in page("leader_a", "/reports/search.php?search=1&from=%s&to=%s&q=%s" % (previous, period, urllib.parse.quote("前の担当"))))
+    search_form_html = page("kacho_a", "/reports/search.php")
+    check("無効の選択肢は検索の条件に出さず、有効な選択肢は出す", "%d:other" % ids["phase"] not in search_form_html and "%d:on_track" % ids["progress"] in search_form_html, "%d:other" % ids["phase"])
+    leader_search_html = page("leader_a", "/reports/search.php?search=1&from=%s&to=%s&q=%s" % (previous, period, urllib.parse.quote("前の担当")))
+    check("確認者の検索の画面が出て、絞り込みの条件が出る", "検索" in leader_search_html and "選択式の値" in leader_search_html)
     check("検索: 自分の報告だけ", "view.php?id=%d" % current_id in page("ippan_a1", "/reports/search.php?search=1&from=%s&to=%s&q=%s" % (previous, period, urllib.parse.quote("前の担当"))))
 
     # ---- 臨時の調査 ----
@@ -186,7 +190,7 @@ def main():
     for kind in ("csv", "xlsx", "print"):
         status, _, _ = post("admin01", "/surveys/result.php?id=%d" % all_id, "", {"format": kind})
         check("全課共通の出力: " + kind, status == 200, status)
-    check("全課共通の結果（スマートフォン）", "HTTP" not in page("admin01", "/surveys/result.php?id=%d" % all_id, mobile=True))
+    check("全課共通の結果（スマートフォン）に回答の状況が出る", "回答" in page("admin01", "/surveys/result.php?id=%d" % all_id, mobile=True))
     check("部長以上の人の調査の一覧", "全課の確かめ" in page("leader_a", "/surveys/results.php"))
     db.execute("UPDATE adhoc_request_targets SET user_id = user_id WHERE request_id = ?", (all_id,))
 
@@ -255,17 +259,17 @@ def main():
     db.execute("DELETE FROM report_field_comments WHERE comment_enc = ''")
 
     section("G-13", "案件の編集・終了した案件")
-    check("案件の編集の欄", "HTTP" not in page("admin01", "/admin/projects.php?edit=%d" % project))
+    check("案件の編集の欄に、更新の操作が出る", 'value="update"' in page("admin01", "/admin/projects.php?edit=%d" % project))
     body = followed("admin01", "/admin/projects.php", "add", {"code": "R-9001", "alias": "株式会社サンプル", "department_id": ""})
     check("客先名らしい呼び名に注意を出す", "客先名" in body, re.findall(r'flash[^>]*>([^<]{0,60})', body)[:3])
     post("admin01", "/admin/projects.php", "update", {"id": project, "alias": "株式会社サンプル", "department_id": ""})
     status, _, _ = post("admin01", "/admin/projects.php", "update", {"id": 99999, "alias": "x", "department_id": ""})
     check("無い案件の直し", status == 404, status)
     section("G-17", "メッセージ・お知らせの編集の画面")
-    check("合う文言がないとき", "HTTP" not in page("hosa01", "/admin/messages.php?q=" + urllib.parse.quote("どこにもない文言xyz")))
+    check("合う文言がないとき、無しの知らせが出る", "該当する文言はありません" in page("hosa01", "/admin/messages.php?q=" + urllib.parse.quote("どこにもない文言xyz")))
     screen_match = re.search(r'<option value="(G-[^"]+)"', page("hosa01", "/admin/messages.php"))
     if screen_match:
-        check("画面で絞り込める", "HTTP" not in page("hosa01", "/admin/messages.php?screen=" + urllib.parse.quote(screen_match.group(1))))
+        check("画面で絞り込むと、その画面が選ばれている", ('value="%s" selected' % screen_match.group(1)) in page("hosa01", "/admin/messages.php?screen=" + urllib.parse.quote(screen_match.group(1))))
     else:
         check("画面の選択肢がある", False)
     post("hosa01", "/admin/messages.php", "save", {"msg_key": "保存しました", "body": "保存できました"})
@@ -286,15 +290,15 @@ def main():
     request_id = one("SELECT MAX(id) FROM support_requests")
     view = "/requests/view.php?id=%d" % request_id
     check("急ぎの札・注意の知らせが出る", "急ぎ" in page("admin01", view) and "急ぎ" in page("admin01", "/requests/index.php"))
-    check("自分の分だけの一覧", "HTTP" not in page("admin01", "/requests/index.php?scope=mine"))
+    check("自分の分だけの一覧（要望・依頼）が開く", "要望・依頼" in page("admin01", "/requests/index.php?scope=mine"))
     check("無い要望のお知らせの元・要望からのお知らせ", "HTTP" not in page("admin01", "/admin/notices.php?request=%d" % request_id))
     post("admin01", view, "staff_reply", {"status": "reviewing", "body": "確かめます"})
     post("kacho_a", view, "reply", {"body": "補足"})
-    check("返信待ちの札が、管理のトップと一覧に出る", "返信待ち" in page("admin01", "/admin/index.php") and "HTTP" not in page("admin01", "/requests/index.php"))
+    check("返信待ちの札が、管理のトップと一覧に出る", "返信待ち" in page("admin01", "/admin/index.php") and "返信待ち" in page("admin01", "/requests/index.php"))
     post("admin01", view, "staff_reply", {"status": "done", "body": "答え"})
     body = page("admin01", view)
     check("答えた質問は、よくある質問に載せられる", "faq.php" in body)
-    check("要望からよくある質問を書く画面", "#%d" % request_id in page("admin01", "/faq.php?request=%d" % request_id) or "要望・依頼" in page("admin01", "/faq.php?request=%d" % request_id))
+    check("要望からよくある質問を書く画面に、その要望の番号が入る", "#%d" % request_id in page("admin01", "/faq.php?request=%d" % request_id))
     for number in range(80):
         db.execute("INSERT INTO support_reply_templates (kind, body, sort_order, updated_by, created_at, updated_at) VALUES ('', ?, ?, 1, ?, ?)", ("定型%d" % number, number, now, now))
     body = followed("admin01", "/requests/index.php", "template_add", {"template_body": "上限", "template_kind": ""})
@@ -315,7 +319,7 @@ def main():
         check("返事が出る: " + question, status == 200 and "chat" in body, status)
     db.execute("UPDATE faq_chat_logs SET feedback = 'unsolved', feedback_faq_id = (SELECT MIN(id) FROM faq_entries) WHERE id = (SELECT MIN(id) FROM faq_chat_logs)")
     db.execute("UPDATE faq_chat_logs SET feedback = 'solved', feedback_faq_id = (SELECT MAX(id) FROM faq_entries) WHERE id = (SELECT MAX(id) FROM faq_chat_logs)")
-    check("記録の画面（管理者・補佐）", "HTTP" not in page("admin01", "/admin/faq_logs.php") and "HTTP" not in page("hosa01", "/admin/faq_logs.php"))
+    check("記録の画面（管理者・補佐）に、記録の見出しが出る", "よくある質問の記録" in page("admin01", "/admin/faq_logs.php") and "よくある質問の記録" in page("hosa01", "/admin/faq_logs.php"))
     body = page("admin01", "/admin/index.php")
     check("管理のトップに、暴力・破壊の知らせが出る", "人への暴力" in body and "壊すと書いた文" in body)
     for number in range(500):
@@ -435,7 +439,7 @@ def main():
     check("課のない人のホームに知らせが出る", "所属の課が設定されていません" in page("ippan_a2", "/index.php"))
     db.execute("UPDATE users SET department_id = ? WHERE login_id = 'ippan_a2'", (seed["dept_a"],))
     db.execute("UPDATE departments SET is_active = 0 WHERE id = ?", (seed["dept_b"],))
-    check("無効の課の課長のホームが開く", "HTTP" not in page("kacho_b", "/index.php"))
+    check("無効の課の課長のホームが開き、役割の欄が出る", "あなたの役割と権限" in page("kacho_b", "/index.php"))
     db.execute("UPDATE departments SET is_active = 1 WHERE id = ?", (seed["dept_b"],))
 
     # ---- コマンドと古い形の DB ----

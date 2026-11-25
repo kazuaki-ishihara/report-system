@@ -187,7 +187,7 @@ def main():
     post("ippan_a2", "/reports/save.php", "submit", dict(good, **{"b[0][f][%d]" % ids["end_month"]: soon, "b[1][project]": one("SELECT id FROM projects WHERE code = 'P-0002'"),
                                                                      "b[1][f][%d]" % ids["progress"]: "on_track", "b[1][f][%d]" % ids["continuation"]: "continuing"}))
     _, _, body = clients["kacho_a"].get("/status/compare.php?period=%s&dept=%d&tab=summary" % (period, seed["dept_a"]))
-    check("終了予定の月が 3 か月以内の案件が、まとめに出る", soon in body or "終了が近い" in body, body[:60])
+    check("終了予定の月が 3 か月以内の案件が、まとめに出る", soon in body, body[:60])
     db.execute("UPDATE report_fields SET include_in_export = 0 WHERE code = 'lim_0'")
     post("kacho_a", "/export/index.php", "", {"type": "report", "format": "csv", "dept": seed["dept_a"], "from": period, "to": period, "content": "both", "free": "1"})
     text = clients["kacho_a"].last_raw.decode("utf-8-sig", "replace")
