@@ -20,6 +20,9 @@ function session_site_stamp(): string
     try {
         $encryptionKey = crypto_key();
     } catch (RuntimeException $e) {
+        if ($e instanceof PDOException) {
+            throw $e; // DB の一時の失敗で印が変わり、ログアウトさせないようにする
+        }
         $encryptionKey = ''; // 鍵を作る前（初期設定）でも、ログイン画面は開けるようにする
     }
     return hash_hmac('sha256', implode("\n", ['session-site', APP_DIR, (string) cfg('base_path'), (string) cfg('db_path')]), $encryptionKey);

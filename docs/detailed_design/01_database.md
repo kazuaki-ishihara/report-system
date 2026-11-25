@@ -628,6 +628,11 @@ CREATE TABLE IF NOT EXISTS app_state (
 | `report_value_history` | `old_value`、`new_value` | 同上 |
 | `report_field_comments` | `comment_enc` | 常に |
 | `adhoc_response_values` | `value_text` | 自由記述の質問、または「限定」の質問 |
+| `user_backup_codes` | `code_enc` | 常に（古いコードは NULL。使ったら NULL） |
+| `lead_recovery_requests` | `first_half_enc` | 常に |
+| `support_requests` | `title_enc`、`body_enc` | 常に |
+| `support_request_messages` | `body_enc` | 常に |
+| `faq_chat_logs` | `question_enc` | 残すとき |
 
 付加データ（共通編 §8.2）は次のとおり。
 
@@ -638,6 +643,13 @@ CREATE TABLE IF NOT EXISTS app_state (
 | コメント | `cmt:<report_id>:<コメントの id>` |
 | 臨時の調査の回答 | `arv:<response_id>:<request_field_id>` |
 | 2 段階認証 | `totp:<user_id>` |
+| 予備のコード | `bkcode:<user_id>:<コードの id>` |
+| 補佐（開発担当）の復旧の仮のパスワードの前半 | `leadrec:<申請の id>` |
+| 要望・依頼の件名・本文 | `sreq_title:<id>`・`sreq_body:<id>` |
+| 要望・依頼のやり取り | `sreq_msg:<要望・依頼の id>:<やり取りの id>` |
+| よくある質問の記録 | `faq_chat:<id>` |
+
+- 暗号化する列を増やしたら、鍵の入れ替え（`app/bin/rotate_key.php` の `rotate_key_targets()`）と `tools/test/smoke_key_rotation.py` にも足す。
 
 - 移行した報告の `report_date`（日付）は暗号化しない。
 - 選択式などの項目に「限定」を付け外したときは、既存の `report_field_values` を暗号化し直すか復号し、`report_record_fields.confidentiality` も書き換える。変更履歴は暗号化し直さない。
@@ -703,6 +715,7 @@ tomato の DB は、この DB と同じ名前で中身の違う表（`users`・`
 |---|---|
 | `php app/bin/seed_template.php [--dept-a=<課ID>] [--dept-b=<課ID>]` | 初期の様式を登録する。共通項目（案件、担当内容、作業フェーズ、進捗、進捗の補足（表示の条件あり）、案件の継続見込み、終了予定、人員の動き、人員の動きの詳細（限定））は常に、課別項目は課の ID を渡したときだけ（A課 3 項目、B課 1 項目）。同じコードがあれば飛ばす |
 | `php app/bin/create_user.php --login=<ID> --name=<表示名> [--admin] [--dept=<課名>] [--reviewer｜--final]` | 利用者を作る（最初の管理者など）。課がなければ作る。12 文字の仮のパスワードを一度だけ出し、`must_change_password = 1` にする |
+| `php app/bin/rotate_key.php [--dry-run] [--db=<DB>]` | 暗号化の鍵の入れ替え（共通編 §8.2.1。メンテナンス中だけ） |
 
 ### 予備のコードの確認・凍結など（K-075。G-14 §6.11）
 
