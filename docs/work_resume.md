@@ -2,7 +2,7 @@
 
 | 項目 | 内容 |
 |---|---|
-| 最終更新 | 2026-11-24 |
+| 最終更新 | 2026-11-25 |
 | ブランチ | `dev_ono_check`（`main` の `9ffe3e5` から派生。PHP 7.4 で動く書き方）と `dev_ono_check8_3`（`dev_ono_check` の `f583992` から派生。PHP 8.3 が前提） |
 | 内容 | 月次報告システムの見直し版（設計書・実装・検証） |
 
@@ -148,7 +148,20 @@ python tools\lib\ui_watch.py --keep-open      # 終わったあともブラウ�
 
 ## 8. 次の作業
 
-> **2026-11-25 の区切り（ここから再開）**
+> **2026-11-25 夕方の区切り（ここから再開）**
+> - **状態**: APP-123 の直しと突き合わせの道具は、両方のブランチにコミット済み・**push はしていない**（`dev_ono_check` は `6923d2b`・`d3f8ba5`、`dev_ono_check8_3` は `7204890`・`8e03fbd`）。本番・デモ用サイトには未反映。
+> - **APP-123（別のサイトのログインの流用）を直した**: セッションを `app/data/sessions` に置き、サイトの印（鍵・`app/` の場所・`base_path`・`db_path` から作る）を `session_boot()` で比べる（共通編 §5）。`config.php` は変えない（サイトごとに `base_path` を直して置かれているので、差分で上げると壊れる）。検証は `tools/test/smoke_session_site.py`（59 件）。関係する工程（session_site・auth・screens・edges・security・limits）は、このブランチで OK 1377 / NG 0（PHP 8.3）。**全工程（画面の自動操作を含む）も、APP-123 を入れて流し直した: OK 3620 / NG 0（16:08〜16:21）。未実施 1 は LibreOffice。****開発側の検証は済み。** 対象外（手元で再現していない）: PHP 7.4 での実行、セッションの保存方式が `files` 以外のとき。
+> - **デモ用サイト（`~/www/report-system_onion/`）の次の更新**: 凍結・APP-123 を含め、`dev_ono_check` の `56a6983` → `6923d2b` を 1 回で上げる。プレオープンの検証中で、実在の利用者がいる。
+>   - 一式: 作業端末の `dev/tools/deploy/output/diff_20261125_152111_56a6983_6923d2b`（63 ファイル。`config.php` なし）。手順は `C:\ReportSystem\onionプレオープン更新手順書_20261125.txt`（控え → 写しでリハーサル → DB の移行 → プログラム → 確かめ → 戻し方）。`6923d2b` より後に入れる変更が増えたら作り直す。
+>   - `tools/deploy/migration_check.php`: `migrate.php` の前後で、もとからある表・列の中身が変わっていないかを突き合わせる（件数と OK/NG だけを出す）。
+>   - `migrate.php` は列・表・トリガーの追加のほか、**`adhoc_requests` を作り直す**（件数か外部キーが合わなければ元に戻す）。反映すると全員ログインし直し。
+>   - 手元で確かめた（PHP 8.3・テストデータ）: もとの 46 表が変わらない、移行した DB で `56a6983` の版が動く、手順書のコマンドが Git Bash で通る。**反映時にシステム管理者が確かめるもの**（開発側の積み残しではない）: さくらでのリハーサル・反映・確かめ（手順書の 3〜8）。手元で通していない: 手順書の画面の操作と DB の戻し。
+>   - 反映の前にそろえるもの: システム管理者と補佐（開発担当）が合わせて 2 人以上（凍結の解除に要る。ふつうの補佐は数えない）、課長代理のチェックを待つかの判断、日時。案内はシステム管理者が出す。
+> - **サーバーの `report-system`・`report-system_tomato` には触らない。** tomato の取り込みは onion が本番対象になってから。取り込むのは報告系だけで、利用者は通常の追加にする（今の `import_tomato.php` は利用者も足すので直しが要る。`C:\ReportSystem\未着手.md`）。
+> - **一式の整理**: `dev/tools/deploy/output` に残るのは上の一式と `20261118_165641_4b40806` だけ。他の端末に渡す一式（`local_…`）は無いので、渡すときは `build_local_kit.py` で作り直す。
+> - **次にすること**: (1) 上の「そろえるもの」を待って onion に反映し、`未着手.md` と版の記録を `6923d2b` に直す。(2) APP-123 が `report-system` 側に残るおそれの扱い（触らない方針のため保留）。(3) SQL・XSS の全件の点検はしていない。(4) ENV-004〜006 は未着手。
+
+> **2026-11-25 昼の区切り**（下の「状態」「次にすること」は、この時点のもの）
 > - **状態: 実装・検証・コミット・push 済み（dev_ono_check 015596b・dev_ono_check8_3 c3a6e08。main・本番・デモ用サイトには未配備）。** 両ブランチとも、変更に関わる全工程の検証（画面の自動操作を含む）が成功（dev_ono_check: OK 3668 / NG 0、dev_ono_check8_3: OK 3345 / NG 0。未実施 1 は LibreOffice）。UI を省いた全工程の流し直しも NG 0。未検証の分岐は 0（coverage_exceptions.tsv で仕分け）。A-1（緩い確かめの締め直し）・A-2（操作の検証を画面ごとに強化・抜け move_down を発見し修正）・A-4（migrate 前の古い DB でも画面が開くことを写しで確認）も済み。操作マニュアルの画像も撮り直し済み（dev 95 枚・dev8_3 76 枚、--check OK）。検証で開いたポート・ブラウザーは閉じたことを確認済み。直下の `画面の目視確認_*.txt` は入れない。
 > - **反映には `migrate.php` が要る**（古い DB の写しで確認済み）。足す列: `users` の `is_hr_manager`・`specialist_title`・`frozen_at`・`is_credential_reset`・`was_admin_deputy_lead`、`user_backup_codes.code_enc`。足す表: `security_notices`・`user_recovery_codes`・`user_blocked_passwords`・`account_freezes`・`mass_reset_requests`・`mass_credential_resets`・`lead_recovery_requests`。足すトリガー: 専門職の役割禁止（`tr_department_*_specialist_*`・`tr_users_specialist_update`）、開発担当だった印（`tr_users_was_lead_*`）。
 > - **この日に実装したもの（両ブランチ。課題管理 APP-124〜129、仮設定 K-071〜K-075）**:
@@ -165,7 +178,7 @@ python tools\lib\ui_watch.py --keep-open      # 終わったあともブラウ�
 >     - 必ず置く人数: 管理者 1 名以上、開発担当のほかに補佐 1 名以上（`admin_deputy_plain_count()`。最後の 1 人は外す・無効・開発担当にできない。CSV も）。
 >   - **設計書・マニュアルを更新**: G-16・G-03・G-11・G-14（§6.11）・G-27・共通編 §10・DB 編・操作マニュアル（9.9・9.10・10 章）。
 > - **足した検証**（`tools/test/`。`verify_all.py` に組み込み済み）: `smoke_specialist.py`（専門職）、`smoke_security.py`（予備のコード・復旧コード・凍結・総入れ替え・開発担当の保護。209 件）。`smoke_surveys_all.py`・`smoke_deputy.py` に人財管理者・役割表示を追加。
-> - **次にすること**: ここから先は保留の B〜D 群のみ。(1) 本番・デモ用サイトへの反映は課長代理のチェック・課長の連絡待ち（下の 2026-11-24）。本番移行は `php app/bin/migrate.php` を流してもらう方式（追加のみ・データ保持・2FA/予備コードそのまま）。(2) 会社・上長の判断待ち（HSTS・IP ロック、K-063〜075 の正式決定、管理者 2 名の検討）。(3) 外部要因（さくら API 確認・スマホアプリ化・実機確認）。※ push 済み・未検証分岐 0・A-1/A-2/A-4 完了は上の「状態」に記載。
+> - **次にすること**: ここから先は保留の B〜D 群のみ。(1) 本番・デモ用サイトへの反映は課長代理のチェック・課長の連絡待ち（下の 2026-11-24）。本番移行は `php app/bin/migrate.php` を流してもらう方式（列・表・トリガーの追加と `adhoc_requests` の作り直し・データ保持・2FA/予備コードそのまま）。(2) 会社・上長の判断待ち（HSTS・IP ロック、K-063〜075 の正式決定、管理者 2 名の検討）。(3) 外部要因（さくら API 確認・スマホアプリ化・実機確認）。※ push 済み・未検証分岐 0・A-1/A-2/A-4 完了は上の「状態」に記載。
 > - **この日の決定（運用。仮設定 K-075）**: 2 人の承認で歯止めをかける形は意図どおり維持。心の不調・退職の知らせは管理者だけ（組織管理の仕事。開発担当には見せない＝K-059 のまま）。管理者が全員凍結中はこの知らせをだれも見られないので、管理者 2 名を勧める。
 
 > **2026-11-24 夜の区切り**
@@ -211,7 +224,7 @@ python tools\lib\ui_watch.py --keep-open      # 終わったあともブラウ�
 >   - 組織: 役職が課長・部長でない人を課長にするときに確かめを出し、ユーザーの一覧に「役職と役割が異なる」の札（K-069 案 A）。「班」の表現を「ライン」に変えた（K-070。前の見出しの CSV も取り込める。標準のよくある質問の質問の文は変えていない）。
 >   - 道具: `tools/test/check_outputs.py`（動いている検証環境の出力をまとめて取り出し、件数を DB と突き合わせ、印刷用の画面を PDF にする）、`tools/deploy/build_diff_package.py`（公開済みのサイトに差分だけを上げる一式と、差分公開範囲.txt・反映手順.txt）、`app/bin/import_tomato.php`（別ブランチ dev_hasimoto の DB を移行データとして取り込む。DB 編 §6.1）、`tools/test/trial_seed.php`・`org_seed.php`（お試し課・組織図どおりのテストデータ）、`tools/lib/build_verify_env.py`（検証環境を作る）。
 > - **検証環境**: 開発の環境とは別に `C:\ReportSystem\verify\report-system-local`（127.0.0.1:8100）。作り直しは `python tools/lib/build_verify_env.py --replace`（DB は消える）。テストデータは組織図どおりの 7 課・お試し課・部長以上の人と、全員が回答した全課共通の調査。出力の確かめのため、課のある全員の 9 月・10 月の報告も入れてある。
-> - **デモ用サイト（`~/www/report-system_onion/`）**: 今は `dev_ono_check` の `56a6983`。アカウントを配っているので、上げるときは差分の一式だけ（`build_diff_package.py --base 56a6983 --site report-system_onion`）。最新の一式は `tools/deploy/output/diff_20261124_132943_56a6983_ca1650b`（`migrate.php` が要る）。
+> - **デモ用サイト（`~/www/report-system_onion/`）**: 今は `dev_ono_check` の `56a6983`。アカウントを配っているので、上げるときは差分の一式だけ（`build_diff_package.py --base 56a6983 --site report-system_onion`）。（この時点の一式 `…_ca1650b` は使わないので消した。今の一式は上の 2026-11-25 夕方の区切り）
 
 > **2026-11-20 の区切り**
 > - **状態（2026-11-20 の終わり）**: すべてコミットして push 済み（`dev_ono_check` は `2e2b06f`、`dev_ono_check8_3` は `bbeae29`。そのあと作業再開ポイントを更新した）。どちらも全件の検証（画面の自動操作・Office のソフトを含む）が成功（dev_ono_check: OK 2060 / NG 0、dev_ono_check8_3: OK 1841 / NG 0。未実施 1 はどちらも LibreOffice が入っていないため）。コミット前の変更は無い（ほかのセッションの、検証のサーバーのセッションのファイルの置き場所の変更（`verify_all.php_server_command()`）も、両方のブランチでコミットして push した）。
