@@ -1341,7 +1341,17 @@ function faq_related_entries(array $faqList, int $baseFaqId, array $excludedFaqI
     }
     $excludedIdSet = array_flip(array_merge([$baseFaqId], array_map('intval', $excludedFaqIdList)));
     $relatedFaqList = [];
-    $candidateList = array_merge(faq_search((string) $baseFaqRow['question'], $faqList), faq_in_category($faqList, (string) $baseFaqRow['category']));
+    // 並び: 同じ分野で近い質問 → 同じ分野のほかの質問 → ほかの分野で近い質問（「スマホ」「コード」のような言葉 1 つだけで、関係の薄い分野の質問が先に出ないように。2026-11-26）
+    $baseCategory = (string) $baseFaqRow['category'];
+    $searchedList = faq_search((string) $baseFaqRow['question'], $faqList);
+    $isSameCategory = static function (array $candidateRow) use ($baseCategory): bool {
+        return (string) $candidateRow['category'] === $baseCategory;
+    };
+    $candidateList = array_merge(
+        array_values(array_filter($searchedList, $isSameCategory)),
+        faq_in_category($faqList, $baseCategory),
+        array_values(array_filter($searchedList, static function (array $candidateRow) use ($isSameCategory): bool { return !$isSameCategory($candidateRow); }))
+    );
     foreach ($candidateList as $candidateRow) {
         $candidateId = (int) $candidateRow['id'];
         if (isset($excludedIdSet[$candidateId])) {

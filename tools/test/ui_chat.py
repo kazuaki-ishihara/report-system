@@ -122,6 +122,10 @@ def main():
         check("「解決しない」を押せる", choose("解決しない"))
         check("関係がありそうな質問を出す", said("関係がありそうな質問"))
         check("選ぶと答えが出る", choose("別の質問") and said("別の答え"))
+        # 関係がありそうな質問から選んだ答えで「解決しない」を押しても、最初の質問（id 1）を元に探す（元がずれていかない）
+        mock(match="related=1&", json={"ok": True, "matches": [dict(faq, id=3, question="三つ目の質問", answer="三つ目の答え")]})
+        choose("解決しない")
+        check("2 回目の関係がありそうな質問も、最初の質問を元に探す", said("関係がありそうな質問") and choose("三つ目の質問") and said("三つ目の答え"))
         mock(match="related=", json={"ok": True, "matches": [other]})
         choose("解決しない")
         said("関係がありそうな質問")
