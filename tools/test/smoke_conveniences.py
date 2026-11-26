@@ -135,6 +135,31 @@ def main():
     check("J: もう一度取り込んでも重ならない（載っていない質問だけ足す）", database.execute("SELECT COUNT(*) FROM faq_entries").fetchone()[0] == faq_count_after)
     check("J: 取り込んだ質問に分野が入る", database.execute("SELECT COUNT(*) FROM faq_entries WHERE category = 'login'").fetchone()[0] >= 10)
     check("J: 取り込みを記録に残す", database.execute("SELECT COUNT(*) FROM access_logs WHERE target LIKE 'faq:import_standard;added=%'").fetchone()[0] == 2)
+    # 質問の文を変えた標準の質問（FAQ_STANDARD_RENAMED_QUESTIONS）: 前の文のまま載っている行は、取り込みで今の文に書き換え、二重に足さない（2026-11-26）
+    renamed_pair_list = re.findall(r"^    '([^']*)' => '([^']*)',$", standard_source.split("FAQ_STANDARD_RENAMED_QUESTIONS")[-1], re.M)
+    check("J: 質問の文の対応表がある", len(renamed_pair_list) >= 1, len(renamed_pair_list))
+    if renamed_pair_list:
+        (old_question_a, new_question_a), (old_question_b, new_question_b) = renamed_pair_list[0], renamed_pair_list[-1]
+        database.execute("UPDATE faq_entries SET question = ?, answer = '前の版の答え', created_at = '2026-01-01 00:00:00', updated_at = '2026-01-01 00:00:00' WHERE question = ?", (old_question_a, new_question_a))
+        database.execute("UPDATE faq_entries SET question = ?, answer = '管理者が直した答え', created_at = '2026-01-01 00:00:00', updated_at = '2026-02-01 00:00:00' WHERE question = ?", (old_question_b, new_question_b))
+        faq_count_before_rename = database.execute("SELECT COUNT(*) FROM faq_entries").fetchone()[0]
+        _status_code, _location, faq_admin_html = admin_client.get("/faq.php")
+        check("J: 前の文のまま載っている標準の質問は、「まだ載っていない」ではなく「質問の文の直し」に数える",
+              "まだ載っていない 0 件" in faq_admin_html and "質問の文の直し 2 件" in faq_admin_html, re.findall(r"標準のよくある質問を取り込む（[^）]*）", faq_admin_html))
+        post_form(admin_client, "/faq.php", {"action": "import_standard"})
+        check("J: 取り込むと、前の文の質問を今の文に書き換え、二重に足さない",
+              database.execute("SELECT COUNT(*) FROM faq_entries").fetchone()[0] == faq_count_before_rename
+              and database.execute("SELECT COUNT(*) FROM faq_entries WHERE question IN (?, ?)", (old_question_a, old_question_b)).fetchone()[0] == 0
+              and database.execute("SELECT COUNT(*) FROM faq_entries WHERE question IN (?, ?)", (new_question_a, new_question_b)).fetchone()[0] == 2)
+        check("J: 管理者が直していない行は、答えも標準の今の答えになる", database.execute("SELECT answer <> '前の版の答え' AND created_at = updated_at FROM faq_entries WHERE question = ?", (new_question_a,)).fetchone()[0] == 1)
+        check("J: 管理者が直した行は、質問の文だけ今の文にし、答えは変えない", database.execute("SELECT answer FROM faq_entries WHERE question = ?", (new_question_b,)).fetchone()[0] == "管理者が直した答え")
+        # 改行の形（CRLF）だけが違う答えは、「答えの直し」に数えない（Windows で取り出したファイルから取り込んだ答え。2026-11-26）
+        crlf_question = database.execute("SELECT question FROM faq_entries WHERE created_at = updated_at AND answer LIKE '%' || char(10) || '%' ORDER BY id LIMIT 1").fetchone()[0]
+        database.execute("UPDATE faq_entries SET answer = replace(answer, char(10), char(13) || char(10)) WHERE question = ?", (crlf_question,))
+        _status_code, _location, faq_admin_html = admin_client.get("/faq.php")
+        check("J: 改行の形だけが違う答えは、答えの直しに数えない", "標準のよくある質問を取り込む（" not in faq_admin_html,
+              re.findall(r"標準のよくある質問を取り込む（[^）]*）", faq_admin_html))
+        check("J: 書き換えた数を記録に残す", database.execute("SELECT COUNT(*) FROM access_logs WHERE target LIKE 'faq:import_standard;%renamed=2'").fetchone()[0] == 1)
     self_miss_list = []
     for _category, standard_question in standard_entry_list:
         _status_code, _location, json_text = admin_client.get("/faq.php?format=json&q=" + urllib.parse.quote(standard_question))   # 管理者だけの分野も含めて確かめる
@@ -542,7 +567,7 @@ def main():
     subordinate_retirement_result = ask_chat(kacho_client, "部下が退職した。どうすればいい？")   # 部下の手続きの答えは、課の管理の分野（課長に見せる）
     subordinate_row = database.execute("SELECT distress_level FROM faq_chat_logs WHERE id = ?", (subordinate_retirement_result["log_id"],)).fetchone()
     check("J: 部下の退職の質問は、手続きの答えを返し、知らせる印を付ける",
-          subordinate_retirement_result["result"] == "matched" and subordinate_retirement_result["matches"][0]["question"].startswith("部下が退職") and subordinate_row[0] == "retirement",
+          subordinate_retirement_result["result"] == "matched" and subordinate_retirement_result["matches"][0]["question"].startswith("一般職が退職") and subordinate_row[0] == "retirement",
           (subordinate_retirement_result["matches"][:1], subordinate_row))
     _status_code, _location, retirement_page_html = ippan_a2_client.get("/faq.php?q=" + urllib.parse.quote("来月退職します"))
     check("J: JavaScript が無くても、自分の退職には相談を促す", "まず上司（課長）に相談してください" in retirement_page_html)

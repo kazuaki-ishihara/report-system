@@ -6,6 +6,7 @@
 /** @var string|null $screenCategory 「この画面の使い方」から来たときの、その画面の分野 */
 /** @var bool $canEdit 管理者・補佐か（書く・直す・消す・並べ替える・取り込む） */
 /** @var int $standardMissingCount 標準のよくある質問のうち、まだ載っていない数 */
+/** @var int $standardRenamableCount 標準の質問の文が変わり、前の文のまま載っている数（取り込みで今の文にする） */
 /** @var int $standardUpdatableCount 標準の答えが新しくなった質問（管理者が直していないもの）の数 */
 /** @var int|null $editedFaqId */
 /** @var int|null $sourceRequestId もとの要望・依頼（「質問」から載せるとき） */
@@ -173,10 +174,10 @@ $renderCategoryChoices = static function () use ($categoryCountList, $categoryUr
 
   <?php if ($canEdit): ?>
     <div class="faq-standard-import">
-      <?php if ($standardMissingCount > 0 || $standardUpdatableCount > 0): ?>
+      <?php if ($standardMissingCount > 0 || $standardUpdatableCount > 0 || $standardRenamableCount > 0): ?>
         <form method="post" action="<?= h(url('/faq.php')) ?>" class="inline" data-confirm="<?= h(msg('標準のよくある質問のうち、まだ載っていない質問を足し、管理者が直していない答えを新しくします。よろしいですか？')) ?>">
           <?= form_hidden() ?>
-          <button type="submit" name="action" value="import_standard">標準のよくある質問を取り込む（まだ載っていない <?= (int) $standardMissingCount ?> 件・答えの直し <?= (int) $standardUpdatableCount ?> 件）</button>
+          <button type="submit" name="action" value="import_standard">標準のよくある質問を取り込む（まだ載っていない <?= (int) $standardMissingCount ?> 件・答えの直し <?= (int) $standardUpdatableCount ?> 件・質問の文の直し <?= (int) $standardRenamableCount ?> 件）</button>
         </form>
         <p class="note"><?= h_phrases('操作マニュアルの全章から想定される質問をまとめたものです。同じ質問の文がすでにあるものは足しません。答えが新しくなった質問は、ここで直していないものだけ答えを新しくします（ここで直した答えは変えません）。取り込んだあとは、ここで直す・消すことができます。') ?></p>
       <?php else: ?>
