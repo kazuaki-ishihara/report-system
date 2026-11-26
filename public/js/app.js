@@ -42,6 +42,29 @@
     btn.textContent = show ? '隠す' : '表示';
   });
 
+  // ---- コンピテンシー評価基準（G-27 §3.5）: 横スライドのつまみ・◀ ▶ と、表の横の位置を合わせる ----
+  document.querySelectorAll('.goal-criteria-block').forEach(function (criteriaBlock) {
+    var scrollBox = criteriaBlock.querySelector('.goal-criteria-scroll');
+    var sliderBox = criteriaBlock.querySelector('.goal-criteria-slider');
+    if (!scrollBox || !sliderBox) { return; }
+    var rangeInput = sliderBox.querySelector('input[type=range]');
+    function maxScroll() { return Math.max(0, scrollBox.scrollWidth - scrollBox.clientWidth); }
+    function syncSlider() {
+      var scrollableWidth = maxScroll();
+      sliderBox.hidden = scrollableWidth < 2;
+      rangeInput.value = scrollableWidth > 0 ? String(Math.round(scrollBox.scrollLeft / scrollableWidth * 1000)) : '0';
+    }
+    rangeInput.addEventListener('input', function () { scrollBox.scrollLeft = maxScroll() * Number(rangeInput.value) / 1000; });
+    sliderBox.addEventListener('click', function (clickEvent) {
+      var stepButton = clickEvent.target.closest('[data-criteria-step]');
+      if (!stepButton) { return; }
+      scrollBox.scrollBy({ left: Number(stepButton.getAttribute('data-criteria-step')) * scrollBox.clientWidth * 0.6, behavior: 'smooth' });
+    });
+    scrollBox.addEventListener('scroll', syncSlider);
+    window.addEventListener('resize', syncSlider);
+    syncSlider();
+  });
+
   // ---- 2 段階認証のコードの欄: ふだんは数字のキーボード。予備のコード（英字を含む）を入れるときは、英字のキーボードにする ----
   document.addEventListener('click', function (clickEvent) {
     var backupButton = clickEvent.target.closest('.use-backup-code');
@@ -1255,5 +1278,29 @@
       });
     });
     scrollToEnd();
+  })();
+
+  // ---- 交通費の精算（G-26）: 金額を入れると、小計と合計（小計 − 仮払い）をその場で出す。保存のときはサーバーでも計算する ----
+  (function () {
+    var expenseForm = document.querySelector('form.expense-form');
+    if (!expenseForm) { return; }
+    var subtotalElement = expenseForm.querySelector('.expense-subtotal');
+    var totalElement = expenseForm.querySelector('.expense-total');
+    var advanceInput = expenseForm.querySelector('.expense-advance');
+    function amountOf(amountText) {
+      var normalizedText = String(amountText || '').replace(/[０-９]/g, function (digitText) { return String.fromCharCode(digitText.charCodeAt(0) - 0xFEE0); })
+        .replace(/[,，円\s　]/g, '');
+      return /^\d+$/.test(normalizedText) ? parseInt(normalizedText, 10) : 0;
+    }
+    function updateTotals() {
+      var subtotalAmount = 0;
+      expenseForm.querySelectorAll('.expense-amount').forEach(function (amountInput) { subtotalAmount += amountOf(amountInput.value); });
+      var totalAmount = subtotalAmount - amountOf(advanceInput ? advanceInput.value : '');
+      if (subtotalElement) { subtotalElement.textContent = subtotalAmount.toLocaleString('ja-JP'); }
+      if (totalElement) { totalElement.textContent = totalAmount.toLocaleString('ja-JP'); }
+    }
+    expenseForm.addEventListener('input', function (inputEvent) {
+      if (inputEvent.target.classList.contains('expense-amount') || inputEvent.target.classList.contains('expense-advance')) { updateTotals(); }
+    });
   })();
 })();

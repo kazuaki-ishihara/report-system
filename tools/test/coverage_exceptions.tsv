@@ -27,8 +27,6 @@ app/lib/report.php	if (!isset($projectIdByReportProjectId[$reportProjectId])) {	
 app/lib/report.php	if ($p !== null) {	案件をまとめ読みの網から漏れた分だけ個別に読むとき
 app/lib/request_key.php	} catch (PDOException $e) {	例外の捕捉（正常系では起きない。異常系は別の確かめで扱う）
 app/lib/role.php	if ($departmentRow === null) {	確認者の課が消えていたときの守り
-app/lib/role.php	if ($duty['isFinal'] && $duty['isActive'] && function_exists('goal_viewer_role')) {	目標管理のある版だけ通る分岐（8.3 の版には goal.php がない）
-app/lib/role.php	&& !is_final_reviewer_of((int) $user['id'], (int) $user['department_id'])) {	目標管理のある版だけ通る分岐（8.3 の版には goal.php がない）
 app/lib/schema.php	if ($rowCountAfter !== $rowCountBefore || $foreignKeyProblemList) {	表を作り直したときだけ通る検証（作り直しが起きない環境では通らない）
 app/lib/schema.php	} catch (Throwable $rebuildError) {	例外の捕捉（正常系では起きない。異常系は別の確かめで扱う）
 app/lib/session.php	if (session_status() === PHP_SESSION_ACTIVE) {	セッションが開いているときだけ閉じる守り
@@ -45,6 +43,7 @@ app/pages/admin_security.php	if ($leadRecovery === null || (int) $leadRecovery['
 app/pages/admin_security.php	if (!is_admin($user) && !security_can_approve_lead_recovery($user, $leadRecovery) && (int) $user['id'] !== (int) $leadRecovery['user_id']) {	申請がない・権限がないときの守り（復旧・総入れ替えの正常系は smoke で確認済み）
 app/pages/admin_security.php	if (!security_is_mass_reset_member($user)) {	申請がない・権限がないときの守り（復旧・総入れ替えの正常系は smoke で確認済み）
 app/pages/comment_templates.php	if ($templateScope === 'mine' && !$isReviewer) {	確認者でない人が自分の定型文を見ようとしたときの守り
+app/pages/goal_edit.php	if (!in_array($userId, array_column(goal_meeting_reviewers($sheet['user_id']), 'user_id'), true)) {	面談の記録を書ける確認者でないときの守り
 app/pages/login.php	if (cfg('dev_skip_2fa') === true && !cfg('https')) {	開発用の設定（本番・自動検証では無効）
 app/pages/report_act.php	if ((int) $c['user_id'] !== $uid) {	ほかの人のコメントを消したときの記録（本人が消すのが通常）
 app/pages/report_save.php	if (!$conflict && !($report === null && $e instanceof PDOException && report_find_own($uid, $period) !== null)) {	同時に保存したときの競合の守り
@@ -56,6 +55,8 @@ app/views/admin_field_edit.php	<?php foreach ($candidateField['options'] as $can
 app/views/department_manage.php	<td><?php if ($isDepartmentMember): ?><select name="member_team[<?= $memberUserId ?>]" aria-label="<?= h($memberRow['display_name']) ?>のライン"><?= $rend	ラインごとの課・専門職の表示の分岐（組み合わせで通らない分）
 app/views/department_manage.php	<td><?php if ($isFinalMember): ?>課全体<?php elseif ($isSpecialistMember): ?>—<?php else: ?><select name="reviewer_team[<?= $memberUserId ?>]" aria-label	ラインごとの課・専門職の表示の分岐（組み合わせで通らない分）
 app/views/faq.php	<?php if ($matchedFaqList): ?>	要配慮の返事に、関連する質問も出るとき（稀な組み合わせ）
+app/views/goal_edit.php	<?php if ($isOwner): ?><input id="<?= h($businessKey) ?>" name="<?= h($businessKey) ?>" type="text" inputmode="decimal" maxlength="10" value="<?= h($s	本人がシートの数値欄を書くときの分岐（見る人では通らない）
+app/views/goal_list.php	if ($progressFlags === null) {	進み具合のないシートの表示の守り
 app/views/report_view.php	<?php if ($previousComparison['previousReport'] !== null && !isset($previousComparison['previousProjectCodeById'][(int) $b['project_id']])): ?><span c	前月の案件の対応が取れないときの差分表示の守り
 app/views/search.php	<?php foreach ($choiceField['options'] as $choiceOption): if (!$choiceOption['active']) { continue; } ?>	無効な選択肢を飛ばす表示の守り
 app/views/support_request_list.php	<?php if ($isStaff && $canSubmit): ?>	管理者で、かつ要望を出せる人のときのタブ（通常は別々の役割）

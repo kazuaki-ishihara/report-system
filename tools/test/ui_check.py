@@ -282,8 +282,8 @@ def main():
         b.click(".app-menu summary")
         time.sleep(0.2)
         shot("menu_admin")
-        check("メニューが見出し（報告・確認・管理）で分かれる",
-              b.eval("Array.prototype.map.call(document.querySelectorAll('.app-menu .menu-group'), function (groupLabel) { return groupLabel.textContent; }).join(',')") == "報告,確認,管理,アカウント")
+        check("メニューが見出し（報告・確認・管理・目標管理・精算）で分かれる",
+              b.eval("Array.prototype.map.call(document.querySelectorAll('.app-menu .menu-group'), function (groupLabel) { return groupLabel.textContent; }).join(',')") == "報告,確認,管理,目標管理,精算,アカウント")
         b.goto(a.base + "/admin/org.php?tab=departments&edit=1")
         shot("org_department_edit")
         check("課の編集の欄が、課の一覧より上に出る",

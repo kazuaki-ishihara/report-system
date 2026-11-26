@@ -57,8 +57,12 @@ report-system/                       ← リポジトリ
     │   ├── messages_catalog.php     変えられる文言の一覧（tools/lib/msg_catalog.py が作る）
     │   ├── account_security.php    予備のコードの確認・復旧コード・凍結・総入れ替え（G-14 §6.11）
     │   ├── backup.php              DB のバックアップ
+    │   ├── expense.php             通勤定期代の精算（G-26）
     │   ├── faq_chat_log.php        よくある質問のチャットの記録（G-25）
     │   ├── faq_standard.php        標準のよくある質問
+    │   ├── goal.php                目標管理（G-27）
+    │   ├── goal_criteria.php       コンピテンシー評価基準の表（自動生成）
+    │   ├── goal_templates.php      目標管理の様式の定数（自動生成）
     │   ├── maintenance.php         メンテナンス中の表示（G-21 §7）
     │   ├── notice.php              更新のお知らせ・よくある質問・画面ごとの使い方（G-24・G-25）
     │   ├── org_csv.php             組織の一括の入れ替え（G-14 §6.8）

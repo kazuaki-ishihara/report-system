@@ -539,6 +539,89 @@ def capture_all(camera, php_path, environment, database_path):
             camera.shoot(image_name, [mark(".tabs a.active, a.active", label=1, nth=0)], scroll="top")
     run_scene(camera, "10 章 アカウント設定", chapter_account)
 
+    # ---- 13 章 通勤定期代の精算（G-26。本人だけ。通勤定期だけ） ----
+    def chapter_expenses():
+        camera.use_width("pc")
+        camera.login("ippan_a1")
+        browser.click(".app-menu summary")
+        time.sleep(0.2)
+        camera.shoot("m13_01_menu", [mark(".app-menu a", text="通勤定期代の精算", label=1)], scroll="top")
+        browser.click(".app-menu summary")
+        camera.goto("/expenses/index.php")
+        camera.shoot("m13_02_list_empty", [mark(".flash-info", label=1), mark("a.button", text="新しく作る", label=2)], scroll="top")
+        camera.goto("/expenses/edit.php")
+        browser.fill("#employee_number", "999")
+        browser.fill("#office", "大阪")
+        camera.shoot("m13_03_edit_head", [mark('input[name="payment_method"]', label=1, up=".expense-head-grid > div"), mark("#submitted_on", label=2),
+                                          mark("#employee_number", label=3), mark("#office", label=4), mark("#department_name", label=5), mark("#full_name", label=6)])
+        browser.fill('input[name="rows[0][start_date]"]', "2026-11-01")
+        browser.fill('input[name="rows[0][end_date]"]', "2027-04-30")
+        browser.fill('input[name="rows[0][purpose]"]', "通勤（本社）")
+        browser.fill('select[name="rows[0][transport]"]', "私鉄・地下鉄")
+        browser.fill('input[name="rows[0][route]"]', "門真南～(谷町六丁目)～天王寺")
+        browser.fill('select[name="rows[0][trip]"]', "往復")
+        browser.fill('input[name="rows[0][amount]"]', "61830")
+        camera.shoot("m13_04_edit_rows", [mark('input[name="rows[0][start_date]"]', label=1), mark('input[name="rows[0][end_date]"]', label=2),
+                                          mark(".expense-fixed-kind", label=3), mark('select[name="rows[0][transport]"]', label=4),
+                                          mark('input[name="rows[0][route]"]', label=5), mark('select[name="rows[0][trip]"]', label=6),
+                                          mark('input[name="rows[0][amount]"]', label=7)])
+        camera.shoot("m13_05_edit_totals", [mark(".expense-subtotal", label=1), mark("#advance_amount", label=2), mark(".expense-total", label=3),
+                                            mark('button[value="save"]', label=4)])
+        browser.click('button[value="save"]', navigate=True)
+        camera.shoot("m13_06_saved", [mark("a.button", text="Excel を受け取る", label=1)], scroll="top")
+        camera.goto("/expenses/index.php")
+        camera.shoot("m13_07_list", [mark("a.button", text="開く", label=1), mark("a.button", text="Excel", label=2),
+                                     mark("a.button", text="写して新しく作る", label=3)], scroll="top")
+    run_scene(camera, "13 章 通勤定期代の精算", chapter_expenses)
+
+    # ---- 14 章 目標管理（G-27。本人・課長・課長代理だけが見る） ----
+    def chapter_goals():
+        fiscal_year = today.year if today.month >= 10 else today.year - 1
+        camera.use_width("pc")
+        camera.login("ippan_a1")
+        camera.goto("/goals/index.php")
+        camera.shoot("m14_01_list", [mark("a.button", text="年度のシートを作る", label=1)], scroll="top")
+        camera.goto("/goals/edit.php?year=%d" % fiscal_year)
+        camera.shoot("m14_02_new_kind", [mark("p.note", text="様式は役職で決まります", label=1), mark("#department_name", label=2)], scroll="top")
+        browser.fill("#goal-theme-1", "障害の件数を減らす")
+        browser.fill('textarea[name="goals[0][goal]"]', "担当システムの障害の件数を、前年の半分にする。\n毎月の振り返りで原因を分類し、再発防止策を決めて実行する。")
+        browser.fill('textarea[name="goals[0][progress]"]', "上期の障害は 6 件（前年同期 11 件）。")
+        camera.shoot("m14_03_goal_owner", [mark("#goal-theme-1", label=1), mark('textarea[name="goals[0][goal]"]', label=2), mark('textarea[name="goals[0][progress]"]', label=3)])
+        browser.fill('textarea[name="goals[0][mid_report]"]', "障害の原因を 4 つに分類し、手順書を見直した。")
+        browser.fill('textarea[name="goals[0][mid_plan]"]', "下期はテストの自動化を進める。")
+        browser.fill('select[name="goals[0][mid_self]"]', "B")
+        camera.shoot("m14_04_report_owner", [mark('textarea[name="goals[0][mid_report]"]', label=1), mark('textarea[name="goals[0][mid_plan]"]', label=2),
+                                             mark('select[name="goals[0][mid_self]"]', label=3)])
+        browser.eval("Array.prototype.forEach.call(document.querySelectorAll('select[name^=\"competency_self\"]'), function (scoreSelect) { scoreSelect.value = '4'; }); true")
+        camera.shoot("m14_05_competency_owner", [mark('select[name="competency_self[0]"]', label=1), mark('button[value="save_owner"]', label=2)])
+        browser.click('button[value="save_owner"]', navigate=True)
+        camera.shoot("m14_06_saved_owner", [mark("a.button", text="Excel を受け取る", label=1)], scroll="top")
+        sheet_path = browser.eval("location.pathname + location.search")
+        camera.login("kacho_a")
+        camera.goto("/goals/index.php")
+        camera.shoot("m14_07_boss_list", [mark("#members", label=1), mark(".goal-list-table a", text="A一般1", label=2)])
+        camera.goto(sheet_path)
+        browser.fill('select[name="goals[0][difficulty]"]', "ストレッチ")
+        browser.fill('select[name="goals[0][mid_boss]"]', "A")
+        camera.shoot("m14_08_boss_grade", [mark('select[name="goals[0][difficulty]"]', label=1), mark('select[name="goals[0][mid_boss]"]', label=2)])
+        camera.shoot("m14_09_boss_save", [mark('select[name="overall_boss"]', label=1), mark('button[value="save_boss"]', label=2)])
+        browser.click('button[value="save_boss"]', navigate=True)
+        camera.login("dairi_a")
+        camera.goto(sheet_path)
+        browser.fill("#goal-comment-body", "目標 1 の指標を数字にしてください")
+        camera.shoot("m14_10_comment", [mark("#goal-comment-body", label=1), mark('button[value="comment"]', label=2)])
+        browser.click('button[value="comment"]', navigate=True)
+        browser.fill("#goal-meeting-note", "目標 1 の指標を「障害の件数」に直すと決めた")
+        camera.shoot("m14_11_meeting", [mark("#goal-meeting-date", label=1), mark("#goal-meeting-note", label=2), mark('button[value="meeting"]', label=3)])
+        browser.click('button[value="meeting"]', navigate=True)
+        camera.login("ippan_a1")
+        camera.goto(sheet_path)
+        camera.click_text("details.goal-reply-form summary", "返信")
+        browser.fill("details.goal-reply-form textarea", "件数に直しました")
+        camera.shoot("m14_12_reply", [mark("details.goal-reply-form summary", label=1), mark("details.goal-reply-form textarea", label=2),
+                                      mark('details.goal-reply-form button[value="reply"]', label=3)])
+    run_scene(camera, "14 章 目標管理", chapter_goals)
+
 
 def referenced_image_names():
     text = open(MANUAL_PATH, encoding="utf-8").read()

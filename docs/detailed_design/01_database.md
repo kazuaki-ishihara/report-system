@@ -70,6 +70,11 @@ SQLite 3。テーブルは `app/lib/schema.php` の `schema_ensure()` で作る�
 | | `faq_chat_logs` | よくある質問のチャットの記録（G-25 §2.7。質問の文は暗号化。1 年で消す） |
 （`faq_chat_logs.conversation_id`: 会話の番号。同じ人が 10 分以内に続けて入れた発言で同じ値。前の記録は空。G-25 §2.14）
 | | `org_schedules` | 組織の改訂の予約（G-14 §6.10。取り込んだ CSV を持つ） |
+| 目標管理 | `goal_sheets` | 目標管理評価シート（G-27。1 人 1 年度に 1 つ。中身は暗号化） |
+| | `goal_sheet_comments` | 目標管理のコメント・返信（暗号化。直さない・消さない） |
+| | `goal_sheet_meetings` | 目標管理の面談の記録（暗号化。直さない・消さない） |
+| | `goal_sheet_history` | 目標管理の更新の履歴（だれが・いつ・何を。中身は入れない） |
+| 精算 | `expense_sheets` | 通勤定期代の精算書（G-26。本人だけが見る。中身はまとめて暗号化。記録・削除データ・保管期限の対象にしない） |
 | 移行 | `legacy_reports`・`legacy_comments` | 移行前の `reports`・`comments` の名前を変えて残したもの（§6。`schema_ensure()` では作らない） |
 
 ---
@@ -405,6 +410,34 @@ CREATE TABLE IF NOT EXISTS report_reminders (
     created_at    TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS ix_report_reminders_user ON report_reminders (user_id, period);
+
+-- G-26 通勤定期代の精算書（K-063）。中身（上の欄・明細・仮払い）は JSON にして暗号化（付加データ「expense_sheets:<user_id>」）
+CREATE TABLE IF NOT EXISTS expense_sheets (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users(id),
+    data_enc TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS ix_expense_sheets_user ON expense_sheets (user_id, id);
+
+-- G-27 目標管理（K-064）。付加データ: goal_sheets:<ID>・goal_sheet_comments:<シート ID>・goal_sheet_meetings:<シート ID>
+CREATE TABLE IF NOT EXISTS goal_sheets (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users(id),
+    fiscal_year INTEGER NOT NULL,                    -- 年度（10 月 1 日〜翌 9 月 30 日）
+    kind TEXT NOT NULL CHECK (kind IN ('general', 'leader', 'manager', 'sales', 'indirect')),   -- 様式の種類
+    data_enc TEXT NOT NULL,                          -- 中身（本人の欄・課長の欄・コンピテンシー）の JSON を暗号化
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    UNIQUE (user_id, fiscal_year)
+);
+CREATE TABLE IF NOT EXISTS goal_sheet_comments (id INTEGER PRIMARY KEY AUTOINCREMENT, sheet_id INTEGER NOT NULL REFERENCES goal_sheets(id),
+    user_id INTEGER NOT NULL REFERENCES users(id), parent_id INTEGER REFERENCES goal_sheet_comments(id), body_enc TEXT NOT NULL, created_at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS goal_sheet_meetings (id INTEGER PRIMARY KEY AUTOINCREMENT, sheet_id INTEGER NOT NULL REFERENCES goal_sheets(id),
+    held_on TEXT NOT NULL, note_enc TEXT NOT NULL, created_by INTEGER NOT NULL REFERENCES users(id), created_at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS goal_sheet_history (id INTEGER PRIMARY KEY AUTOINCREMENT, sheet_id INTEGER NOT NULL REFERENCES goal_sheets(id),
+    user_id INTEGER NOT NULL REFERENCES users(id), action TEXT NOT NULL, created_at TEXT NOT NULL);
 ```
 
 ### 3.7 臨時の調査
@@ -633,6 +666,10 @@ CREATE TABLE IF NOT EXISTS app_state (
 | `support_requests` | `title_enc`、`body_enc` | 常に |
 | `support_request_messages` | `body_enc` | 常に |
 | `faq_chat_logs` | `question_enc` | 残すとき |
+| `expense_sheets` | `data_enc` | 常に |
+| `goal_sheets` | `data_enc` | 常に |
+| `goal_sheet_comments` | `body_enc` | 常に |
+| `goal_sheet_meetings` | `note_enc` | 常に |
 
 付加データ（共通編 §8.2）は次のとおり。
 
@@ -648,6 +685,8 @@ CREATE TABLE IF NOT EXISTS app_state (
 | 要望・依頼の件名・本文 | `sreq_title:<id>`・`sreq_body:<id>` |
 | 要望・依頼のやり取り | `sreq_msg:<要望・依頼の id>:<やり取りの id>` |
 | よくある質問の記録 | `faq_chat:<id>` |
+| 通勤定期代の精算書 | `expense_sheets:<user_id>` |
+| 目標管理 | `goal_sheets:<id>`・`goal_sheet_comments:<シートの id>`・`goal_sheet_meetings:<シートの id>` |
 
 - 暗号化する列を増やしたら、鍵の入れ替え（`app/bin/rotate_key.php` の `rotate_key_targets()`）と `tools/test/smoke_key_rotation.py` にも足す。
 

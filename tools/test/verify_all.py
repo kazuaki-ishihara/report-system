@@ -317,6 +317,8 @@ STEP_TABLE = [
     {"key": "ledger", "name": "案件台帳の道具・案件の一覧の CSV 出力", "script": "smoke_project_ledger.py", "screen": "G-13"},
     {"key": "conveniences", "name": "便利機能 A〜J（お知らせ・定型文・予定・CSV・メンテナンス・予約・バックアップ・使い方・よくある質問）", "script": "smoke_conveniences.py", "screen": "G-25"},
     {"key": "additions", "name": "あとから足した機能（コメントを直す・調査の見本・提出のお知らせ・チャットの通信の失敗）", "script": "smoke_additions.py", "screen": "G-08"},
+    {"key": "expenses", "name": "通勤定期代の精算（本人だけ・通勤定期だけ・様式の xlsx）", "script": "smoke_expenses.py", "screen": "G-26", "secrets": True},
+    {"key": "goals", "name": "目標管理（本人・課長・課長代理だけ・様式の xlsx）", "script": "smoke_goals.py", "screen": "G-27", "secrets": True},
     {"key": "actions", "name": "検証に無かった操作（取り消し・再開・締め切り・複製・戻す・並べ替え・自動保存の応答）", "script": "smoke_actions.py", "screen": "共通", "secrets": True},
     {"key": "inputs", "name": "すべての入力部品と、取り下げ・削除・絞り込み・個人の回答の出力", "script": "smoke_inputs.py", "screen": "G-04", "secrets": True},
     {"key": "refusals", "name": "断る処理（誤った入力・無い番号・権限・状態。DB が変わらないこと）", "script": "smoke_refusals.py", "screen": "共通", "secrets": True},
@@ -437,15 +439,23 @@ def main():
         step_repo(r)
         r.run("メッセージの一覧が最新", [sys.executable, "-I", os.path.join(ROOT, "tools", "lib", "msg_catalog.py"), "--check"], default_screen="コード")
         # 操作マニュアル（docs/operation_manual.md）が使う画面の画像がそろい、使っていない画像がない（tools/lib/manual_capture.py）
+        # 目標管理の様式（app/templates/goal_*.xlsx）から作った定数（app/lib/goal_templates.php）が様式と合っている
         # 入力の確かめの正規表現は、文字列全体の先頭・末尾（\A・\z）で書く（^・$ は改行を混ぜた値を通すおそれ）
         r.run("正規表現は文字列全体で確かめる", [sys.executable, "-I", os.path.join(HERE, "check_regex_anchors.py")], default_screen="コード")
-        # 画面の操作（action・app.js の補助）が検証に入っているか。入れ忘れを NG にする
+        # コードを読むだけの安全の点検（SQL に値をつないでいない・画面に出す値を h() で書き出す・危険な関数・外への転送）。
+        # 安全と確かめて仕分けた箇所は tools/test/static_security_exceptions.tsv（理由つき）
+        r.run("静的な安全点検（SQL・XSS・危険な関数・転送）", [php, os.path.join("tools", "test", "check_static_security.php")], default_screen="コード")
+        # 画面の操作（action・app.js の補助）が検証に入っているか。入れ忘れを NG にする（APP-118 のように、検証に無いまま動いていないことを防ぐ）
         r.run("操作が自動検証に入っている", [sys.executable, "-I", os.path.join(HERE, "check_action_coverage.py")], default_screen="コード")
+        r.run("目標管理の様式の定数が最新", [sys.executable, "-I", os.path.join(ROOT, "tools", "lib", "goal_template_gen.py"), "--check"], default_screen="G-27")
+        # コンピテンシー評価基準（app/templates/competency_criteria.xlsx）から作った表（app/lib/goal_criteria.php）が最新
+        r.run("コンピテンシー評価基準の表が最新", [sys.executable, "-I", os.path.join(ROOT, "tools", "lib", "goal_criteria_gen.py"), "--check"], default_screen="G-27")
         r.run("操作マニュアルの画像がそろっている", [sys.executable, "-I", os.path.join(ROOT, "tools", "lib", "manual_capture.py"), "--check"], default_screen="共通")
         # よくある質問のチャットの判定（システムに寄る・グレーゾーン・明確にアウトの入力。tools/test/faq_input_cases.tsv）。サーバー・DB は使わない
         r.run("よくある質問の自動入力検証", [php, os.path.join("tools", "test", "faq_input_check.php")], default_screen="G-25")
         # 部品（前置き・たとえ・中心の言葉・語尾）のすべての組み合わせ（tools/test/faq_combo_cases.txt）。言い方を変えても判定が崩れないか
         r.run("よくある質問の組み合わせ入力検証", [php, os.path.join("tools", "test", "faq_combo_check.php")], default_screen="G-25")
+        # ライブラリの関数の誤り・異常系（鍵がない・壊れた暗号文・組織の CSV の誤りなど）。使い捨ての DB と鍵
         r.run("ライブラリの関数の誤り・異常系", [php, os.path.join("tools", "test", "check_libs.php")], default_screen="共通")
         if "units" not in skip and (not only or only & {"units", "G-10", "G-03", "共通"}):
             # 画面を通さずに確かめる決まり（検証の印・対象月の切り替え・出力の数式・XML）。サーバー・検証の DB は使わない

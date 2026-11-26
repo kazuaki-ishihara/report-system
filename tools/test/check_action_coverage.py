@@ -23,6 +23,7 @@ TEST_DIR = os.path.join(REPOSITORY_ROOT, "tools", "test")
 UI_COVERAGE = {
     "文言": ("smoke_messages.py", "JavaScript の文言にも変えた文言が渡る"),
     "パスワードの表示": ("ui_session.py", ".toggle-password"),
+    "コンピテンシー評価基準": ("ui_session.py", "評価基準: つまみで表が横に動く"),
     "2 段階認証のコードの欄": ("ui_check.py", ".use-backup-code"),
     "自分の色": ("ui_session.py", "自分の色: 読みにくい"),
     "メンテナンス中": ("ui_session.py", "メンテナンス中: 保存・提出のボタンが押せない"),
@@ -44,6 +45,7 @@ UI_COVERAGE = {
     "必須の未入力の数": ("ui_session.py", "必須の未入力の数が減る"),
     "下書きの自動保存": ("ui_session.py", "自動保存の送り先は"),
     "よくある質問のチャット": ("ui_session.py", "反応が DB に残る"),
+    "交通費の精算": ("ui_session.py", "精算: 小計と合計"),
 }
 
 

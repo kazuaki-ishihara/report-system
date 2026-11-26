@@ -24,11 +24,13 @@ if ($canManageAllDepartments) {
     $scopeConditionList[] = 'q.department_id IS NULL';
 }
 $where = ['q.deleted_at IS NULL', '(' . implode(' OR ', $scopeConditionList) . ')'];
+$whereParams = [];   // 絞り込みの値は ? で渡す（SQL の文に画面の値をつながない）
 if ($state === 'template') {
     $where[] = 'q.is_template = 1';
 } elseif (in_array($state, ['draft', 'open', 'closed'], true)) {
     $where[] = 'q.is_template = 0';
-    $where[] = "q.status = '" . $state . "'";
+    $where[] = 'q.status = ?';
+    $whereParams[] = $state;
 }
 $rows = db_all(
     "SELECT q.*, COALESCE(d.name, '全課共通') AS dept_name,
@@ -36,7 +38,8 @@ $rows = db_all(
             (SELECT COUNT(*) FROM adhoc_responses a WHERE a.request_id = q.id AND a.submitted_at IS NOT NULL) AS answered
        FROM adhoc_requests q LEFT JOIN departments d ON d.id = q.department_id
       WHERE " . implode(' AND ', $where) . '
-      ORDER BY q.is_template, q.created_at DESC'
+      ORDER BY q.is_template, q.created_at DESC',
+    $whereParams
 );
 
 render('survey_manage', ['title' => '臨時の調査', 'user' => $user, 'rows' => $rows, 'state' => $state]);

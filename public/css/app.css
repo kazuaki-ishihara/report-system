@@ -806,6 +806,78 @@ form.wizard-active .sticky-actions button[value="submit"] { display: none; }
 
 /* 説明の文の区切り（h_phrases）: まとまりごとに折り返す。スマートフォンで言葉の途中で折り返さない */
 .phrase { display: inline-block; word-break: auto-phrase; }   /* まとまりが 1 行に入らないときも、対応するブラウザー（Chrome・Edge）では文節で折り返す */
+/* ---- G-26 通勤定期代の精算（K-063） ---- */
+.expense-head-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 8px 16px; }
+.expense-head-grid .label-text { display: block; font-weight: 600; margin-bottom: 4px; }
+.expense-head-grid .choice { display: inline-flex; margin-right: 12px; }
+.expense-input-table input, .expense-input-table select { width: 100%; min-width: 6em; box-sizing: border-box; }
+.expense-input-table td { padding: 2px 4px; }
+.expense-input-table .row-number { color: var(--muted); text-align: right; }
+.expense-input-table .expense-fixed-kind { white-space: nowrap; }
+.expense-input-table .expense-amount, .expense-advance { text-align: right; }
+.expense-list-table .number { text-align: right; white-space: nowrap; }
+.expense-list-table .actions { white-space: nowrap; }
+.expense-totals strong { font-size: 1.2rem; }
+.form-actions { margin-top: 12px; }
+.table-wrap { overflow-x: auto; }
+.expense-form fieldset { min-width: 0; }
+/* 精算書の明細は列が多いので、PC では画面を広く使う（狭い画面では表を横に動かす） */
+.app-main:has(.expense-form), .app-main:has(.expense-list-table) { max-width: 1200px; }
+.expense-list-table td { white-space: nowrap; }
+.expense-input-table { min-width: 960px; }
+.expense-delete-form { margin-top: 32px; padding-top: 12px; border-top: 1px solid var(--line); }
+/* ---- G-27 目標管理（K-064） ---- */
+.app-main:has(.goal-sheet), .app-main:has(.goal-list-table) { max-width: 1100px; }
+.goal-form fieldset { min-width: 0; margin-bottom: 16px; }
+.goal-head-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px 16px; }
+.goal-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 16px; margin: 8px 0; }
+@media (max-width: 700px) { .goal-pair { grid-template-columns: 1fr; } }
+.goal-pair textarea { width: 100%; box-sizing: border-box; }
+.goal-sheet .label-text { display: block; font-weight: 600; margin-bottom: 4px; }
+.goal-grade-line .label-text { display: inline; margin-right: 6px; }
+/* 評価の行の「見出し＋選ぶ欄」は、まとめて次の行に送る */
+.goal-grade-item { display: inline-block; white-space: nowrap; margin-right: 10px; }
+.goal-grade-line select { width: auto; margin-right: 16px; }
+.goal-readonly { border: 1px dashed var(--line); border-radius: var(--radius); padding: 6px 10px; min-height: 2.2em; background: var(--bg); }
+.goal-choice-value { display: inline-block; min-width: 3em; font-weight: 600; margin-right: 16px; }
+.goal-competency-table .goal-guide { min-width: 18em; font-size: 0.9rem; }
+.goal-competency-table select { width: auto; }
+/* スマートフォンの幅: コンピテンシー評価の表は、1 項目ずつのカード（大分類 ＞ 中分類・行動指針・本人評価・上長評価）にする。
+   表のままだと大分類・中分類の列が 1 文字の幅になり、1 文字ずつ縦に折り返すため */
+@media (max-width: 720px) {
+  .goal-competency .table-wrap { overflow-x: visible; }
+  .goal-competency-table, .goal-competency-table tbody { display: block; width: 100%; }
+  .goal-competency-table thead { display: none; }
+  .goal-competency-table tr { display: block; padding: 10px 0; border-bottom: 1px solid var(--line, rgba(128, 128, 128, 0.35)); }
+  .goal-competency-table td, .goal-competency-table th { display: block; border: 0; padding: 2px 0; text-align: left; }
+  .goal-competency-table .goal-major, .goal-competency-table .goal-minor { display: inline; font-weight: 600; }
+  .goal-competency-table .goal-major::after { content: " ＞ "; font-weight: 400; }
+  .goal-competency-table .goal-guide { min-width: 0; margin: 4px 0; }
+  .goal-competency-table .goal-score-cell { display: flex; align-items: center; gap: 8px; margin: 4px 0; }
+  .goal-competency-table .goal-score-cell select { flex: 1 1 auto; min-width: 0; max-width: 100%; }
+  .goal-competency-total td { display: inline-block; white-space: nowrap; margin-right: 14px; }
+  .goal-competency-table .goal-score-cell::before, .goal-competency-total td::before { content: attr(data-label) " "; font-weight: 600; flex: 0 0 auto; }
+  .goal-competency-total th { font-weight: 600; }
+}
+.goal-score-table .number, .goal-competency-table .number { text-align: right; }
+.goal-list-table td { white-space: nowrap; }
+.goal-comment { border-top: 1px solid var(--line); padding: 8px 0; }
+.goal-comment-head { margin: 0 0 4px; }
+.goal-reply { margin: 8px 0 0 24px; padding-left: 12px; border-left: 3px solid var(--line); }
+.goal-reply-form { margin: 6px 0 0 24px; }
+.goal-meeting-block { border-top: 1px solid var(--line); padding-top: 8px; margin-top: 12px; }
+.goal-meeting-block h3 { margin: 0 0 6px; font-size: 1rem; }
+/* コンピテンシー評価基準: 文の長い欄は広く取って折り返しを減らし、表は横に動かして見る（横スライド） */
+.goal-criteria-table { border-collapse: collapse; font-size: 0.9rem; line-height: 1.6; }
+.goal-criteria-table td { border: 1px solid var(--line); padding: 6px 8px; vertical-align: top; min-width: 5em; }
+.goal-criteria-table td.criteria-short { white-space: nowrap; }
+.goal-criteria-table td.criteria-long { min-width: 20em; max-width: 28em; }
+.goal-criteria-block { margin-bottom: 24px; }
+.app-main:has(.goal-criteria) { max-width: none; }
+.goal-criteria-scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); }
+.goal-criteria-slider { display: flex; align-items: center; gap: 8px; margin: 8px 0; position: sticky; top: 0; z-index: 2; background: var(--card); padding: 6px 0; }
+.goal-criteria-slider input[type=range] { flex: 1; }
+.goal-criteria-slider button { flex: none; }
 
 /* 臨時の調査の集計（G-10 の印刷・G-11 の結果）: 選択肢ごとの割合の横棒。幅は SVG の属性（survey_bar_svg()） */
 .survey-tally { margin-bottom: 16px; break-inside: avoid; page-break-inside: avoid; }

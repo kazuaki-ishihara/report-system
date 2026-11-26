@@ -2,7 +2,7 @@
 
 | 項目 | 内容 |
 |---|---|
-| 最終更新 | 2026-11-25 |
+| 最終更新 | 2026-11-26 |
 | ブランチ | `dev_ono_check`（`main` の `9ffe3e5` から派生。PHP 7.4 で動く書き方）と `dev_ono_check8_3`（`dev_ono_check` の `f583992` から派生。PHP 8.3 が前提） |
 | 内容 | 月次報告システムの見直し版（設計書・実装・検証） |
 
@@ -60,7 +60,7 @@ C:\ReportSystem\
 | `tools/lib/` | 何度も使う道具（Python 3 標準ライブラリ、3.8 互換）: `msg_catalog.py`（文言の一覧）、`project_ledger.py`（案件台帳。使い方は `docs/project_ledger.md`）、`mdview.py`（Markdown をブラウザーで読む。`python3 tools/lib/mdview.py docs` で docs/ を一覧から読める。Linux・Windows 共通）、`md_check.py`（MD の文書と実装の食い違いを機械で探す。`python tools/lib/md_check.py`。文書を直したら流す）、`faq_check.php`（よくある質問の答え方を確かめる。自動入力検証は `tools/test/faq_input_check.php`（`--all` ですべての判定を出す。入力は `faq_input_cases.tsv` で、システムに寄る・グレーゾーン・明確にアウトの 3 つ。自動検証でも流す）。派生入力検証は `tools/test/faq_derived_check.php`（`他端末検証/` の記録の質問から表記ゆれ・言い回しの派生を作り、元と同じ判定かを確かめる。表記の食い違いは NG、言い回しは参考（`--all`）。今の判定を期待にした `derived_cases.tsv` を `tools/test/output/faq_derived/` に書く。G-25 §3）。`self` 標準の質問が自分を見つけられるか／`ask "質問" [ID]` 1 つの判定／`logs [番号]` この端末のチャットの記録を今の作りで判定し直す／`csv <ファイル>` ほかの端末から受け取った記録を判定し直す／`sync` この端末の DB に標準の質問の追加・答えの変更を写す。聞いた人に見える範囲で判定し、要配慮・緊急の文は伏せて出す。ローカル専用）、組み合わせ入力検証は `tools/test/faq_combo_check.php`（部品 `faq_combo_cases.txt` の前置き・たとえ・中心の言葉・語尾のすべての組み合わせで、想定の結果になるかを確かめる。自動検証でも流す。G-25 §3）、`ui_watch.py`（画面の自動操作をブラウザーを表示して見学する。§6.1）、`manual_capture.py`（操作マニュアルの画面を撮る。自分用の DB・サーバーで画面を操作し、押す場所に赤い枠と番号を付けた画像を `docs/manual/images/` に書く。`--only m04` で一部だけ、`--check` でマニュアルが使う画像がそろっているかだけ確かめる（自動検証の工程にも入れた）。画面を変えたら撮り直す）、`php_version_check.py`（PHP のバージョンを調べる。この端末の PHP と php.net の系列ごとの最新版・サポートの状態を比べ、要更新・ダウンロードをすすめるを出す。`--prod-web`・`--prod-cli` で本番の版も判定。`--download 系列` で取ってきて適用する（Windows: 公式の zip を SHA-256 で確かめて `<リポジトリの親>/php-<版>-<x64|x86>/` に展開し、利用者の環境変数 PATH・`PHP_BIN`（x86 は `PHP_BIN_X86`）を変える。`--restore` で戻す。Linux: apt で入れて update-alternatives で切り替える。`--no-apply` で取ってくるだけ）。Windows・Linux 共通）、`tools/test/php_compat_check.py`（新しい PHP で動くかを調べる。構文・コンパイルのときの非推奨・8.4/8.5 の非推奨の書き方・`--verify` で自動検証をその PHP で流す）、`clean_outputs.py`（古い検証記録・見学の画像・画面一覧・派生入力検証の出力と、古いローカル検証環境の一式（x64・x86 それぞれ最新を残す）を消す。`--yes` を付けたときだけ消す。`--keep` で残す回数） |
 | `tools/deploy/` | 本番への反映: `build_package.py`（コミット済みの内容から反映用の一式 `tools/deploy/output/<日時>_<コミット>/` を作る。DB・鍵・ローカルの設定は入らない）、`check_prod.py`（本番を外から確かめる。画面を見るだけ）、`build_local_kit.py`（ほかの人に渡すローカル検証環境の一式 `tools/deploy/output/local_<日時>_<コミット>/report-system-local(.zip)` を作る。Windows 用の PHP を同梱し、受け取った人は `1_起動.bat` だけで動かせる。初回の起動でテスト用の利用者・標準のよくある質問・暗号の鍵を作る。`3_記録を書き出す.bat` で、よくある質問のチャットの記録だけを CSV（`faq_chat_log_<日時>.csv`。質問は復号済み。報告の中身・鍵は入らない）に書き出し、受け取った人に送り返してもらう（道具は `tools/test/export_faq_chat_log.php`。この端末でも使える）。DB・鍵・この端末の設定は入らない。`--worktree` でコミット前の変更も入れる。`--no-php` で PHP を入れない） |
 | `tools/2fa/` | 開発用の利用者の 2 段階認証のコードを出すバッチ（`.bat`）とシェルスクリプト（`.sh`）、Python なしで動く PowerShell 版（`dev_code.ps1`。`-Watch` で 1 秒ごと、`-Watch -Interval 30` で 30 秒ごとに更新。全員を 30 秒ごとに出す `all_ps.bat` はダブルクリックで使える）。ローカルのテストデータ専用 |
-| `tools/test/` | 検証の道具（Python 3 標準ライブラリ）。`screen_gallery.py` は画面の目視確認の道具（全画面の画像と一覧のページ） |
+| `tools/test/` | 検証の道具（Python 3 標準ライブラリ）。`screen_gallery.py` は画面の目視確認の道具（全画面の画像と一覧のページ）。`check_static_security.php` はコードを読むだけの安全の点検（SQL に値をつないでいない・画面に出す値を `h()` で書き出す・属性の引用符・危険な関数・外への転送。PHP の字句解析で読む。安全と確かめて仕分けた箇所は `static_security_exceptions.tsv` に理由つきで書き、どこにも当たらない行は NG。`verify_all.py` の工程「静的な安全点検」） |
 
 詳細設計書（共通編・DB 編・G-01〜G-25）は実装に合わせて更新済み。まだ作っていないもの（`Strict-Transport-Security`、記録の削除）は、設計書にその旨を書いてある。
 
@@ -148,7 +148,16 @@ python tools\lib\ui_watch.py --keep-open      # 終わったあともブラウ�
 
 ## 8. 次の作業
 
-> **2026-11-25 終わりの区切り（ここから再開）**
+> **2026-11-26 の区切り（ここから再開）**
+> - **鍵の入れ替えの検証は済み**: `--ui` を含む全工程が成功（OK 3691 / NG 0。未実施は LibreOffice の 1 件だけ）。
+> - **通勤定期代の精算（G-26）・目標管理（G-27）を `dev_ono_check` から入れた**: 画面・関数・様式の xlsx・表（`schema.php`）・メニュー・画面の説明（`notice.php` は `match` 式のまま分岐を足した）、標準のよくある質問（+22 件・上限 500 件）・チャットの言葉の表、操作マニュアル 13・14 章と画像、設計書（G26・G27・DB 編・共通編・基本設計書）、検証（`smoke_expenses.py`・`smoke_goals.py`・道具の工程）。画面の説明の 2 つの文の「リーダー」を「主任」にそろえた（このブランチだけ残っていた）。`coverage_exceptions.tsv` の「目標管理のある版だけ通る分岐」2 行は不要になったので消した。
+> - **臨時の調査の一覧の絞り込みを `?` で渡す形にした**: `app/pages/survey_manage.php` が、画面の値（`in_array` で 3 つに絞った後）を SQL の文に直につないでいた。今は安全だったが、確かめが変わっても安全なように置き場所で渡す。静的な安全点検の例外から外した（仕分け 52 か所）。
+> - **全工程の検証（取り込みと上の直しの後）**: `--ui` を含めて成功（OK 4040 / NG 0。未実施は LibreOffice の 1 件だけ）。
+> - **検証（取り込みの直後）**: 関係する工程（精算・目標管理・専門職・断る処理・残りの画面・上限・鍵の入れ替え・便利機能・あとから足した機能・画面の自動操作）を `--ui` で流して OK 2656 / NG 0。鍵の入れ替えの確かめは精算書・目標管理を含めて 73 件。全工程は、取り込み後は流していない。
+> - **静的な安全点検を足した**: `tools/test/check_static_security.php`（§4 の `tools/test/`。`dev_ono_check` と同じもの。PHP 8 の `match` 式の各分岐も読む）。NG 0。`verify_all.py` の工程に入れた。
+> - **次にすること**: (1) 未検証の分岐の数え直し（`branch_coverage.py`。約 30 分。指示を待つ）。(2) ここまでは両方のブランチとも push 済み。
+
+> **2026-11-25 終わりの区切り**
 > - **最初に行うこと**（`C:\ReportSystem\未着手.md` の最後。鍵の入れ替えの検証の残り）: (1) **済み**（65 件 OK）: `smoke_key_rotation.py` に、入れ替えの前後で各画面を HTTP で開く確かめを足す（コメント・変更履歴、調査、要望・依頼、チャットの記録、予備のコード、`dev_ono_check` だけ精算書・目標管理）。(2) **ここから**: `--ui` を含む全工程を両方のブランチで流す（約 30 分。2026-11-25 17:26 に始めて、すぐ止めた。検証記録の「中断」はこのため）。(3) `branch_coverage.py` で未検証の分岐を数え直す。(4) 済んだら文書を直す。
 > - **push していないもの**: 鍵の入れ替え（`dev_ono_check` `019d48c`、`dev_ono_check8_3` `9a24506`）と、再開ポイントの更新。push は指示を待つ。
 > - **鍵の入れ替えの検証の状態**: 専用 65 件と、暗号化に関係する工程（このブランチで OK 1666 / NG 0）は済み。画面の自動操作（`--ui`）は流していない。
@@ -242,7 +251,7 @@ python tools\lib\ui_watch.py --keep-open      # 終わったあともブラウ�
 >   - 値を返すだけの switch 文を match 式にした（`screen_help_text`・`support_request_default_reply_text`・`export_text`・`form_display_html`・`faq_check.php`）。`form.php` の入力の確かめ・入力欄の HTML、`report_act.php` は枝ごとに複数の文があるので switch のまま。列挙型はまだ使っていない。
 >   - 道具: `tools/lib/php_version_check.py`（PHP の版を調べ、取ってくると答えたら適用まで。Windows・Linux）、`tools/test/php_compat_check.py`（新しい PHP で動くか）。見つかった fgetcsv の escape の省略（8.4 で非推奨）を直した。
 >   - 検証: 変えた所に関わる工程（OK 898・1140 / NG 0）、出力・表示の直す前との比べ（32 通り一致）、記録の CSV の読み取り（331 件一致）。全体検証（画面の自動操作を含む）は成功（OK 1753 / NG 0・未実施 1（LibreOffice）。11-18 の 1910 との差は、一式を Git の管理から外す前に数えた 157 ファイルぶん）。
-> - **2026-11-20 の後半にしたこと（このブランチ）**: 入力の確かめの正規表現を `\A`・`\z` に、ログイン ID などに `inputmode`、2 段階認証のコードの欄に「予備のコードを入れる」（`7cb43a5`。dev_ono_check と同じ直し）。通勤定期代の精算・目標管理・よくある質問の追加は `dev_ono_check` だけ（このブランチには無い）。
+> - **2026-11-20 の後半にしたこと（このブランチ）**: 入力の確かめの正規表現を `\A`・`\z` に、ログイン ID などに `inputmode`、2 段階認証のコードの欄に「予備のコードを入れる」（`7cb43a5`。dev_ono_check と同じ直し）。通勤定期代の精算・目標管理・よくある質問の追加は、このときは `dev_ono_check` だけだった（2026-11-26 にこのブランチにも入れた）。
 > - **説明の文の折り返し（両方のブランチ）**: スマートフォンで言葉の途中（「課長代｜理」「記｜載」）で折り返さないよう、画面の説明の文を `h_phrases()`（`app/lib/html.php`）で出す。「、」「。」「・」「〜」「：」「）」「を」のあと・「（」の前で区切ったまとまりごとに折り返す（`.phrase`。Chrome・Edge では、まとまりの中も文節で折り返す `word-break: auto-phrase`）。msg の文言・画面の使い方・お知らせの帯・エラーの画面・画面に直接書いた説明の文・枠の見出しが対象。利用者が書いた文は `h_lines()` のまま（G-17 の文言の出し方）。検証は HTML の文言を文字どおりに探すので、`lib_http.py` が区切りの印を外してから返す。iPhone の Safari は文節の折り返しが無いので、1 行に入らない長いまとまりの中では言葉の途中で折り返すことがある。
 > - **操作マニュアルを画面の画像付きにした（両方のブランチ）**: `docs/operation_manual.md` の手順ごとに、押す場所を赤い枠と番号（手順の番号と同じ）で示した画像（76 枚。`docs/manual/images/`）を付けた。0 章に Linux の PC の基本の操作（ブラウザーの開き方・アドレスとブックマーク・キー・日本語の入力・ダウンロードの場所・画面のロック）、11 章・12 章に PDF・CSV・Excel 形式の細かい手順を足した。
 >   - 画像は `python tools\lib\manual_capture.py` で撮る（自分用の DB `app/data/manual.sqlite` とサーバーを使う。Windows の Claude Code からは Bash で実行。`--only m04` で一部だけ）。画面を変えたら撮り直す。`--check`（マニュアルが使う画像がそろっているか）は自動検証の工程「操作マニュアルの画像がそろっている」に入れた。
