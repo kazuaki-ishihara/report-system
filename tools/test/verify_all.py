@@ -459,6 +459,8 @@ def main():
         r.run("よくある質問の自動入力検証", [php, os.path.join("tools", "test", "faq_input_check.php")], default_screen="G-25")
         # 部品（前置き・たとえ・中心の言葉・語尾）のすべての組み合わせ（tools/test/faq_combo_cases.txt）。言い方を変えても判定が崩れないか
         r.run("よくある質問の組み合わせ入力検証", [php, os.path.join("tools", "test", "faq_combo_check.php")], default_screen="G-25")
+        # 標準のよくある質問に、見直す前の言い方（部下・（管理者）・班など）が戻っていないか。対応表の行き先が標準にあるか（2026-11-26）
+        r.run("標準のよくある質問の文言", [php, os.path.join("tools", "test", "check_faq_wording.php")], default_screen="G-25")
         # ライブラリの関数の誤り・異常系（鍵がない・壊れた暗号文・組織の CSV の誤りなど）。使い捨ての DB と鍵
         r.run("ライブラリの関数の誤り・異常系", [php, os.path.join("tools", "test", "check_libs.php")], default_screen="共通")
         if "units" not in skip and (not only or only & {"units", "G-10", "G-03", "共通"}):
