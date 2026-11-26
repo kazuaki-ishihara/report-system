@@ -475,6 +475,48 @@
     });
   });
 
+  // ---- 選ぶ欄の絞り込み（input.select-filter の data-filter-select で選ぶ欄を指定。候補の文字に含むものだけ残す） ----
+  //   ・option を隠すだけでは効かないブラウザーがあるので、合わない option は外し、まとまり（optgroup）ごと元の順に入れ直す
+  //   ・値が空の option（「なし」）と、今選んでいる option は、いつも残す
+  //   ・絞り込みの欄の直後の .select-filter-count に、残った人数を出す
+  document.querySelectorAll('input.select-filter').forEach(function (selectFilterInput) {
+    var filteredSelect = document.querySelector(selectFilterInput.getAttribute('data-filter-select'));
+    if (!filteredSelect) { return; }
+    var countNote = filteredSelect.parentNode.querySelector('.select-filter-count');
+    var originalChildList = Array.prototype.slice.call(filteredSelect.children).map(function (childNode) {
+      return { node: childNode, optionList: childNode.tagName === 'OPTGROUP' ? Array.prototype.slice.call(childNode.children) : null };
+    });
+    selectFilterInput.hidden = false;
+    selectFilterInput.addEventListener('input', function () {
+      var filterText = selectFilterInput.value.trim().toLowerCase();
+      var selectedValue = filteredSelect.value;
+      var matchedCount = 0;
+      var optionMatches = function (candidateOption) {
+        if (candidateOption.value === '' || candidateOption.value === selectedValue) { return true; }
+        var isMatched = filterText === '' || candidateOption.textContent.toLowerCase().indexOf(filterText) !== -1;
+        if (isMatched) { matchedCount++; }
+        return isMatched;
+      };
+      while (filteredSelect.firstChild) { filteredSelect.removeChild(filteredSelect.firstChild); }
+      originalChildList.forEach(function (originalChild) {
+        if (originalChild.optionList === null) {
+          if (optionMatches(originalChild.node)) { filteredSelect.appendChild(originalChild.node); }
+          return;
+        }
+        while (originalChild.node.firstChild) { originalChild.node.removeChild(originalChild.node.firstChild); }
+        originalChild.optionList.forEach(function (groupOption) {
+          if (optionMatches(groupOption)) { originalChild.node.appendChild(groupOption); }
+        });
+        if (originalChild.node.children.length > 0) { filteredSelect.appendChild(originalChild.node); }
+      });
+      filteredSelect.value = selectedValue;
+      if (countNote) {
+        countNote.hidden = filterText === '';
+        countNote.textContent = matchedCount === 0 ? M('合う人がいません。') : M('合う人: {count} 人', { count: matchedCount });
+      }
+    });
+  });
+
   // ---- コメントの定型文を本文に入れる（G-05。G-19 で課長が登録した文） ----
   document.addEventListener('change', function (changeEvent) {
     var templateSelect = changeEvent.target;

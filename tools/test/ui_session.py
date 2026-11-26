@@ -295,6 +295,25 @@ def main():
         b.fill("input.table-filter", "")
         time.sleep(0.2)
         check("絞り込みを消すと、全部の行に戻る", b.eval(rows_js) == all_rows)
+        # 課長の候補の絞り込み（課の編集の「課長」の節。合わない人を選ぶ欄から外し、今選んでいる人は残す）
+        b.goto(a.base + "/admin/org.php?tab=departments&edit=%d#dept-final" % seed_dept)
+        options_js = "Array.prototype.map.call(document.querySelectorAll('#final_user_id option'), function (o) { return o.value; })"
+        all_options = b.eval(options_js)
+        selected_before = b.eval("document.getElementById('final_user_id').value")
+        b.fill("input.select-filter", "ippan_b1")
+        time.sleep(0.2)
+        filtered_options = b.eval(options_js)
+        check("課長の候補の絞り込みで、合う人と「課長なし」と今の課長だけ残る",
+              set(filtered_options) == {"", selected_before, str(db.execute("SELECT id FROM users WHERE login_id = ?", ("ippan_b1",)).fetchone()[0])} and len(filtered_options) < len(all_options), filtered_options)
+        check("絞り込んでも、選んでいる人は変わらない", b.eval("document.getElementById('final_user_id').value") == selected_before)
+        check("絞り込むと、合う人数を出す", b.eval("document.querySelector('.select-filter-count').textContent") == "合う人: 1 人")
+        b.fill("input.select-filter", "だれにも合わない文字")
+        time.sleep(0.2)
+        check("合う人がいないときは、そう出す", b.eval("document.querySelector('.select-filter-count').textContent") == "合う人がいません。")
+        b.fill("input.select-filter", "")
+        time.sleep(0.2)
+        check("絞り込みを消すと、全部の候補に元の順で戻る", b.eval(options_js) == all_options
+              and b.eval("document.querySelectorAll('#final_user_id optgroup').length") >= 2)
         writable = sqlite3.connect(a.db, timeout=10, isolation_level=None)
         admin = lib_http.login(a.base, "admin01", users["admin01"])
         _, _, page_html = admin.get("/requests/index.php")
