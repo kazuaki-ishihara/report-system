@@ -4,6 +4,7 @@
 /** @var array<int, array<string, int|float|string|null>> $memberRowList 課員と確認者の行（department_manage_member_rows()） */
 /** @var array<int, array{id: int|string, name: string, is_active: int|string}> $teamList ライン（無効を含む） */
 /** @var string[] $errorTextList */
+/** @var array<int, array<string, int|string|null>> $concurrentCandidateRowList 兼務の確認者に足せる人（department_manage_concurrent_candidates()） */
 $departmentId = (int) $department['id'];
 $selfUrl = url('/admin/department.php?dept=' . $departmentId);
 $isTeamScope = ($department['review_scope'] ?? 'department') === 'team';
@@ -80,6 +81,33 @@ $renderTeamOptions = function (?int $selectedTeamId, string $emptyLabel) use ($a
       </table>
       <button type="submit" class="primary">確認者と課員を保存</button>
     </form>
+
+    <h3 id="dept-concurrent">兼務の確認者を足す</h3>
+    <p class="note"><?= h_phrases('ほかの課に所属している人（課のない部長などを含む）を、この課の確認者（課長代理・主任など）として兼務させます。足したあと、上の表で担当のライン・チェックするを決めて保存してください。兼務を外すときは、上の表で「確認者」の印を外して保存します。') ?></p>
+    <?php if (!$concurrentCandidateRowList): ?>
+      <p class="note"><?= h_phrases(msg('兼務の確認者に足せる人はいません。')) ?></p>
+    <?php else: ?>
+      <?php $concurrentGroupList = [];
+      foreach ($concurrentCandidateRowList as $candidateRow) {
+          $concurrentGroupList[(string) ($candidateRow['dept_name'] ?? '課なし')][] = $candidateRow;
+      } ?>
+      <form method="post" action="<?= h($selfUrl) ?>" class="form" data-confirm="<?= h(msg('選んだ人を、この課の兼務の確認者にします。この課の報告を見てコメントできるようになります。よろしいですか？')) ?>">
+        <?= form_hidden() ?>
+        <input type="hidden" name="action" value="concurrent_add">
+        <label for="concurrent_user_id">兼務させる人</label>
+        <select id="concurrent_user_id" name="concurrent_user_id" class="tag-picker" data-search-placeholder="名前・ID・課・役職で探す">
+          <option value="">（選んでいません）</option>
+          <?php foreach ($concurrentGroupList as $groupLabel => $groupRowList): ?>
+          <optgroup label="<?= h($groupLabel) ?>">
+            <?php foreach ($groupRowList as $candidateRow): ?>
+            <option value="<?= (int) $candidateRow['id'] ?>"><?= h((string) $candidateRow['display_name']) ?>（<?= h((string) $candidateRow['login_id']) ?>・<?= h((string) ($candidateRow['dept_name'] ?? '課なし')) ?>・<?= h((string) $candidateRow['role_title']) ?>）</option>
+            <?php endforeach; ?>
+          </optgroup>
+          <?php endforeach; ?>
+        </select>
+        <button type="submit">兼務の確認者に足す</button>
+      </form>
+    <?php endif; ?>
   </section>
 
   <section id="dept-teams" data-tab-title="ライン">
