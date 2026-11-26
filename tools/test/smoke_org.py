@@ -343,6 +343,53 @@ def main():
         "SELECT is_final FROM department_reviewers WHERE user_id = ? AND department_id = ?", (user_id_of("kacho_a"), department_a_id)).fetchone() == (1,))
     check("反映が記録に残る", database.execute("SELECT 1 FROM access_logs WHERE target LIKE 'organization:bulk_apply:%'").fetchone() is not None)
 
+    # 課長の交代: 新しい課長の行を、今の課長の行より前に置いても反映できる（今の課長の役割を先に外してから付け直す。検証環境で 500 になった）
+    status_code, _location, _csv_text = admin_client.get("/admin/org.php?tab=bulk&csv=1")
+    fresh_row_list = list(csv.reader(io.StringIO(admin_client.last_raw.decode("utf-8-sig"))))
+    fresh_header_index = next(row_index for row_index, csv_row in enumerate(fresh_row_list) if csv_row[:1] == ["ログイン ID"])
+    swap_row_by_login_id = {}
+    for csv_row in fresh_row_list[fresh_header_index + 1:]:
+        if csv_row and csv_row[0] in ("kacho_a", "dairi_a"):
+            swap_row_by_login_id[csv_row[0]] = list(csv_row)
+    original_dairi_row = list(swap_row_by_login_id["dairi_a"])
+    original_kacho_row = list(swap_row_by_login_id["kacho_a"])
+    swap_row_by_login_id["dairi_a"][4] = "課長"
+    swap_row_by_login_id["dairi_a"][5] = ""
+    swap_row_by_login_id["kacho_a"][4] = ""
+    swap_buffer = io.StringIO()
+    swap_writer = csv.writer(swap_buffer)
+    for csv_row in fresh_row_list[:fresh_header_index + 1]:
+        swap_writer.writerow(csv_row)
+    swap_writer.writerow(swap_row_by_login_id["dairi_a"])   # 新しい課長を先に
+    swap_writer.writerow(swap_row_by_login_id["kacho_a"])
+    status_code, _location, preview_html = upload_csv(("﻿" + swap_buffer.getvalue()).encode("utf-8"))
+    check("課長の交代（新しい課長の行が先）を取り込むと、反映のボタンを出す", 'value="bulk_apply"' in preview_html, status_code)
+    swap_plan_token = preview_html.split('name="plan_token" value="')[1].split('"')[0] if 'name="plan_token"' in preview_html else ""
+    status_code, location, _page_html = admin_client.post("/admin/org.php?tab=bulk", {
+        "csrf_token": csrf(preview_html), "request_key": os.urandom(16).hex(), "action": "bulk_apply", "plan_token": swap_plan_token})
+    final_rows_a = database.execute("SELECT user_id FROM department_reviewers WHERE department_id = ? AND is_final = 1", (department_a_id,)).fetchall()
+    check("課長の交代を反映でき、A課の課長は新しい課長の 1 人だけになる",
+          status_code == 303 and final_rows_a == [(user_id_of("dairi_a"),)], (status_code, location, final_rows_a))
+    check("前の課長は、A課の役割が外れる", database.execute(
+        "SELECT 1 FROM department_reviewers WHERE user_id = ? AND department_id = ?", (user_id_of("kacho_a"), department_a_id)).fetchone() is None)
+    # 元に戻す（このあとの確かめのため）。今度は前の課長の行を先にする
+    swap_row_by_login_id = {"dairi_a": original_dairi_row, "kacho_a": original_kacho_row}
+    swap_buffer = io.StringIO()
+    swap_writer = csv.writer(swap_buffer)
+    for csv_row in fresh_row_list[:fresh_header_index + 1]:
+        swap_writer.writerow(csv_row)
+    swap_writer.writerow(swap_row_by_login_id["kacho_a"])
+    swap_writer.writerow(swap_row_by_login_id["dairi_a"])
+    status_code, _location, preview_html = upload_csv(("﻿" + swap_buffer.getvalue()).encode("utf-8"))
+    swap_plan_token = preview_html.split('name="plan_token" value="')[1].split('"')[0] if 'name="plan_token"' in preview_html else ""
+    status_code, location, _page_html = admin_client.post("/admin/org.php?tab=bulk", {
+        "csrf_token": csrf(preview_html), "request_key": os.urandom(16).hex(), "action": "bulk_apply", "plan_token": swap_plan_token})
+    final_rows_a = database.execute("SELECT user_id FROM department_reviewers WHERE department_id = ? AND is_final = 1", (department_a_id,)).fetchall()
+    check("課長を元に戻せる（前の課長の行が先でも反映できる）", status_code == 303 and final_rows_a == [(user_id_of("kacho_a"),)], (status_code, location, final_rows_a))
+    check("元に戻すと、課長代理は担当のラインの確認者に戻る", database.execute(
+        "SELECT r.is_final, t.name FROM department_reviewers r LEFT JOIN department_teams t ON t.id = r.team_id WHERE r.user_id = ? AND r.department_id = ?",
+        (user_id_of("dairi_a"), department_a_id)).fetchone() == (0, original_dairi_row[5] or None))
+
     # ---- 課の並び順: 範囲外・負の数・数字以外はエラーにし、黙って 0 にしない（検証官の指摘） ----
     section("G-14", "課の並び順: 範囲外・負の数・数字以外はエラーにし、黙って 0 にしない（検証官の指摘）")
     original_sort_order = database.execute("SELECT sort_order FROM departments WHERE id = ?", (department_b_id,)).fetchone()[0]

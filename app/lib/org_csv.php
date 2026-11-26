@@ -285,18 +285,37 @@ function org_csv_apply(array $plan): int
             }
             return $teamIdByDepartmentAndName[$cacheKey];
         };
-        $changedUserCount = 0;
+        // 1 回目: 変える人の役割（確認者・課長の行）を先にすべて外す。
+        //   1 人ずつ外して付け直すと、新しい課長の行が今の課長の行より先に来たとき、今の課長が残ったまま新しい課長を入れることになり、
+        //   「課長は 1 つの課に 1 人」（ux_department_final）に当たって反映できない（課長の交代）
+        $userRowById = [];
+        $previousDoesCheckByUserId = [];
         foreach ($plan['planByUserId'] as $userId => $userPlan) {
             $userRow = db_one('SELECT * FROM users WHERE id = ?', [$userId]);
+            $userRowById[$userId] = $userRow;
             $departmentId = $userPlan['departmentId'];
-            $teamId = ($departmentId !== null && $userPlan['teamName'] !== '') ? $findOrCreateTeamId($departmentId, $userPlan['teamName']) : null;
             // 前の課から移るとき・無効にするときは、前の課（所属の課）の役割を外す
             if ($userRow['department_id'] !== null && ((int) $userRow['department_id'] !== $departmentId || !$userPlan['isActive'])) {
                 db_exec('DELETE FROM department_reviewers WHERE user_id = ? AND department_id = ?', [$userId, (int) $userRow['department_id']]);
-                db_exec('DELETE FROM department_admins WHERE user_id = ? AND department_id = ?', [$userId, (int) $userRow['department_id']]);
             }
             if (!$userPlan['isActive']) {
                 db_exec('DELETE FROM department_reviewers WHERE user_id = ?', [$userId]);
+            }
+            if ($departmentId !== null && $userPlan['isActive']) {
+                $previousDoesCheckByUserId[$userId] = db_val('SELECT does_check FROM department_reviewers WHERE user_id = ? AND department_id = ?', [$userId, $departmentId]);
+                db_exec('DELETE FROM department_reviewers WHERE user_id = ? AND department_id = ?', [$userId, $departmentId]);
+            }
+        }
+        // 2 回目: 所属・有効を変え、役割を付け直す
+        $changedUserCount = 0;
+        foreach ($plan['planByUserId'] as $userId => $userPlan) {
+            $userRow = $userRowById[$userId];
+            $departmentId = $userPlan['departmentId'];
+            $teamId = ($departmentId !== null && $userPlan['teamName'] !== '') ? $findOrCreateTeamId($departmentId, $userPlan['teamName']) : null;
+            if ($userRow['department_id'] !== null && ((int) $userRow['department_id'] !== $departmentId || !$userPlan['isActive'])) {
+                db_exec('DELETE FROM department_admins WHERE user_id = ? AND department_id = ?', [$userId, (int) $userRow['department_id']]);
+            }
+            if (!$userPlan['isActive']) {
                 db_exec('DELETE FROM department_admins WHERE user_id = ?', [$userId]);
                 if ((int) $userRow['is_active'] === 1) {
                     auth_forget_all_devices($userId);
@@ -305,8 +324,7 @@ function org_csv_apply(array $plan): int
             db_exec('UPDATE users SET department_id = ?, team_id = ?, is_active = ?, updated_at = ? WHERE id = ?',
                 [$departmentId, $teamId, $userPlan['isActive'] ? 1 : 0, now(), $userId]);
             if ($departmentId !== null && $userPlan['isActive']) {
-                $previousDoesCheck = db_val('SELECT does_check FROM department_reviewers WHERE user_id = ? AND department_id = ?', [$userId, $departmentId]);
-                db_exec('DELETE FROM department_reviewers WHERE user_id = ? AND department_id = ?', [$userId, $departmentId]);
+                $previousDoesCheck = $previousDoesCheckByUserId[$userId] ?? null;
                 if ($userPlan['roleCode'] !== '') {
                     $isFinalRole = $userPlan['roleCode'] === 'final';
                     $reviewerTeamId = (!$isFinalRole && $userPlan['reviewerTeamName'] !== '') ? $findOrCreateTeamId($departmentId, $userPlan['reviewerTeamName']) : null;
