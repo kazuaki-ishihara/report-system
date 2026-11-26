@@ -272,8 +272,10 @@ def main():
             os.remove(path)
 
         # ---- 入れ替え（前に途中で止まったときの v2 の鍵があっても使える） ----
+        set_maintenance(False)   # メンテナンス中は、管理者・補佐のほかはログインできないので、始める前にログインしておく
         old_client = login(base, "kacho_a", users["kacho_a"])
         check("準備: 入れ替えの前はログインしている", old_client.get("/index.php")[0] == 200)
+        set_maintenance(True)
         status, text = rotate()
         check("入れ替えられる", status == 0 and "入れ替えました: v1 → v2、%d 件" % total in text, text[-400:])
         check("途中で止まったときの新しい鍵を使うことを知らせる", "新しい版の鍵がもうあるので" in text)
@@ -290,8 +292,10 @@ def main():
         old_blob_list = [blob for rows in before_blobs.values() for _, blob in rows if blob]
         check("DB のファイルに、古い暗号文が残らない", not any(blob.encode() in raw for blob in old_blob_list))
         check("控えは、古い鍵で読める", len(backups()) == 1 and plain_texts(backups()[0]) == before_texts)
+        set_maintenance(False)   # メンテナンス中の追い出しと見分けるため、メンテナンスを終えて確かめる
         status, location, _ = old_client.get("/index.php")
         check("入れ替えの前のログインは切れる", status == 303 and "/login.php" in location, (status, location))
+        set_maintenance(True)
 
         # ---- 古い鍵を外しても使える ----
         os.rename(os.path.join(key_dir, "field_v1.key"), os.path.join(work, "field_v1.key"))

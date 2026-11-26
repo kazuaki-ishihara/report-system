@@ -15,7 +15,7 @@ $flashes = take_flashes();
 <?php if ($userThemeStylesheetUrl !== ''): ?><link rel="stylesheet" href="<?= h($userThemeStylesheetUrl) ?>"><?php endif; ?>
 <script src="<?= h(asset_url('/js/app.js')) ?>" defer></script>
 </head>
-<body<?php if (maintenance_blocks($user ?? null) && ($user ?? null) !== null): ?> data-maintenance="1"<?php endif; ?> data-msgs="<?= h(json_encode(msg_js_map(), JSON_UNESCAPED_UNICODE)) ?>"<?php if (($user ?? null) !== null): ?> data-user-id="<?= (int) $user['id'] ?>" data-session-check="<?= h(url('/session_check.php')) ?>" data-login-url="<?= h(url('/login.php')) ?>"<?php endif; ?>>
+<body data-msgs="<?= h(json_encode(msg_js_map(), JSON_UNESCAPED_UNICODE)) ?>"<?php if (($user ?? null) !== null): ?> data-user-id="<?= (int) $user['id'] ?>" data-session-check="<?= h(url('/session_check.php')) ?>" data-login-url="<?= h(url('/login.php')) ?>"<?php endif; ?>>
 <header class="app-header">
   <a class="app-title" href="<?= h(url('/index.php')) ?>">月次報告</a>
   <?php if ($user !== null && ($_SESSION['stage'] ?? '') === 'full'): ?>

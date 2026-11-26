@@ -11,7 +11,7 @@ $user = page_start(['allow' => ['setup', 'must_change']]);
 $uid = (int) $user['id'];
 $stage = $_SESSION['stage'];
 
-$tab = (string) ($_GET['tab'] ?? 'totp');
+$tab = get_str('tab', 'totp');
 if (!in_array($tab, ['totp', 'codes', 'devices', 'password', 'theme'], true)) {
     $tab = 'totp';
 }
@@ -256,7 +256,7 @@ if ($tab === 'totp') {
     unset($_SESSION['show_backup_codes']);
     $vars['afterNext'] = (string) ($_SESSION['after_codes_next'] ?? '');
     unset($_SESSION['after_codes_next']);
-    $vars['remaining'] = (int) db_val('SELECT COUNT(*) FROM user_backup_codes WHERE user_id = ? AND used_at IS NULL', [$uid]);
+    $vars['remaining'] = (int) db_val('SELECT COUNT(*) FROM user_backup_codes WHERE user_id = ?', [$uid]);   // 予備のコードの数（何度でも使えるので、使ったものも数える）
 } elseif ($tab === 'devices') {
     $vars['devices'] = db_all('SELECT id, label, expires_at, last_used_at FROM remembered_devices WHERE user_id = ? AND expires_at > ? ORDER BY last_used_at DESC', [$uid, now()]);
     $vars['currentDeviceId'] = auth_remembered_device_id($uid);

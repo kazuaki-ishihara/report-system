@@ -90,6 +90,22 @@ function input_id(string $name, string $method = 'GET'): int
     return (int) $v;
 }
 
+/**
+ * GET の文字列（無ければ $default）。配列など文字列でない値・UTF-8 として正しくない値は 400。
+ * スーパーグローバル変数は型を確かめてから使う（(string) で文字列にすると、配列のときに 500 になるため。監査の指摘への対応）
+ */
+function get_str(string $name, string $default = ''): string
+{
+    if (!array_key_exists($name, $_GET)) {
+        return $default;
+    }
+    $v = $_GET[$name];
+    if (!is_string($v) || preg_match('//u', $v) !== 1) {
+        error_page(400);
+    }
+    return $v;
+}
+
 /** POST の文字列（配列などは 400） */
 function post_str(string $name, bool $trim = true): string
 {

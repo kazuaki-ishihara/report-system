@@ -323,6 +323,7 @@ STEP_TABLE = [
     {"key": "goals", "name": "目標管理（本人・課長・課長代理だけ・様式の xlsx）", "script": "smoke_goals.py", "screen": "G-27", "secrets": True},
     {"key": "actions", "name": "検証に無かった操作（取り消し・再開・締め切り・複製・戻す・並べ替え・自動保存の応答）", "script": "smoke_actions.py", "screen": "共通", "secrets": True},
     {"key": "inputs", "name": "すべての入力部品と、取り下げ・削除・絞り込み・個人の回答の出力", "script": "smoke_inputs.py", "screen": "G-04", "secrets": True},
+    {"key": "get_arrays", "name": "GET の項目に配列を送っても 500 にしない（スーパーグローバル変数の型の確かめ）", "script": "smoke_get_arrays.py", "screen": "共通"},
     {"key": "refusals", "name": "断る処理（誤った入力・無い番号・権限・状態。DB が変わらないこと）", "script": "smoke_refusals.py", "screen": "共通", "secrets": True},
     {"key": "rest", "name": "残りの画面・状態（一覧の中身・件数・組織の CSV・ロック・チャット・古い DB・コマンドの誤り）", "script": "smoke_rest.py", "screen": "共通", "secrets": True},
     {"key": "limits", "name": "時間切れ・同時の保存・上限・壊れたデータ・DB の障害", "script": "smoke_limits.py", "screen": "共通", "secrets": True},
@@ -447,6 +448,7 @@ def main():
         # コードを読むだけの安全の点検（SQL に値をつないでいない・画面に出す値を h() で書き出す・危険な関数・外への転送）。
         # 安全と確かめて仕分けた箇所は tools/test/static_security_exceptions.tsv（理由つき）
         r.run("静的な安全点検（SQL・XSS・危険な関数・転送）", [php, os.path.join("tools", "test", "check_static_security.php")], default_screen="コード")
+        r.run("スーパーグローバル変数を型を確かめて読む", [sys.executable, "-I", os.path.join(ROOT, "tools", "test", "check_superglobals.py")], default_screen="コード")
         # 画面の操作（action・app.js の補助）が検証に入っているか。入れ忘れを NG にする（APP-118 のように、検証に無いまま動いていないことを防ぐ）
         r.run("操作が自動検証に入っている", [sys.executable, "-I", os.path.join(HERE, "check_action_coverage.py")], default_screen="コード")
         r.run("目標管理の様式の定数が最新", [sys.executable, "-I", os.path.join(ROOT, "tools", "lib", "goal_template_gen.py"), "--check"], default_screen="G-27")

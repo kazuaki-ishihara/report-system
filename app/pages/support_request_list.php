@@ -17,11 +17,11 @@ if (!$canSubmit && !$isStaff) {
 }
 $errorTextList = [];
 // 各画面の「この画面について要望・依頼」から来たときは、画面と開いていた画面を入れておく
-$linkedScreenCode = (string) ($_GET['screen'] ?? '');
+$linkedScreenCode = get_str('screen');
 $typedValueByName = [
     'kind' => 'improvement', 'urgency' => 'normal', 'title' => '', 'body' => '',
     'screen_code' => isset(SUPPORT_REQUEST_SCREEN_LABELS[$linkedScreenCode]) ? $linkedScreenCode : '',
-    'source_path' => support_request_clean_source_path((string) ($_GET['from'] ?? '')),
+    'source_path' => support_request_clean_source_path(get_str('from')),
 ];
 
 // ---- 返信の定型文の追加・削除（便利機能 B。管理者側） ----
@@ -79,11 +79,11 @@ if (is_post()) {
 }
 
 // ---- 一覧 ----
-$statusFilter = (string) ($_GET['status'] ?? 'active');
+$statusFilter = get_str('status', 'active');
 if ($statusFilter !== 'active' && $statusFilter !== 'all' && !isset(SUPPORT_REQUEST_STATUS_LABELS[$statusFilter])) {
     $statusFilter = 'active';
 }
-$kindFilter = (string) ($_GET['kind'] ?? '');
+$kindFilter = get_str('kind');
 if ($kindFilter !== '' && !isset(SUPPORT_REQUEST_KIND_LABELS[$kindFilter])) {
     $kindFilter = '';
 }

@@ -26,7 +26,6 @@ UI_COVERAGE = {
     "コンピテンシー評価基準": ("ui_session.py", "評価基準: つまみで表が横に動く"),
     "2 段階認証のコードの欄": ("ui_check.py", ".use-backup-code"),
     "自分の色": ("ui_session.py", "自分の色: 読みにくい"),
-    "メンテナンス中": ("ui_session.py", "メンテナンス中: 保存・提出のボタンが押せない"),
     "要望・依頼の返信の定型文": ("ui_session.py", "返信の定型文を選ぶと"),
     "パスワードを自動で作る": ("ui_check.py", ".generate-password"),
     "客先名らしい言葉の注意": ("ui_check.py", "客先名らしい言葉で注意が出る"),

@@ -55,6 +55,21 @@ function maintenance_notice_text(): string
     return $state['message'] !== '' ? $noticeText . "\n" . $state['message'] : $noticeText;
 }
 
+/**
+ * ログインの画面に出す、メンテナンス中の知らせ（メンテナンス中は、管理者・補佐のほかはログインできない。ログインしている人も追い出す。2026-11-26 指示）。
+ * メンテナンス中でなければ空。
+ */
+function maintenance_login_text(): string
+{
+    $state = maintenance_state();
+    if ($state === null) {
+        return '';
+    }
+    $noticeText = msg('メンテナンス中です（{until} まで）。この間は、システム管理者・補佐のほかはログインできません。終わってからログインしてください。',
+        ['until' => display_datetime($state['until'])]);
+    return $state['message'] !== '' ? $noticeText . "\n" . $state['message'] : $noticeText;
+}
+
 /** メンテナンスを始める（$untilText は Y-m-d H:i:s） */
 function maintenance_start(string $untilText, string $messageText, int $userId): void
 {

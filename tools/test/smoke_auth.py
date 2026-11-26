@@ -208,7 +208,7 @@ def main():
     e.post("/login.php", {"csrf_token": csrf(body), "action": "password", "login_id": a.login, "password": a.new_password})
     s, _, body, _ = e.get("/login.php?step=2")
     s, loc, body2, _ = e.post("/login.php", {"csrf_token": csrf(body), "action": "code", "code": codes[0]})
-    check("使用済みの予備のコードは使えない", "コードが違います" in body2, (s, loc))
+    check("同じ予備のコードで、もう一度入れる（予備のコードは何度でも使える）", s == 303 and "/index.php" in (loc or ""), (s, loc))
 
     # ---- 別の端末から「すべての端末からログアウト」→ 最初の端末も切れる ----
     section("G-16", "別の端末から「すべての端末からログアウト」→ 最初の端末も切れる")

@@ -18,7 +18,7 @@ if (!$manageableDepartmentById && !$isReviewer) {
     error_page(403);
 }
 // 範囲: 課長は既定で課の定型文、確認者（課長でない）は自分の定型文だけ
-$templateScope = (string) ($_GET['scope'] ?? '');
+$templateScope = get_str('scope');
 if ($templateScope !== 'mine' && $templateScope !== 'department') {
     $templateScope = $manageableDepartmentById ? 'department' : 'mine';
 }

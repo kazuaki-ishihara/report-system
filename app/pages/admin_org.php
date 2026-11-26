@@ -10,7 +10,7 @@ declare(strict_types=1);
 $user = page_start();
 require_system_manager($user);
 
-$tab = (string) ($_GET['tab'] ?? 'departments');
+$tab = get_str('tab', 'departments');
 if (!in_array($tab, ['departments', 'users', 'words', 'bulk'], true)) {
     $tab = 'departments';
 }
@@ -260,8 +260,33 @@ $vars = ['title' => '組織・ユーザー', 'user' => $user, 'tab' => $tab, 'er
 if ($tab === 'departments') {
     $vars['departments'] = departments_all();
     $vars['reviewers'] = [];
-    foreach (db_all('SELECT r.department_id, r.is_final, u.display_name FROM department_reviewers r JOIN users u ON u.id = r.user_id AND u.is_active = 1 ORDER BY r.is_final DESC, r.sort_order') as $r) {
+    foreach (db_all('SELECT r.department_id, r.is_final, u.id AS user_id, u.display_name, u.role_title FROM department_reviewers r JOIN users u ON u.id = r.user_id AND u.is_active = 1 ORDER BY r.is_final DESC, r.sort_order') as $r) {
         $vars['reviewers'][(int) $r['department_id']][] = $r;
+    }
+    // 課員（課 ID => 有効な課員の行）と、兼務でその課の課長・確認者をしている人（課 ID => 行）。だれがいるのかを一覧と課の編集で見るため（2026-11-26 指示）
+    $vars['memberRowListByDepartmentId'] = [];
+    foreach (db_all(
+        'SELECT u.id, u.login_id, u.display_name, u.role_title, u.department_id, t.name AS team_name, r.is_final, (r.user_id IS NOT NULL) AS is_reviewer, rt.name AS reviewer_team_name
+           FROM users u
+           LEFT JOIN department_teams t ON t.id = u.team_id
+           LEFT JOIN department_reviewers r ON r.user_id = u.id AND r.department_id = u.department_id
+           LEFT JOIN department_teams rt ON rt.id = r.team_id
+          WHERE u.is_active = 1 AND u.department_id IS NOT NULL AND u.login_id IS NOT NULL
+          ORDER BY COALESCE(r.is_final, 0) DESC, (r.user_id IS NOT NULL) DESC, t.sort_order, u.display_name'
+    ) as $memberRow) {
+        $vars['memberRowListByDepartmentId'][(int) $memberRow['department_id']][] = $memberRow;
+    }
+    $vars['concurrentRowListByDepartmentId'] = [];
+    foreach (db_all(
+        'SELECT r.department_id, r.is_final, rt.name AS reviewer_team_name, u.id, u.login_id, u.display_name, u.role_title, d.name AS home_department_name
+           FROM department_reviewers r
+           JOIN users u ON u.id = r.user_id AND u.is_active = 1
+           LEFT JOIN departments d ON d.id = u.department_id
+           LEFT JOIN department_teams rt ON rt.id = r.team_id
+          WHERE r.department_id IS NOT u.department_id
+          ORDER BY r.is_final DESC, u.display_name'
+    ) as $concurrentRow) {
+        $vars['concurrentRowListByDepartmentId'][(int) $concurrentRow['department_id']][] = $concurrentRow;
     }
     // 引き継いだ課の名前（課 ID => 改訂前の課の名前の一覧）
     $vars['predecessorNameListByDepartmentId'] = [];
@@ -321,9 +346,9 @@ if ($tab === 'departments') {
     }
     $vars['newForm'] = isset($_GET['new']);
 } elseif ($tab === 'users') {
-    $deptFilter = (string) ($_GET['dept'] ?? '');
-    $state = (string) ($_GET['state'] ?? 'active');
-    $q = trim((string) ($_GET['q'] ?? ''));
+    $deptFilter = get_str('dept');
+    $state = get_str('state', 'active');
+    $q = trim(get_str('q'));
     $where = [];
     $params = [];
     if ($deptFilter !== '' && preg_match('/\A\d+\z/', $deptFilter) === 1) {

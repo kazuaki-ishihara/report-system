@@ -37,7 +37,17 @@ $pwUser = function (): ?array {
     return ($u !== null && (int) $u['is_active'] === 1 && !security_is_frozen($u)) ? $u : null;
 };
 
-$finishLogin = function (array $user, string $next): void {
+// メンテナンス中は、管理者・補佐のほかの人をログインさせない（パスワードと 2 段階認証まで済んだところで断る。手順 1 で断ると、パスワードが合っているかが分かってしまうため）
+$refuseDuringMaintenance = function (array $user): void {
+    if (maintenance_blocks($user)) {
+        unset($_SESSION['pw_uid'], $_SESSION['pw_at']);
+        audit_log('auth', 'login:maintenance', (int) $user['id']);
+        redirect('/login.php');
+    }
+};
+
+$finishLogin = function (array $user, string $next) use ($refuseDuringMaintenance): void {
+    $refuseDuringMaintenance($user);
     // 失敗の回数は、2 段階認証まで済んだときにだけ戻す（パスワードだけ知る人がコードを総当たりできないように）
     auth_reset_failures((int) $user['id']);
     session_login($user, 'full');
@@ -88,6 +98,7 @@ if (is_post()) {
                 }
                 if ($user['totp_enabled_at'] === null) {
                     // 2 段階認証が未設定: 設定の画面だけ使える状態にする
+                    $refuseDuringMaintenance($user);
                     session_login($user, 'setup');
                     $_SESSION['after_setup_next'] = $next;
                     audit_log('auth', 'login:pw_ok_setup', (int) $user['id']);
@@ -131,6 +142,7 @@ if (is_post()) {
             $next = (string) ($_SESSION['pw_next'] ?? '/index.php');
             unset($_SESSION['pw_next']);
             auth_reset_failures((int) $user['id']);
+            $refuseDuringMaintenance($user);
             session_login(db_one('SELECT * FROM users WHERE id = ?', [(int) $user['id']]), 'setup');
             $_SESSION['after_setup_next'] = is_safe_local_path($next) ? $next : '/index.php';
             audit_log('auth', 'login:recovery_code', (int) $user['id']);

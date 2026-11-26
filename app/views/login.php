@@ -6,6 +6,7 @@
 ?>
 <section class="card narrow">
   <h1>ログイン</h1>
+  <?php if (maintenance_login_text() !== ''): ?><div class="flash flash-warning" role="status" id="maintenance-login-notice"><?= h_lines(maintenance_login_text()) ?></div><?php endif; ?>
   <?php foreach ($errors as $e): ?>
     <div class="flash flash-error" role="alert"><?= h_lines($e) ?></div>
   <?php endforeach; ?>

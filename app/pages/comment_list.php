@@ -11,12 +11,12 @@ declare(strict_types=1);
 $user = page_start();
 $userId = (int) $user['id'];
 
-$tabName = (string) ($_GET['tab'] ?? '');
+$tabName = get_str('tab');
 if (!in_array($tabName, ['sent', 'received'], true)) {
     // 既定: 確認者なら自分が出したコメント、そうでなければ自分の報告へのコメント
     $tabName = reviewer_departments($userId) ? 'sent' : 'received';
 }
-$statusFilterName = (string) ($_GET['status'] ?? 'unresolved');
+$statusFilterName = get_str('status', 'unresolved');
 $threadStatusListByFilterName = [
     'unresolved' => ['open', 'answered'],
     'open'       => ['open'],

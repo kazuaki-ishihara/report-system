@@ -20,8 +20,8 @@ $anchorIdFor = function (string $defaultText): string {
 };
 
 // ---- 絞り込み（GET。保存のあとも同じ条件に戻す） ----
-$filterScreenName = (string) ($_GET['screen'] ?? '');
-$filterKeywordText = trim((string) ($_GET['q'] ?? ''));
+$filterScreenName = get_str('screen');
+$filterKeywordText = trim(get_str('q'));
 $isChangedOnly = ($_GET['changed'] ?? '') === '1';
 $screenNameList = [];
 foreach ($catalogByDefaultText as $catalogEntry) {

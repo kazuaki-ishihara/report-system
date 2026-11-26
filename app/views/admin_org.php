@@ -1,6 +1,8 @@
 <?php
 /** @var string $tab */
 /** @var array $errors */
+/** @var array<int, array<int, array<string, int|string|null>>> $memberRowListByDepartmentId 課 ID => 有効な課員（課の一覧と課の編集の「課員」。タブ departments のとき） */
+/** @var array<int, array<string, int|string|null>> $concurrentRowListByDepartmentId 課 ID => 兼務でその課の課長・確認者をしている人 */
 ?>
 <section class="card wide">
   <h1>組織・ユーザー</h1>
@@ -85,6 +87,38 @@
       <button type="submit" class="primary">課長を保存</button>
     </form>
     </section>
+    <section id="dept-members" data-tab-title="課員">
+    <?php $editMemberRowList = $memberRowListByDepartmentId[(int) $edit['id']] ?? [];
+    $editConcurrentRowList = $concurrentRowListByDepartmentId[(int) $edit['id']] ?? []; ?>
+    <p class="note"><?= h_phrases('この課に所属している有効な人と、兼務でこの課の課長・確認者をしている人です。所属・ラインはユーザーの編集か一括（CSV）、課長代理・主任・ラインは、この課の課長が「課の管理」で決めます。') ?></p>
+    <?php if (!$editMemberRowList && !$editConcurrentRowList): ?>
+      <p class="note"><?= h_phrases(msg('この課に所属している人はいません。')) ?></p>
+    <?php else: ?>
+      <table class="table" id="department-member-list">
+        <thead><tr><th>名前</th><th>ログイン ID</th><th>役職</th><th>ライン</th><th>役割</th></tr></thead>
+        <tbody>
+        <?php foreach ($editMemberRowList as $memberRow): ?>
+          <tr>
+            <td><a href="<?= h(url('/admin/user_edit.php?id=' . (int) $memberRow['id'])) ?>"><?= h((string) $memberRow['display_name']) ?></a></td>
+            <td><?= h((string) $memberRow['login_id']) ?></td>
+            <td><?= h(display_role_title((int) $memberRow['id'], (string) $memberRow['role_title'])) ?></td>
+            <td><?= h((string) ($memberRow['team_name'] ?? '')) ?></td>
+            <td><?= (int) $memberRow['is_reviewer'] === 1 ? h(reviewer_role_label((int) $memberRow['id'], (string) $memberRow['role_title'], (int) $memberRow['is_final'] === 1)) . ($memberRow['reviewer_team_name'] !== null ? '（' . h((string) $memberRow['reviewer_team_name']) . '）' : '') : '' ?></td>
+          </tr>
+        <?php endforeach; ?>
+        <?php foreach ($editConcurrentRowList as $concurrentRow): ?>
+          <tr>
+            <td><a href="<?= h(url('/admin/user_edit.php?id=' . (int) $concurrentRow['id'])) ?>"><?= h((string) $concurrentRow['display_name']) ?></a> <span class="tag">兼務（<?= h((string) ($concurrentRow['home_department_name'] ?? '課なし')) ?>）</span></td>
+            <td><?= h((string) $concurrentRow['login_id']) ?></td>
+            <td><?= h(display_role_title((int) $concurrentRow['id'], (string) $concurrentRow['role_title'])) ?></td>
+            <td>—</td>
+            <td><?= h(reviewer_role_label((int) $concurrentRow['id'], (string) $concurrentRow['role_title'], (int) $concurrentRow['is_final'] === 1)) . ($concurrentRow['reviewer_team_name'] !== null ? '（' . h((string) $concurrentRow['reviewer_team_name']) . '）' : '') ?></td>
+          </tr>
+        <?php endforeach; ?>
+        </tbody>
+      </table>
+    <?php endif; ?>
+    </section>
     <section id="dept-succession" data-tab-title="引き継ぎ">
     <p class="note"><?= h_phrases('組織の改訂で課をまとめた・分けた・作り直したときに、改訂の前の課を選びます。この課の確認者（課長を含む）が、選んだ課の過去の報告も見られるようになります（前月との比べ・検索を含む）。改訂の前の課を無効にしても、報告は残ります。') ?></p>
     <form method="post" action="<?= h(url('/admin/org.php?tab=departments&edit=' . (int) $edit['id'])) ?>" class="form"
@@ -106,14 +140,30 @@
   <?php endif; ?>
 
   <table class="table">
-    <thead><tr><th>課</th><th>締め日</th><th>確認者</th><th>状態</th><th></th></tr></thead>
+    <thead><tr><th>課</th><th>課員</th><th>締め日</th><th>確認者</th><th>状態</th><th></th></tr></thead>
     <tbody>
     <?php foreach ($departments as $d): ?>
       <tr>
         <td><?= h($d['name']) ?></td>
+        <td><?php $listMemberRowList = $memberRowListByDepartmentId[(int) $d['id']] ?? [];
+            $listConcurrentRowList = $concurrentRowListByDepartmentId[(int) $d['id']] ?? []; ?>
+          <?php if (!$listMemberRowList && !$listConcurrentRowList): ?>0 人<?php else: ?>
+          <details class="department-member-details">
+            <summary><?= count($listMemberRowList) ?> 人<?= $listConcurrentRowList ? '（兼務 ' . count($listConcurrentRowList) . ' 人）' : '' ?></summary>
+            <ul class="department-member-names">
+              <?php foreach ($listMemberRowList as $memberRow): ?>
+                <li><?= h((string) $memberRow['display_name']) ?><?= (int) $memberRow['is_reviewer'] === 1 ? ' <span class="tag">' . h(reviewer_role_label((int) $memberRow['id'], (string) $memberRow['role_title'], (int) $memberRow['is_final'] === 1)) . '</span>' : '' ?><?= $memberRow['team_name'] !== null ? ' <span class="note">' . h((string) $memberRow['team_name']) . '</span>' : '' ?></li>
+              <?php endforeach; ?>
+              <?php foreach ($listConcurrentRowList as $concurrentRow): ?>
+                <li><?= h((string) $concurrentRow['display_name']) ?> <span class="tag">兼務の<?= h(reviewer_role_label((int) $concurrentRow['id'], (string) $concurrentRow['role_title'], (int) $concurrentRow['is_final'] === 1)) ?></span> <span class="note"><?= h((string) ($concurrentRow['home_department_name'] ?? '課なし')) ?></span></li>
+              <?php endforeach; ?>
+            </ul>
+            <a href="<?= h(url('/admin/org.php?tab=users&dept=' . (int) $d['id'])) ?>">ユーザーの一覧で見る</a>
+          </details>
+          <?php endif; ?></td>
         <td><?= $d['close_day'] === null ? '—' : ((int) $d['close_day'] === 31 ? '月末' : (int) $d['close_day'] . '日') ?></td>
         <td><?php foreach ($reviewers[(int) $d['id']] ?? [] as $r): ?>
-          <span class="tag"><?= (int) $r['is_final'] === 1 ? '課長 ' : '' ?><?= h($r['display_name']) ?></span>
+          <span class="tag"><?= h(reviewer_role_label((int) $r['user_id'], (string) $r['role_title'], (int) $r['is_final'] === 1)) ?> <?= h($r['display_name']) ?></span>
         <?php endforeach; ?>
           <?php $hasFinalReviewer = (bool) array_filter($reviewers[(int) $d['id']] ?? [], function (array $reviewerRow): bool { return (int) $reviewerRow['is_final'] === 1; }); ?>
           <?php if ((int) $d['is_active'] === 1 && !$hasFinalReviewer): ?><span class="tag tag-open"><?= h_phrases(msg('課長がいません（確認を完了にできません）')) ?></span><?php endif; ?>
@@ -179,6 +229,19 @@
     <h2>変わる内容</h2>
     <?php foreach ($bulkPlan['errorTextList'] as $bulkErrorText): ?><div class="flash flash-error" role="alert"><?= h_lines($bulkErrorText) ?></div><?php endforeach; ?>
     <?php foreach ($bulkPlan['warningTextList'] ?? [] as $bulkWarningText): ?><div class="flash flash-warning" role="alert"><?= h_lines($bulkWarningText) ?></div><?php endforeach; ?>
+    <?php if (!empty($bulkPlan['notInCsvList'])): ?>
+      <div class="flash flash-warning" role="status" id="org-csv-not-listed">
+        <?= h_phrases(msg('CSV に載っていない人が {count} 人います（この人たちは変わりません。課を移す・無効にするときは、行を残して直してください）。', ['count' => count($bulkPlan['notInCsvList'])])) ?>
+        <details>
+          <summary>載っていない人を見る</summary>
+          <ul class="department-member-names">
+            <?php foreach ($bulkPlan['notInCsvList'] as $notListedPerson): ?>
+              <li><?= h($notListedPerson['displayName']) ?> <span class="note"><?= h($notListedPerson['loginId']) ?>・<?= h($notListedPerson['departmentName'] === '' ? '課なし' : $notListedPerson['departmentName']) ?></span></li>
+            <?php endforeach; ?>
+          </ul>
+        </details>
+      </div>
+    <?php endif; ?>
     <?php if ($bulkPlan['newTeamList']): ?>
       <p>新しく作るライン: <?php foreach ($bulkPlan['newTeamList'] as $newTeam): ?><span class="tag"><?= h($newTeam['departmentName']) ?> / <?= h($newTeam['teamName']) ?></span><?php endforeach; ?></p>
     <?php endif; ?>

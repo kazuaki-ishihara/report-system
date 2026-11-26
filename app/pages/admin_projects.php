@@ -119,7 +119,7 @@ if (($_GET['csv'] ?? '') === '1') {
     exit;
 }
 
-$state = (string) ($_GET['state'] ?? 'active');
+$state = get_str('state', 'active');
 $where = $state === 'ended' ? 'p.is_active = 0' : ($state === 'all' ? '1 = 1' : 'p.is_active = 1');
 $latest = db_val('SELECT MAX(period) FROM report_records WHERE deleted_at IS NULL AND is_legacy = 0');
 $projects = db_all(

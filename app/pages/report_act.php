@@ -33,12 +33,12 @@ $isFinal = reviewer_can_see_report($uid, $report, true, false);   // 報告の�
 $back = '/reports/view.php?id=' . $id;
 
 /** コメントの本文を確かめる */
-$readComment = function (): string {
+$readComment = function () use ($id): string {
     $text = str_replace(["\r\n", "\r"], "\n", post_str('comment'));
     if ($text === '' || str_len($text) > 1000 || has_control_chars($text, true)) {
         rk_cancel();
         flash('error', msg('コメントは 1〜1000 文字で入れてください'));
-        redirect('/reports/view.php?id=' . (int) $_POST['report_id']);
+        redirect('/reports/view.php?id=' . $id);
     }
     return $text;
 };

@@ -16,7 +16,7 @@ if (!$depts) {
 
 // 自由記述のセルを 1 つ開く（JSON）
 if (isset($_GET['cell'])) {
-    if (preg_match('/\A(\d+):(\d+):(\d+)\z/', (string) $_GET['cell'], $m) !== 1) {
+    if (preg_match('/\A(\d+):(\d+):(\d+)\z/', get_str('cell'), $m) !== 1) {
         error_page(400);
     }
     [$_x, $rid, $rpId, $fid] = array_map('intval', $m);
@@ -38,7 +38,7 @@ if (isset($_GET['cell'])) {
     json_response(['ok' => true, 'text' => export_text($def, (string) $v)]);
 }
 
-$period = (string) ($_GET['period'] ?? report_target_period($user));
+$period = get_str('period', report_target_period($user));
 if (!is_valid_period($period)) {
     error_page(400);
 }

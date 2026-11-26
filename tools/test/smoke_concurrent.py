@@ -83,6 +83,21 @@ def main():
     check("足した人は、確認者と課員の表に「ほかの課」の札つきで出て、候補からは消える",
           "B一般1" in member_table_html and '<span class="tag">ほかの課</span>' in member_table_html
           and 'value="%d"' % user_id_of("ippan_b1") not in (re.search(r'<select id="concurrent_user_id".*?</select>', manage_html, re.S) or re.search("$^", "")).group(0))
+    # 組織・ユーザー: 課の一覧と課の編集に、課員（所属の人）と兼務の人を出す（だれがいるのか分かるように。2026-11-26 指示）
+    _status_code, _location, department_list_html = admin_client.get("/admin/org.php?tab=departments")
+    a_row_html = next((row_html for row_html in re.findall(r"<tr>.*?</tr>", department_list_html, re.S) if "<td>A課</td>" in row_html), "")
+    a_member_count = database.execute("SELECT COUNT(*) FROM users WHERE department_id = ? AND is_active = 1", (department_a_id,)).fetchone()[0]
+    check("課の一覧に課員の人数と名前（押すと開く）、兼務の人を出す",
+          "<summary>%d 人（兼務 1 人）</summary>" % a_member_count in a_row_html and "A一般1" in a_row_html and "A課長" in a_row_html
+          and "B一般1" in a_row_html and "兼務の確認者" in a_row_html and "/admin/org.php?tab=users&amp;dept=%d" % department_a_id in a_row_html, a_row_html[:300])
+    check("課長・確認者は「確認者」ではなく役職で出す（課長代理・主任。役職が一般の兼務の人だけ「確認者」）",
+          "課長 A課長" in a_row_html and "課長代理 A代理" in a_row_html and "主任 Aリーダー" in a_row_html
+          and '<span class="tag">課長代理</span>' in a_row_html and '<span class="tag">主任</span>' in a_row_html and "兼務の確認者" in a_row_html, a_row_html[:400])
+    _status_code, _location, edit_html = admin_client.get("/admin/org.php?tab=departments&edit=%d" % department_a_id)
+    member_list_html = (re.search(r'<table class="table" id="department-member-list">.*?</table>', edit_html, re.S) or re.search("$^", "")).group(0) if re.search(r'id="department-member-list"', edit_html) else ""
+    check("課の編集の「課員」の節に、所属の人全員と兼務の人（所属の課つき）を出す",
+          'data-tab-title="課員"' in edit_html and member_list_html.count("<tr>") == a_member_count + 1 + 1
+          and "A一般2" in member_list_html and "兼務（B課）" in member_list_html, member_list_html.count("<tr>"))
     status_code, _location, page_html = post_with(kacho_a_client, manage_path_a, {"action": "concurrent_add", "concurrent_user_id": str(user_id_of("ippan_b1"))})
     check("もう確認者の人を足そうとすると、そう知らせる", status_code == 200 and "もうこの課の確認者です" in page_html, status_code)
     status_code, _location, _page_html = post_with(kacho_a_client, manage_path_a, {"action": "concurrent_add", "concurrent_user_id": str(user_id_of("ippan_a1"))})
@@ -156,6 +171,14 @@ def main():
         check("兼務の誤り（%s）を知らせ、反映のボタンを出さない" % bad_text, expected_text in preview_html and 'value="bulk_apply"' not in preview_html, status_code)
     status_code, _location, preview_html = upload(build_csv(row_list, header_index, {"kacho_a": {"兼務": "B課：課長"}}))
     check("全角の「：」「；」でも読む", "B課 の課長が" not in preview_html and "兼務は「課の名前" not in preview_html and "変わる人はいません" in preview_html, status_code)
+    # CSV に載っていない人を知らせる（行を消しても変わらないことに気づけるように。2026-11-26 指示）
+    only_kacho_rows = row_list[:header_index + 1] + [csv_row for csv_row in row_list[header_index + 1:] if csv_row and csv_row[0] == "kacho_a"]
+    status_code, _location, preview_html = upload(build_csv(only_kacho_rows, header_index, {}))
+    active_user_count = database.execute("SELECT COUNT(*) FROM users WHERE is_active = 1 AND login_id IS NOT NULL").fetchone()[0]
+    check("CSV に載っていない人の数と一覧を出す（この人たちは変わらない）",
+          "CSV に載っていない人が %d 人います" % (active_user_count - 1) in preview_html and "A一般1" in preview_html and "載っていない人を見る" in preview_html, status_code)
+    status_code, _location, preview_html = upload(build_csv(row_list, header_index, {}))
+    check("全員が載っている CSV では、載っていない人の知らせを出さない", "CSV に載っていない人が" not in preview_html, status_code)
     # 元に戻す（B課の課長を kacho_b に。kacho_a の兼務は外す）
     status_code, _location, preview_html = upload(build_csv(row_list, header_index, {"kacho_b": {"役割": "課長"}, "kacho_a": {"兼務": ""}}))
     status_code, _location, _page_html = apply_plan(preview_html)

@@ -23,9 +23,9 @@ if (!is_post()) {
     );
     render('export_index', [
         'title' => '出力', 'user' => $user, 'depts' => $depts, 'mobile' => $mobile, 'surveys' => $surveys,
-        'period' => (string) ($_GET['period'] ?? report_target_period($user)),
-        'deptSel' => (string) ($_GET['dept'] ?? ''), 'type' => (($_GET['type'] ?? '') === 'survey') ? 'survey' : 'report',
-        'surveySel' => (string) ($_GET['survey_id'] ?? ''),
+        'period' => get_str('period', report_target_period($user)),
+        'deptSel' => get_str('dept'), 'type' => (($_GET['type'] ?? '') === 'survey') ? 'survey' : 'report',
+        'surveySel' => get_str('survey_id'),
     ]);
 }
 

@@ -167,6 +167,15 @@ function page_start(array $opt = []): ?array
         $q = is_safe_local_path($next) && !is_post() ? '?next=' . rawurlencode($next) : '';
         redirect('/login.php' . $q);
     }
+    // メンテナンス中は、管理者・補佐のほかの人をログアウトさせる（ログインの画面にメンテナンス中の知らせが出る。2026-11-26 指示）
+    if (maintenance_blocks($user)) {
+        audit_log('auth', 'logout:maintenance', (int) $user['id']);
+        session_logout();
+        if (is_json_request()) {
+            json_response(['ok' => false, 'reason' => 'login'], 401);
+        }
+        redirect('/login.php');
+    }
     $allow = $opt['allow'] ?? [];
     $stage = $_SESSION['stage'] ?? '';
     if ($stage === 'setup' && !in_array('setup', $allow, true)) {

@@ -107,6 +107,19 @@ def main():
     raw_rows = database.execute("SELECT code_hash, code_enc FROM user_backup_codes WHERE user_id = ?", (uid("ippan_a1"),)).fetchall()
     check("DB に予備のコードの平文がない（ハッシュと暗号文だけ）",
           all(row[1] and not any(code in text or code.replace("-", "") in text for code in own_codes for text in row) for row in raw_rows) and len(raw_rows) == 8)
+    # 予備のコードは何度でも使える（2026-11-26 指示）。使ったコードも暗号文を残し、管理者が確認できるまま
+    for attempt_number in (1, 2):
+        backup_login_client = Client(arguments.base)
+        _, _, login_html = backup_login_client.get("/login.php")
+        backup_login_client.post("/login.php", {"csrf_token": csrf(login_html), "action": "password", "login_id": "ippan_a1", "password": password_of("ippan_a1")})
+        _, _, step2_html = backup_login_client.get("/login.php?step=2")
+        status_code, location, _ = backup_login_client.post("/login.php", {"csrf_token": csrf(step2_html), "action": "code", "code": own_codes[0], "remember": "0"})
+        check("同じ予備のコードで入れる（%d 回目）" % attempt_number, status_code == 303 and "/index.php" in (location or ""), (status_code, location))
+    used_rows = database.execute("SELECT used_at, code_enc FROM user_backup_codes WHERE user_id = ?", (uid("ippan_a1"),)).fetchall()
+    check("使った予備のコードも残り、暗号文も消さない（使った日時だけ入る）",
+          len(used_rows) == 8 and all(row[1] for row in used_rows) and sum(1 for row in used_rows if row[0]) == 1, used_rows)
+    _, _, codes_html = client_of("ippan_a1").get("/account.php?tab=codes")
+    check("アカウント設定の予備のコードは、使ったあとも 8 個と出る", "8 個（どのコードも何度でも使えます）" in codes_html)
 
     section("G-14", "予備のコードの確認: 使える人")
     for operator in ("ippan_b1", "kacho_a", "leader_a", "ippan_a2"):
@@ -146,9 +159,9 @@ def main():
     check("ほかの人のホームには出ない", all("予備のコードを確認しました" not in client_of(login_id).get("/index.php")[2] for login_id in ("ippan_a2", "kacho_a", "ippan_b1")))
     client, _, _ = password_step("ippan_a1", password_of("ippan_a1"))
     location, _ = code_step(client, own_codes[0])
-    check("予備のコードでログインでき、使った分の暗号文は消える", "/index.php" in location and one("SELECT COUNT(*) FROM user_backup_codes WHERE user_id = ? AND code_enc IS NOT NULL", uid("ippan_a1")) == 7, location)
+    check("予備のコードでログインでき、使ったコードの暗号文も残る（何度でも使える）", "/index.php" in location and one("SELECT COUNT(*) FROM user_backup_codes WHERE user_id = ? AND code_enc IS NOT NULL", uid("ippan_a1")) == 8, location)
     security_post("admin01", "view_backup_codes", "ippan_a1")
-    check("使った予備のコードは確認に出ない", sorted(shown("admin01", "ippan_a1")[0]) == sorted(own_codes[1:]))
+    check("使った予備のコードも確認に出る（8 個すべて）", sorted(shown("admin01", "ippan_a1")[0]) == sorted(own_codes))
     database.execute("UPDATE security_notices SET created_at = ?", ((datetime.datetime.now() - datetime.timedelta(days=29)).strftime("%Y-%m-%d %H:%M:%S"),))
     check("知らせは 29 日後も出る", "予備のコードを確認しました" in client_of("ippan_a1").get("/index.php")[2])
     database.execute("UPDATE security_notices SET created_at = ?", ((datetime.datetime.now() - datetime.timedelta(days=31)).strftime("%Y-%m-%d %H:%M:%S"),))

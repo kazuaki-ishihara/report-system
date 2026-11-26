@@ -122,7 +122,10 @@ def main():
     after_status, after_location, _page = other_device_client.get("/index.php")
     check("再設定のあと、ほかの端末のセッションが切れる", after_status in (302, 303) and "login" in after_location, (after_status, after_location))
     _status_code, _location, reused_backup_html = reset_password(arguments.base, "ippan_b1", backup_code, "another-pass-9999-xyz")
-    check("再設定に使った予備のコードは、使用済みになる", WRONG_CODE_MESSAGE in reused_backup_html)
+    check("再設定に使った予備のコードも、使えるまま（予備のコードは何度でも使える。2026-11-26 指示）",
+          WRONG_CODE_MESSAGE not in reused_backup_html and database.execute(
+              "SELECT COUNT(*) FROM user_backup_codes WHERE user_id = (SELECT id FROM users WHERE login_id = 'ippan_b1') AND used_at IS NOT NULL").fetchone()[0] >= 1)
+    user_info_by_login_id["ippan_b1"]["password"] = "another-pass-9999-xyz"   # 2 回目の再設定で変わったパスワード
     clear_throttle()
 
     count_client = Client(arguments.base)

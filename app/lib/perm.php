@@ -92,6 +92,19 @@ function display_role_title(int $userId, string $roleTitle): string
     return $specialistTitle !== '' ? $specialistTitle : $roleTitle;
 }
 
+/**
+ * 課長・確認者の役割を、役職の名前で出す（「確認者」ではなく「課長代理」「主任」など。2026-11-26 指示）。
+ * 課長は「課長」。確認者は役職（専門職なら専門職の名前）。役職が空・「一般」の確認者だけ「確認者」と出す。
+ */
+function reviewer_role_label(int $userId, string $roleTitle, bool $isFinal): string
+{
+    if ($isFinal) {
+        return '課長';
+    }
+    $titleText = display_role_title($userId, $roleTitle);
+    return ($titleText === '' || $titleText === '一般') ? '確認者' : $titleText;
+}
+
 /** 専門職の人のもの（報告・調査の回答・目標管理）を、その課の担当として見られるか。見られるのは課長だけ、担当部長はだれも見られない */
 function specialist_viewable_as(string $specialistTitle, bool $isFinal): bool
 {

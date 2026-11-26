@@ -31,7 +31,7 @@ if ($id !== null) {
     }
     $deptId = $field['department_id'] === null ? null : (int) $field['department_id'];
 } else {
-    $dp = (string) ($_GET['dept'] ?? 'common');
+    $dp = get_str('dept', 'common');
     $deptId = $dp === 'common' ? null : (preg_match('/\A\d+\z/', $dp) === 1 ? (int) $dp : -1);
     if ($deptId === -1 || ($deptId !== null && db_one('SELECT id FROM departments WHERE id = ?', [$deptId]) === null)) {
         error_page(400);

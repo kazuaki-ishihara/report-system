@@ -116,7 +116,7 @@ CREATE TABLE IF NOT EXISTS user_backup_codes (
     id         INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id    INTEGER NOT NULL REFERENCES users(id),
     code_hash  TEXT NOT NULL,          -- password_hash() の値
-    used_at    TEXT,
+    used_at    TEXT,                   -- 最後に使った日時（予備のコードは何度でも使える。2026-11-26 から）
     created_at TEXT NOT NULL
 );
 
@@ -661,7 +661,7 @@ CREATE TABLE IF NOT EXISTS app_state (
 | `report_value_history` | `old_value`、`new_value` | 同上 |
 | `report_field_comments` | `comment_enc` | 常に |
 | `adhoc_response_values` | `value_text` | 自由記述の質問、または「限定」の質問 |
-| `user_backup_codes` | `code_enc` | 常に（古いコードは NULL。使ったら NULL） |
+| `user_backup_codes` | `code_enc` | 常に（古いコードと、1 回限りだった前の版で使ったコードは NULL） |
 | `lead_recovery_requests` | `first_half_enc` | 常に |
 | `support_requests` | `title_enc`、`body_enc` | 常に |
 | `support_request_messages` | `body_enc` | 常に |
@@ -760,7 +760,7 @@ tomato の DB は、この DB と同じ名前で中身の違う表（`users`・`
 
 | 表・列 | 内容 |
 |---|---|
-| `user_backup_codes.code_enc` | 予備のコードの暗号文（古いコードは NULL。使ったら NULL） |
+| `user_backup_codes.code_enc` | 予備のコードの暗号文（古いコードは NULL。予備のコードが 1 回限りだった前の版で使ったものも NULL） |
 | `users.frozen_at`・`users.is_credential_reset` | 凍結した日時・総入れ替えの途中 |
 | `security_notices` | 本人への知らせ（種類・操作した人の ID・名前・役割・理由・「心当たりがない」を押した日時） |
 | `user_recovery_codes` | 復旧コードのハッシュ・期限・使った日時・発行の知らせ |

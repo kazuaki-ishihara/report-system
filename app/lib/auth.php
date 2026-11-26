@@ -124,7 +124,10 @@ function auth_totp_secret(array $user): ?string
     return base32_decode($b32);
 }
 
-/** TOTP のコードか予備のコードを確かめる。成功なら true（使用済みの記録も行う） */
+/**
+ * TOTP のコードか予備のコードを確かめる。成功なら true（TOTP は同じコードを 2 回使えないよう記録する）。
+ * 予備のコードは何度でも使える（2 段階認証を入れられない人の恒久の対策のため。2026-11-26 指示）。used_at は最後に使った日時
+ */
 function auth_verify_second_factor(array $user, string $code): bool
 {
     $code = preg_replace('/[\s-]/', '', $code);
@@ -143,10 +146,10 @@ function auth_verify_second_factor(array $user, string $code): bool
     }
     if (preg_match('/\A[a-z0-9]{10}\z/i', $code) === 1) {
         $code = strtolower($code);
-        $rows = db_all('SELECT id, code_hash FROM user_backup_codes WHERE user_id = ? AND used_at IS NULL', [(int) $user['id']]);
+        $rows = db_all('SELECT id, code_hash FROM user_backup_codes WHERE user_id = ?', [(int) $user['id']]);
         foreach ($rows as $r) {
             if (password_verify($code, $r['code_hash'])) {
-                db_exec('UPDATE user_backup_codes SET used_at = ?' . (security_is_supported() ? ', code_enc = NULL' : '') . ' WHERE id = ?', [now(), (int) $r['id']]);
+                db_exec('UPDATE user_backup_codes SET used_at = ? WHERE id = ?', [now(), (int) $r['id']]);   // 最後に使った日時（コードは使えるまま）
                 return true;
             }
         }
