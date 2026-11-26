@@ -17,6 +17,8 @@
 /** @var array<string, int> $conversationCountById 会話ごとの発言の数（G-25 §2.14） */
 /** @var string $conversationFilter 選んだ会話の番号（選んでいなければ空） */
 /** @var array<int|string, string> $faqQuestionById */
+/** @var array<string, mixed>|null $faqCsvPlan faq_csv_plan() の戻り値（取り込んだとき） */
+/** @var array<int, string> $faqCsvErrorTextList 取り込むファイルの誤り（選んでいない・大きすぎる・UTF-8 でない） */
 
 $askedUserText = static function (array $logRow) use ($canSeeAskedUser): string {
     if (!$canSeeAskedUser) {
@@ -95,6 +97,64 @@ $faqQuestionText = static function (?int $faqId) use ($faqQuestionById): string 
     </table>
   <?php endif; ?>
 
+  <?php endif; ?>
+
+  <h2 id="faq-csv">CSV で出す・まとめて直す</h2>
+  <p class="note"><?= h_phrases('記録を CSV で出して見直したり、よくある質問を CSV でまとめて直したりできます（期間は上で選んだもの）。記録の CSV には、聞いた人の名前と、知らせる質問は入れません。') ?></p>
+  <p class="actions">
+    <a class="button" href="<?= h(url('/admin/faq_logs.php?days=' . $periodDays . '&csv=log')) ?>">記録を CSV で出す</a>
+    <a class="button" href="<?= h(url('/admin/faq_logs.php?days=' . $periodDays . '&csv=maintenance')) ?>">メンテナンス用の CSV を出す</a>
+  </p>
+  <ol class="steps">
+    <li><?= h_phrases('「メンテナンス用の CSV を出す」で、載っている質問・まだ載っていない標準の質問・答えられなかった質問（多い順）を 1 つのファイルに出す。') ?></li>
+    <li><?= h_phrases('CSV を直す。載っている質問は、分野・質問・答えを直すか、「消す」に 1 を入れる。番号の無い行（標準の質問・答えられなかった質問・新しく書き足した行）は、答えを書いた行だけ足す（答えが空の行は飛ばす）。番号と直した日時は変えない。CSV から消した行は、そのまま残る。') ?></li>
+    <li><?= h_phrases('直した CSV を取り込み、変わる内容を確かめてから「反映する」を押す。') ?></li>
+  </ol>
+  <form method="post" action="<?= h(url('/admin/faq_logs.php?days=' . $periodDays . '#faq-csv')) ?>" class="form" enctype="multipart/form-data">
+    <?= form_hidden() ?>
+    <input type="hidden" name="action" value="faq_csv_preview">
+    <label for="faq_csv">直した CSV（UTF-8、2 MB まで）</label>
+    <input type="file" id="faq_csv" name="faq_csv" accept=".csv,text/csv">
+    <button type="submit">取り込んで、変わる内容を確かめる</button>
+  </form>
+  <?php foreach ($faqCsvErrorTextList as $faqCsvErrorText): ?><div class="flash flash-error" role="alert"><?= h_lines($faqCsvErrorText) ?></div><?php endforeach; ?>
+  <?php if ($faqCsvPlan !== null): ?>
+    <h3>変わる内容</h3>
+    <?php foreach ($faqCsvPlan['errorTextList'] as $faqCsvErrorText): ?><div class="flash flash-error" role="alert"><?= h_lines($faqCsvErrorText) ?></div><?php endforeach; ?>
+    <p>
+      <span class="tag">足す <?= count($faqCsvPlan['addList']) ?></span>
+      <span class="tag">直す <?= count($faqCsvPlan['updateList']) ?></span>
+      <span class="tag<?= $faqCsvPlan['deleteList'] ? ' tag-open' : '' ?>">消す <?= count($faqCsvPlan['deleteList']) ?></span>
+      <span class="tag">変わらない <?= (int) $faqCsvPlan['unchangedCount'] ?></span>
+      <span class="tag">答えが空で飛ばす <?= (int) $faqCsvPlan['skippedCount'] ?></span>
+    </p>
+    <?php $faqCsvChangeRowList = array_merge(
+        array_map(static function (array $plannedRow): array { return ['足す', $plannedRow['lineNumber'], '', $plannedRow['question'], FAQ_CATEGORY_LABELS[$plannedRow['category']] ?? '', $plannedRow['answer']]; }, $faqCsvPlan['addList']),
+        array_map(static function (array $plannedRow): array { return ['直す', $plannedRow['lineNumber'], (string) $plannedRow['id'], $plannedRow['question'] === $plannedRow['beforeQuestion'] ? $plannedRow['question'] : $plannedRow['beforeQuestion'] . ' → ' . $plannedRow['question'], FAQ_CATEGORY_LABELS[$plannedRow['category']] ?? '', $plannedRow['answer']]; }, $faqCsvPlan['updateList']),
+        array_map(static function (array $plannedRow): array { return ['消す', $plannedRow['lineNumber'], (string) $plannedRow['id'], $plannedRow['question'], '', '']; }, $faqCsvPlan['deleteList'])
+    ); ?>
+    <?php if ($faqCsvChangeRowList): ?>
+      <table class="table faq-csv-plan">
+        <thead><tr><th>変える</th><th>行</th><th>番号</th><th>質問</th><th>分野</th><th>答え</th></tr></thead>
+        <tbody>
+        <?php foreach ($faqCsvChangeRowList as [$changeKind, $changeLine, $changeFaqId, $changeQuestion, $changeCategory, $changeAnswer]): ?>
+          <tr><td><span class="tag<?= $changeKind === '消す' ? ' tag-open' : '' ?>"><?= h($changeKind) ?></span></td><td><?= (int) $changeLine ?></td><td><?= h($changeFaqId) ?></td><td><?= h($changeQuestion) ?></td><td><?= h($changeCategory) ?></td><td><?= h_lines($changeAnswer) ?></td></tr>
+        <?php endforeach; ?>
+        </tbody>
+      </table>
+    <?php endif; ?>
+    <?php if (!$faqCsvPlan['errorTextList'] && $faqCsvChangeRowList): ?>
+      <form method="post" action="<?= h(url('/admin/faq_logs.php?days=' . $periodDays)) ?>" class="form" data-confirm="<?= h(msg('この内容で、よくある質問を反映します。よろしいですか？')) ?>">
+        <?= form_hidden() ?>
+        <input type="hidden" name="action" value="faq_csv_apply">
+        <input type="hidden" name="plan_token" value="<?= h($faqCsvPlan['token']) ?>">
+        <button type="submit" class="primary">反映する（足す <?= count($faqCsvPlan['addList']) ?> 件・直す <?= count($faqCsvPlan['updateList']) ?> 件・消す <?= count($faqCsvPlan['deleteList']) ?> 件）</button>
+      </form>
+    <?php elseif ($faqCsvPlan['errorTextList']): ?>
+      <p class="note"><?= h_phrases(msg('誤りを直してから、もう一度取り込んでください（反映はしていません）。')) ?></p>
+    <?php else: ?>
+      <p class="note"><?= h_phrases(msg('変わる質問はありません。')) ?></p>
+    <?php endif; ?>
   <?php endif; ?>
 
   <h2>答えられなかった質問（多い順）</h2>

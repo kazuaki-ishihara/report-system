@@ -316,6 +316,7 @@ STEP_TABLE = [
     {"key": "requests", "name": "要望・依頼（課長・確認者 → システム管理者の返信）", "script": "smoke_requests.py", "screen": "G-22", "secrets": True},
     {"key": "ledger", "name": "案件台帳の道具・案件の一覧の CSV 出力", "script": "smoke_project_ledger.py", "screen": "G-13"},
     {"key": "conveniences", "name": "便利機能 A〜J（お知らせ・定型文・予定・CSV・メンテナンス・予約・バックアップ・使い方・よくある質問）", "script": "smoke_conveniences.py", "screen": "G-25"},
+    {"key": "faq_csv", "name": "よくある質問の CSV（記録・メンテナンス用を出す・直して取り込む・誤りのときは変えない）", "script": "smoke_faq_csv.py", "screen": "G-25"},
     {"key": "additions", "name": "あとから足した機能（コメントを直す・調査の見本・提出のお知らせ・チャットの通信の失敗）", "script": "smoke_additions.py", "screen": "G-08"},
     {"key": "expenses", "name": "通勤定期代の精算（本人だけ・通勤定期だけ・様式の xlsx）", "script": "smoke_expenses.py", "screen": "G-26", "secrets": True},
     {"key": "goals", "name": "目標管理（本人・課長・課長代理だけ・様式の xlsx）", "script": "smoke_goals.py", "screen": "G-27", "secrets": True},
