@@ -1,0 +1,105 @@
+月次報告システム 差分公開範囲（20261126_161959）
+
+対象のサイト: ~/www/report-system_onion/
+今サーバーにある版: 56a6983（2026-11-20 17:17 作業再開ポイントを更新（2026-11-20 の終わりの状態））
+上げる版:           f3000fe（2026-11-26 16:15 自動検証に「標準のよくある質問の文言」を足した（見直す前の言い方・置き換えの行き過ぎが戻っていないか、質問の文の対応表の行き先が標準にあるか））
+
+■ 上げるもの（追加 15 ・変更 69 ファイル）
+  同じフォルダーの「report-system_onion」フォルダーの中身を、サーバーの ~/www/report-system_onion/ に上書きで上げる。
+  [変更] .htaccess
+  [追加] admin/security.php
+  [追加] app/bin/import_tomato.php
+  [変更] app/bin/migrate.php
+  [追加] app/bin/rotate_key.php
+  [変更] app/bootstrap.php
+  [追加] app/lib/account_security.php
+  [変更] app/lib/admin.php
+  [変更] app/lib/auth.php
+  [変更] app/lib/backup.php
+  [変更] app/lib/crypto.php
+  [変更] app/lib/export.php
+  [変更] app/lib/faq_chat_log.php
+  [追加] app/lib/faq_csv.php
+  [変更] app/lib/faq_standard.php
+  [変更] app/lib/goal.php
+  [変更] app/lib/html.php
+  [変更] app/lib/maintenance.php
+  [変更] app/lib/messages_catalog.php
+  [変更] app/lib/notice.php
+  [変更] app/lib/org_csv.php
+  [変更] app/lib/perm.php
+  [変更] app/lib/reminder.php
+  [追加] app/lib/role.php
+  [変更] app/lib/schema.php
+  [変更] app/lib/session.php
+  [変更] app/lib/support_request.php
+  [変更] app/lib/survey.php
+  [変更] app/lib/util.php
+  [変更] app/pages/account.php
+  [変更] app/pages/admin_faq_logs.php
+  [変更] app/pages/admin_field_edit.php
+  [変更] app/pages/admin_fields.php
+  [変更] app/pages/admin_home.php
+  [変更] app/pages/admin_logs.php
+  [変更] app/pages/admin_messages.php
+  [変更] app/pages/admin_org.php
+  [変更] app/pages/admin_projects.php
+  [追加] app/pages/admin_security.php
+  [変更] app/pages/admin_user_edit.php
+  [変更] app/pages/comment_list.php
+  [変更] app/pages/comment_templates.php
+  [変更] app/pages/department_manage.php
+  [変更] app/pages/export.php
+  [変更] app/pages/faq.php
+  [変更] app/pages/goal_edit.php
+  [変更] app/pages/home.php
+  [変更] app/pages/login.php
+  [変更] app/pages/password_reset.php
+  [変更] app/pages/report_act.php
+  [変更] app/pages/report_edit.php
+  [変更] app/pages/report_mine.php
+  [変更] app/pages/report_save.php
+  [変更] app/pages/report_view.php
+  [変更] app/pages/search.php
+  [追加] app/pages/session_check.php
+  [変更] app/pages/status_compare.php
+  [変更] app/pages/status_index.php
+  [変更] app/pages/support_request_list.php
+  [変更] app/pages/survey_edit.php
+  [変更] app/pages/survey_manage.php
+  [変更] app/pages/survey_result.php
+  [追加] app/pages/survey_results.php
+  [変更] app/views/account.php
+  [変更] app/views/admin_faq_logs.php
+  [変更] app/views/admin_org.php
+  [追加] app/views/admin_security.php
+  [変更] app/views/admin_user_edit.php
+  [変更] app/views/comment_templates.php
+  [変更] app/views/department_manage.php
+  [変更] app/views/export_print.php
+  [変更] app/views/faq.php
+  [変更] app/views/home.php
+  [変更] app/views/layout.php
+  [変更] app/views/login.php
+  [追加] app/views/survey_all_departments_tally.php
+  [変更] app/views/survey_edit.php
+  [変更] app/views/survey_result.php
+  [追加] app/views/survey_result_all.php
+  [追加] app/views/survey_results.php
+  [変更] css/app.css
+  [変更] js/app.js
+  [追加] session_check.php
+  [追加] surveys/results.php
+
+■ サーバーから消すもの（0 ファイル）
+  なし
+
+■ 触らないもの（消さない・上書きしない）
+  app/data/（DB。アカウントと、これまでの報告・回答が入っている）
+  app/keys/（暗号の鍵。消すと「限定」の項目や回答が読めなくなる）
+  app/logs/・app/backups/・app/config/config.local.php（あれば）
+  上の一覧にないファイル（前の版のまま使う）
+
+■ DB の形の変更
+  変わっています。上げたあとに必ず migrate.php を 1 回実行する（反映手順.txt の 3）。
+  何度実行しても同じ結果になる。実行すると「〜を追加」「〜を作り直した」の行が出る。
