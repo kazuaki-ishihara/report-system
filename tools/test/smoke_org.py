@@ -311,7 +311,7 @@ def main():
 
     # 列の番号: 0 ログイン ID、2 所属の課、3 ライン、4 役割、5 担当のライン、6 項目管理者、7 有効
     status_code, _location, preview_html = upload_csv(make_csv({"kacho_b": {2: "B課", 4: "課長"}, "dairi_a": {4: "課長", 5: ""}},
-                                                               [["no_such_user", "x", "A課", "", "", "", "", "1"]]))
+                                                               [["no_such_user", "x", "A課", "", "", "", "", "1", ""]]))
     check("誤りがあれば知らせ、反映のボタンを出さない（登録されていない ID・課長が 2 人）",
           status_code == 200 and "登録されていないログイン ID" in preview_html and "課長が 2 人以上" in preview_html and 'value="bulk_apply"' not in preview_html, status_code)
     status_code, _location, preview_html = upload_csv(make_csv({"ippan_b1": {4: "課長"}}))

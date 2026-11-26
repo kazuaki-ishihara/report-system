@@ -306,6 +306,7 @@ STEP_TABLE = [
     {"key": "edges", "name": "設計書で未検証だった項目（時間に頼るもの・同時の新規作成・境目・二重送信 など）", "script": "smoke_edges.py", "screen": "共通"},
     {"key": "viewpoints", "name": "設計書の検証の観点の突き合わせで見つかった残り（G-03〜G-16）", "script": "smoke_viewpoints.py", "screen": "共通"},
     {"key": "org", "name": "組織（ラインごと・異動・管理担当・課長がいない課）", "script": "smoke_org.py", "screen": "G-14"},
+    {"key": "concurrent", "name": "兼務（兼務の確認者・組織の CSV の兼務・課のない部長の課長）", "script": "smoke_concurrent.py", "screen": "G-23"},
     {"key": "deputy", "name": "システム管理者補佐（代行できること・見られないもの）", "script": "smoke_deputy.py", "screen": "G-14"},
     {"key": "specialist", "name": "専門職（技師・担当課長・担当部長。見られる人・役割）", "script": "smoke_specialist.py", "screen": "G-14"},
     {"key": "security", "name": "予備のコードの確認・復旧コード・凍結・総入れ替え", "script": "smoke_security.py", "screen": "G-14", "secrets": True},

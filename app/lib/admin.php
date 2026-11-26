@@ -103,6 +103,27 @@ function department_manage_member_rows(int $departmentId): array
     );
 }
 
+/**
+ * 兼務の確認者に足せる人（G-23）: 有効で、この課に所属していない人（課のない人を含む）のうち、この課の確認者・課長でなく、専門職でない人。
+ * 所属の課の並び順（課のない人は最後）・名前の順。
+ *
+ * @return array<int, array<string, int|string|null>>
+ */
+function department_manage_concurrent_candidates(int $departmentId): array
+{
+    $candidateRowList = db_all(
+        'SELECT u.id, u.login_id, u.display_name, u.role_title, d.name AS dept_name
+           FROM users u LEFT JOIN departments d ON d.id = u.department_id
+          WHERE u.is_active = 1 AND u.login_id IS NOT NULL AND u.department_id IS NOT ?
+            AND NOT EXISTS (SELECT 1 FROM department_reviewers r WHERE r.department_id = ? AND r.user_id = u.id)
+          ORDER BY d.id IS NULL, d.sort_order, d.id, u.display_name',
+        [$departmentId, $departmentId]
+    );
+    return array_values(array_filter($candidateRowList, static function (array $candidateRow): bool {
+        return specialist_title_of((int) $candidateRow['id']) === '';   // 専門職は確認者にしない（K-074）
+    }));
+}
+
 function validate_text(string $value, string $label, int $max, bool $required, array &$errors, bool $allowNewline = false): void
 {
     if ($required && $value === '') {

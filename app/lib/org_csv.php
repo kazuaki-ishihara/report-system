@@ -9,7 +9,9 @@ declare(strict_types=1);
 // ====================================================================
 
 /** CSV の列（出力も取り込みもこの順） */
-const ORG_CSV_COLUMNS = ['ログイン ID', '表示名', '所属の課', 'ライン', '役割', '担当のライン', '項目管理者', '有効'];
+const ORG_CSV_COLUMNS = ['ログイン ID', '表示名', '所属の課', 'ライン', '役割', '担当のライン', '項目管理者', '有効', '兼務'];
+/** 「兼務」の列が無い CSV（2026-11-26 より前に出力したもの）の列。取り込むと、兼務はそのまま */
+const ORG_CSV_COLUMNS_WITHOUT_CONCURRENT = ['ログイン ID', '表示名', '所属の課', 'ライン', '役割', '担当のライン', '項目管理者', '有効'];
 const ORG_CSV_ROLE_LABELS = ['' => '', 'reviewer' => '確認者', 'final' => '課長'];
 /** 前の見出しの名前（「班」を「ライン」に変える前に出力した CSV も取り込めるように、今の名前に読み替える。2026-11-24） */
 const ORG_CSV_OLD_COLUMN_NAMES = ['班' => 'ライン', '担当の班' => '担当のライン'];
@@ -39,9 +41,47 @@ function org_csv_current_rows(): array
             (string) $userRow['login_id'], (string) $userRow['display_name'], (string) ($userRow['department_name'] ?? ''),
             (string) ($userRow['team_name'] ?? ''), ORG_CSV_ROLE_LABELS[$roleCode], (string) ($userRow['reviewer_team_name'] ?? ''),
             (int) $userRow['is_field_admin'] === 1 ? '1' : '', (int) $userRow['is_active'] === 1 ? '1' : '0',
+            org_csv_concurrent_text(org_csv_current_concurrent_roles((int) $userRow['id'])),
         ];
     }
     return $csvRowList;
+}
+
+/**
+ * 所属の課の外での役割（兼務）。課の並び順。
+ *
+ * @return array<int, array{departmentId: int, departmentName: string, roleCode: string, reviewerTeamName: string}>
+ */
+function org_csv_current_concurrent_roles(int $userId): array
+{
+    $concurrentRoleList = [];
+    foreach (db_all(
+        'SELECT r.department_id, d.name AS department_name, r.is_final, rt.name AS reviewer_team_name
+           FROM department_reviewers r JOIN users u ON u.id = r.user_id JOIN departments d ON d.id = r.department_id
+           LEFT JOIN department_teams rt ON rt.id = r.team_id
+          WHERE r.user_id = ? AND r.department_id IS NOT u.department_id
+          ORDER BY d.sort_order, d.id',
+        [$userId]
+    ) as $concurrentRow) {
+        $concurrentRoleList[] = [
+            'departmentId' => (int) $concurrentRow['department_id'], 'departmentName' => (string) $concurrentRow['department_name'],
+            'roleCode' => (int) $concurrentRow['is_final'] === 1 ? 'final' : 'reviewer', 'reviewerTeamName' => (string) ($concurrentRow['reviewer_team_name'] ?? ''),
+        ];
+    }
+    return $concurrentRoleList;
+}
+
+/**
+ * 兼務を CSV の 1 つの欄の文にする（「課の名前:役割[:担当のライン]」を「; 」でつなぐ。例「B課:課長; C課:確認者:山田ライン」）。
+ *
+ * @param array<int, array{departmentName: string, roleCode: string, reviewerTeamName: string}> $concurrentRoleList
+ */
+function org_csv_concurrent_text(array $concurrentRoleList): string
+{
+    return implode('; ', array_map(static function (array $concurrentRole): string {
+        return $concurrentRole['departmentName'] . ':' . ORG_CSV_ROLE_LABELS[$concurrentRole['roleCode']]
+            . ($concurrentRole['reviewerTeamName'] !== '' ? ':' . $concurrentRole['reviewerTeamName'] : '');
+    }, $concurrentRoleList));
 }
 
 /**
@@ -58,7 +98,8 @@ function org_csv_current_rows(): array
  */
 function org_csv_plan(string $csvText, int $operatorUserId): array
 {
-    $plan = ['errorTextList' => [], 'warningTextList' => [], 'changeList' => [], 'newTeamList' => [], 'planByUserId' => []];
+    $plan = ['errorTextList' => [], 'warningTextList' => [], 'changeList' => [], 'newTeamList' => [], 'planByUserId' => [], 'hasConcurrentColumn' => false];
+    $readColumnList = ORG_CSV_COLUMNS;
     // 補佐が取り込むときは、管理者・補佐の利用者を変えられない（K-043）
     // 補佐（開発担当。K-059）は管理者と同じに扱う
     $isOperatorDeputy = (int) db_val('SELECT is_admin_deputy FROM users WHERE id = ? AND is_admin_deputy_lead = 0', [$operatorUserId]) === 1;
@@ -82,16 +123,18 @@ function org_csv_plan(string $csvText, int $operatorUserId): array
         $csvCells = array_map(function ($cellValue): string { return trim((string) $cellValue); }, $csvCells);
         if (!$isHeaderFound) {
             $headerCells = array_map(function (string $headerCell): string { return ORG_CSV_OLD_COLUMN_NAMES[$headerCell] ?? $headerCell; }, $csvCells);
-            if ($headerCells === ORG_CSV_COLUMNS) {
+            if ($headerCells === ORG_CSV_COLUMNS || $headerCells === ORG_CSV_COLUMNS_WITHOUT_CONCURRENT) {
                 $isHeaderFound = true;
+                $readColumnList = $headerCells;
+                $plan['hasConcurrentColumn'] = $headerCells === ORG_CSV_COLUMNS;
             }
             continue;   // 見出しの前の行（「社外秘」など）は読み飛ばす
         }
-        if (count($csvCells) !== count(ORG_CSV_COLUMNS)) {
+        if (count($csvCells) !== count($readColumnList)) {
             $plan['errorTextList'][] = msg('{line} 行目: 列の数が違います', ['line' => $lineNumber]);
             continue;
         }
-        $parsedRowList[] = ['lineNumber' => $lineNumber, 'cells' => array_combine(ORG_CSV_COLUMNS, $csvCells)];
+        $parsedRowList[] = ['lineNumber' => $lineNumber, 'cells' => array_combine($readColumnList, $csvCells) + ['兼務' => '']];
     }
     fclose($csvStream);
     if (!$isHeaderFound) {
@@ -158,6 +201,32 @@ function org_csv_plan(string $csvText, int $operatorUserId): array
                 continue 2;
             }
         }
+        // 兼務（所属の課の外での役割）。列が無い CSV では、今の兼務をそのまま残す
+        $concurrentRoleList = null;
+        $concurrentParse = null;
+        if ($plan['hasConcurrentColumn']) {
+            $concurrentParse = org_csv_parse_concurrent($cells['兼務'], $departmentId, $departmentIdByName, $lineNumber);
+            if ($concurrentParse['errorTextList']) {
+                $plan['errorTextList'] = array_merge($plan['errorTextList'], $concurrentParse['errorTextList']);
+                continue;
+            }
+            $concurrentRoleList = $isActive ? $concurrentParse['roleList'] : [];
+            if ($concurrentRoleList && specialist_title_of($userId) !== '') {
+                $plan['errorTextList'][] = msg('{line} 行目: 専門職の人は、課長・確認者・項目管理者にできません', ['line' => $lineNumber]);
+                continue;
+            }
+        }
+        $currentConcurrentRoleList = org_csv_current_concurrent_roles($userId);
+        // 課長の数に入れる兼務: 列があれば CSV の兼務、無ければ今の兼務（所属の課を移って、その課の役割になるものは除く）
+        foreach ($concurrentRoleList ?? ($isActive ? $currentConcurrentRoleList : []) as $concurrentRole) {
+            if ($concurrentRole['roleCode'] === 'final' && $concurrentRole['departmentId'] !== $departmentId) {
+                $finalUserIdListByDepartmentId[$concurrentRole['departmentId']][] = $userId;
+                if ($concurrentParse !== null && !role_title_fits_final((string) $userRow['role_title']) && !is_final_reviewer_of($userId, $concurrentRole['departmentId'])) {
+                    $plan['warningTextList'][] = msg('{line} 行目: {name} さんの役職は「{title}」です（課長・部長ではありません）。役職と異なる役割をお任せする場合のみ、このまま反映してください。',
+                        ['line' => $lineNumber, 'name' => (string) $userRow['display_name'], 'title' => (string) $userRow['role_title']]);
+                }
+            }
+        }
         if ($roleCode === 'final' && $isActive) {
             $finalUserIdListByDepartmentId[$departmentId][] = $userId;
             // 役職が課長・部長でない人を新しく課長にするときは知らせる（止めはしない。K-069）
@@ -170,6 +239,7 @@ function org_csv_plan(string $csvText, int $operatorUserId): array
         $plan['planByUserId'][$userId] = [
             'departmentId' => $departmentId, 'teamName' => $cells['ライン'], 'roleCode' => $isActive ? $roleCode : '',
             'reviewerTeamName' => $isActive ? $cells['担当のライン'] : '', 'isFieldAdmin' => $isActive && $cells['項目管理者'] === '1', 'isActive' => $isActive,
+            'concurrentRoleList' => $concurrentRoleList,
         ];
 
         // 変わる内容
@@ -195,9 +265,10 @@ function org_csv_plan(string $csvText, int $operatorUserId): array
         $describeChange(msg('担当のライン'), (string) ($currentPlacementRow['reviewer_team_name'] ?? ''), $isActive ? $cells['担当のライン'] : '');
         $describeChange(msg('項目管理者'), (int) $currentPlacementRow['is_field_admin'] === 1 ? '1' : '', $isActive && $cells['項目管理者'] === '1' ? '1' : '');
         $describeChange(msg('有効'), (int) $userRow['is_active'] === 1 ? '1' : '0', $isActive ? '1' : '0');
-        $otherDepartmentRoleCount = (int) db_val('SELECT COUNT(*) FROM department_reviewers WHERE user_id = ? AND department_id IS NOT ?', [$userId, $userRow['department_id']]);
-        if ($otherDepartmentRoleCount > 0 && $isActive) {
-            $descriptionList[] = msg('（所属の課以外の課の確認者の役割はそのまま）');
+        if ($concurrentRoleList !== null) {
+            $describeChange(msg('兼務'), org_csv_concurrent_text($currentConcurrentRoleList), org_csv_concurrent_text($concurrentRoleList));
+        } elseif ($currentConcurrentRoleList && $isActive) {
+            $descriptionList[] = msg('（兼務の列が無い CSV のため、兼務の役割はそのまま）');
         }
         if ($userRow['department_id'] !== null && (int) $userRow['department_id'] !== $departmentId && $currentRoleCode !== '') {
             $descriptionList[] = msg('（前の課の役割は外す）');
@@ -209,8 +280,14 @@ function org_csv_plan(string $csvText, int $operatorUserId): array
             $plan['changeList'][] = ['loginId' => $loginId, 'displayName' => (string) $userRow['display_name'], 'descriptionList' => $descriptionList];
         }
 
-        // 新しいライン
-        foreach (array_unique([$cells['ライン'], $isActive ? $cells['担当のライン'] : '']) as $teamName) {
+        // 新しいライン（所属の課のライン・担当のラインと、兼務の担当のライン）
+        $plannedTeamList = [[$departmentId, $departmentName, $cells['ライン']], [$departmentId, $departmentName, $isActive ? $cells['担当のライン'] : '']];
+        foreach ($concurrentRoleList ?? [] as $concurrentRole) {
+            $plannedTeamList[] = [$concurrentRole['departmentId'], $concurrentRole['departmentName'], $concurrentRole['reviewerTeamName']];
+        }
+        foreach ($plannedTeamList as [$plannedDepartmentId, $plannedDepartmentName, $teamName]) {
+            $departmentId = $plannedDepartmentId;
+            $departmentName = $plannedDepartmentName;
             if ($teamName === '' || $departmentId === null) {
                 continue;
             }
@@ -259,6 +336,58 @@ function org_csv_plan(string $csvText, int $operatorUserId): array
 }
 
 /**
+ * 「兼務」の欄を読む（「課の名前:役割[:担当のライン]」を「;」でつなぐ。全角の「：」「；」も読む。空は兼務なし）。
+ *
+ * @param array<string, int> $departmentIdByName 有効な課（名前 => ID）
+ * @return array{errorTextList: string[], roleList: array<int, array{departmentId: int, departmentName: string, roleCode: string, reviewerTeamName: string}>}
+ */
+function org_csv_parse_concurrent(string $concurrentText, ?int $homeDepartmentId, array $departmentIdByName, int $lineNumber): array
+{
+    $parsed = ['errorTextList' => [], 'roleList' => []];
+    $concurrentText = str_replace(['；', '：'], [';', ':'], trim($concurrentText));
+    if ($concurrentText === '') {
+        return $parsed;
+    }
+    $roleCodeByLabel = array_flip(ORG_CSV_ROLE_LABELS);
+    $seenDepartmentIdSet = [];
+    foreach (explode(';', $concurrentText) as $entryText) {
+        $entryText = trim($entryText);
+        if ($entryText === '') {
+            continue;
+        }
+        $entryPartList = array_map('trim', explode(':', $entryText));
+        $concurrentDepartmentName = $entryPartList[0];
+        $roleLabel = $entryPartList[1] ?? '';
+        $reviewerTeamName = $entryPartList[2] ?? '';
+        if (count($entryPartList) > 3 || !isset($departmentIdByName[$concurrentDepartmentName]) || !in_array($roleLabel, ['課長', '確認者'], true)) {
+            $parsed['errorTextList'][] = msg('{line} 行目: 兼務は「課の名前:課長」か「課の名前:確認者[:担当のライン]」を「;」でつないでください（{entry}）', ['line' => $lineNumber, 'entry' => $entryText]);
+            continue;
+        }
+        $concurrentDepartmentId = $departmentIdByName[$concurrentDepartmentName];
+        if ($concurrentDepartmentId === $homeDepartmentId) {
+            $parsed['errorTextList'][] = msg('{line} 行目: 所属の課（{department}）の役割は、兼務ではなく「役割」の列に入れてください', ['line' => $lineNumber, 'department' => $concurrentDepartmentName]);
+            continue;
+        }
+        if (isset($seenDepartmentIdSet[$concurrentDepartmentId])) {
+            $parsed['errorTextList'][] = msg('{line} 行目: 兼務に同じ課が 2 回あります（{department}）', ['line' => $lineNumber, 'department' => $concurrentDepartmentName]);
+            continue;
+        }
+        $seenDepartmentIdSet[$concurrentDepartmentId] = true;
+        $roleCode = (string) $roleCodeByLabel[$roleLabel];
+        if ($roleCode === 'final' && $reviewerTeamName !== '') {
+            $parsed['errorTextList'][] = msg('{line} 行目: 担当のラインは「確認者」のときだけ入れてください', ['line' => $lineNumber]);
+            continue;
+        }
+        if (str_len($reviewerTeamName) > 40 || has_control_chars($reviewerTeamName)) {
+            $parsed['errorTextList'][] = msg('{line} 行目: ラインの名前は 40 文字以内にしてください', ['line' => $lineNumber]);
+            continue;
+        }
+        $parsed['roleList'][] = ['departmentId' => $concurrentDepartmentId, 'departmentName' => $concurrentDepartmentName, 'roleCode' => $roleCode, 'reviewerTeamName' => $reviewerTeamName];
+    }
+    return $parsed;
+}
+
+/**
  * 計画を反映する（1 つのトランザクション）。誤りのない計画だけを渡す。
  *
  * @return int 変えた人の数
@@ -290,6 +419,7 @@ function org_csv_apply(array $plan): int
         //   「課長は 1 つの課に 1 人」（ux_department_final）に当たって反映できない（課長の交代）
         $userRowById = [];
         $previousDoesCheckByUserId = [];
+        $previousConcurrentDoesCheckByKey = [];
         foreach ($plan['planByUserId'] as $userId => $userPlan) {
             $userRow = db_one('SELECT * FROM users WHERE id = ?', [$userId]);
             $userRowById[$userId] = $userRow;
@@ -304,6 +434,13 @@ function org_csv_apply(array $plan): int
             if ($departmentId !== null && $userPlan['isActive']) {
                 $previousDoesCheckByUserId[$userId] = db_val('SELECT does_check FROM department_reviewers WHERE user_id = ? AND department_id = ?', [$userId, $departmentId]);
                 db_exec('DELETE FROM department_reviewers WHERE user_id = ? AND department_id = ?', [$userId, $departmentId]);
+            }
+            // 兼務の列がある CSV: 所属の課の外の役割を外す（CSV の兼務で付け直す。チェックするかどうかは前の値を引き継ぐ）
+            if (($userPlan['concurrentRoleList'] ?? null) !== null) {
+                foreach (db_all('SELECT department_id, does_check FROM department_reviewers WHERE user_id = ? AND department_id IS NOT ?', [$userId, $departmentId]) as $concurrentRow) {
+                    $previousConcurrentDoesCheckByKey[$userId . ':' . $concurrentRow['department_id']] = (int) $concurrentRow['does_check'];
+                }
+                db_exec('DELETE FROM department_reviewers WHERE user_id = ? AND department_id IS NOT ?', [$userId, $departmentId]);
             }
         }
         // 2 回目: 所属・有効を変え、役割を付け直す
@@ -335,6 +472,15 @@ function org_csv_apply(array $plan): int
                 db_exec('DELETE FROM department_admins WHERE user_id = ? AND department_id = ?', [$userId, $departmentId]);
                 if ($userPlan['isFieldAdmin']) {
                     db_exec('INSERT INTO department_admins (department_id, user_id) VALUES (?, ?)', [$departmentId, $userId]);
+                }
+            }
+            if ($userPlan['isActive']) {
+                foreach ($userPlan['concurrentRoleList'] ?? [] as $concurrentRole) {
+                    $isConcurrentFinal = $concurrentRole['roleCode'] === 'final';
+                    $concurrentTeamId = (!$isConcurrentFinal && $concurrentRole['reviewerTeamName'] !== '') ? $findOrCreateTeamId($concurrentRole['departmentId'], $concurrentRole['reviewerTeamName']) : null;
+                    $concurrentDoesCheck = $isConcurrentFinal ? 1 : ($previousConcurrentDoesCheckByKey[$userId . ':' . $concurrentRole['departmentId']] ?? reviewer_default_does_check($userId, false));
+                    db_exec('INSERT INTO department_reviewers (department_id, user_id, is_final, sort_order, team_id, does_check) VALUES (?, ?, ?, ?, ?, ?)',
+                        [$concurrentRole['departmentId'], $userId, $isConcurrentFinal ? 1 : 0, $isConcurrentFinal ? 0 : 100, $concurrentTeamId, $concurrentDoesCheck]);
                 }
             }
             $changedUserCount++;

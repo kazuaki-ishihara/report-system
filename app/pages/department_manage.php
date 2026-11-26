@@ -6,6 +6,7 @@ declare(strict_types=1);
 // G-23 課の管理（課長が自分の課を管理する。詳細設計書 G23_department_manage.md。K-042）
 //   基本: 締め日・管理の仕方（課全体／ラインごと）
 //   確認者と課員: 課長代理・主任（確認者）・担当のライン・チェックする／しない（K-039）・項目管理者・課員のライン
+//                 ほかの課の人（課のない部長などを含む）を、兼務の確認者として足す（2026-11-26 指示）
 //   ライン: ラインの追加・名前・有効
 // システム管理者は個々の課を管理しない（課の追加・名前・課長・引き継ぎは G-14）。
 // ====================================================================
@@ -35,7 +36,7 @@ $errorTextList = [];
 
 if (is_post()) {
     $action = post_str('action');
-    if (!in_array($action, ['settings_save', 'members_save', 'team_add', 'team_update'], true)) {
+    if (!in_array($action, ['settings_save', 'members_save', 'concurrent_add', 'team_add', 'team_update'], true)) {
         error_page(400);
     }
     rk_begin('department.' . $action, $userId);
@@ -57,6 +58,30 @@ if (is_post()) {
             audit_log('admin', 'department:' . $departmentId . ':settings');
             flash('success', msg('保存しました'));
             rk_done($selfPath . '#dept-basic');
+        }
+
+    } elseif ($action === 'concurrent_add') {
+        // 兼務の確認者を足す: ほかの課の人（課のない人を含む）を、この課の確認者にする（担当のライン・チェックするは、足したあと表で決める）
+        if (post_str('concurrent_user_id') === '') {
+            $errorTextList[] = msg('兼務させる人を選んでください');
+        } else {
+            $concurrentUserId = input_id('concurrent_user_id', 'POST');
+            $concurrentUserRow = db_one('SELECT id, display_name, department_id FROM users WHERE id = ? AND is_active = 1 AND login_id IS NOT NULL', [$concurrentUserId]);
+            if ($concurrentUserRow === null || $concurrentUserRow['department_id'] !== null && (int) $concurrentUserRow['department_id'] === $departmentId) {
+                error_page(400);   // 無効な人・この課の人（この課の人は、表で「確認者」に印を付ける）
+            }
+            if (specialist_title_of($concurrentUserId) !== '') {
+                error_page(400, msg('専門職の人は、課長・確認者・項目管理者にできません。'));
+            }
+            if (db_val('SELECT 1 FROM department_reviewers WHERE department_id = ? AND user_id = ?', [$departmentId, $concurrentUserId]) !== null) {
+                $errorTextList[] = msg('{name} さんは、もうこの課の確認者です', ['name' => (string) $concurrentUserRow['display_name']]);
+            } else {
+                db_exec('INSERT INTO department_reviewers (department_id, user_id, is_final, sort_order, team_id, does_check) VALUES (?, ?, 0, ?, NULL, ?)',
+                    [$departmentId, $concurrentUserId, $concurrentUserId * 10, reviewer_default_does_check($concurrentUserId, false)]);
+                audit_log('admin', 'department:' . $departmentId . ':concurrent_add:' . $concurrentUserId);
+                flash('success', msg('{name} さんを、兼務の確認者に足しました。担当のライン・チェックするを表で決めて保存してください', ['name' => (string) $concurrentUserRow['display_name']]));
+                rk_done($selfPath . '#dept-members');
+            }
         }
 
     } elseif ($action === 'members_save') {
@@ -176,6 +201,7 @@ render('department_manage', [
     'department'                => $department,
     'manageableDepartmentById'  => $manageableDepartmentById,
     'memberRowList'             => department_manage_member_rows($departmentId),
+    'concurrentCandidateRowList' => department_manage_concurrent_candidates($departmentId),
     'teamList'                  => department_teams_of($departmentId, false),
     'errorTextList'             => $errorTextList,
 ]);
