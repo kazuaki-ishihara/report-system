@@ -127,8 +127,8 @@ def main():
           candidate_group_of("ippan_a1") == "この課の人" and candidate_group_of("kacho_a") == "この課の人"
           and candidate_group_of("kacho_b") == "ほかの課の課長・部長" and candidate_group_of("ippan_b1") == "ほかの人",
           [candidate_group_of(login_id) for login_id in ("ippan_a1", "kacho_a", "kacho_b", "ippan_b1")])
-    check("課長の候補を絞り込む欄がある（課長なしは、まとまりの外に置く）",
-          'data-filter-select="#final_user_id"' in org_edit_html and re.search(r'<select id="final_user_id"[^>]*>\s*<option value="">', final_select_html) is not None)
+    check("課長の選ぶ欄は札と候補の一覧にする印がある（課長なしは、まとまりの外に置く）",
+          'class="tag-picker"' in final_select_html and re.search(r'<select id="final_user_id"[^>]*>\s*<option value="">', final_select_html) is not None)
     status_code, _location, _page_html = post_org(org_edit_path_a, {"action": "team_add", "dept_id": str(department_a_id), "team_name": "管理者のライン"})
     check("管理者はラインを足せない（400）", status_code == 400, status_code)
     status_code, _location, _page_html = post_org(org_edit_path_a, {"action": "roles_save", "dept_id": str(department_a_id)})

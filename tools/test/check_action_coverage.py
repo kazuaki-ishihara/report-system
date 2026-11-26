@@ -36,7 +36,7 @@ UI_COVERAGE = {
     "項目の編集": ("ui_check.py", "add-option-row"),
     "ページの中のタブ": ("ui_check.py", "section-tabs"),
     "表の絞り込み": ("ui_session.py", "一覧の絞り込みで"),
-    "選ぶ欄の絞り込み": ("ui_session.py", "課長の候補の絞り込みで"),
+    "選ぶ欄を札と候補の一覧にする": ("ui_session.py", "課長の候補を探すと"),
     "コメントの定型文": ("ui_check.py", "comment-template-select"),
     "ログインの状態の確認": ("ui_session.py", "ログインが切れたまま送っても"),
     "確認の表示": ("ui_session.py", "二重に押しても、送るのは 1 回"),
