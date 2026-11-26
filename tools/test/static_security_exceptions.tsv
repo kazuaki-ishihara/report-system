@@ -32,6 +32,7 @@ SQL	app/pages/survey_result.php	'SELECT u.id, u.display_name FROM adhoc_request_
 XSS	app/lib/html.php	$__content	render() がテンプレートの出力を ob_get_clean で受け取ったもの。テンプレートの中の <?= ・echo は、それぞれこの道具で点検している
 XSS	app/lib/report.php	report_status_tag_html(): return '<span class="tag status-tag status-'.$statusClassName.'">'.h(report_status_label($status)).'</span>'	$statusClassName は in_array($status, ['draft', 'submitted', 'confirmed'], true) で確かめた値か 'none'。文は h() で書き出す
 XSS	app/lib/util.php	json_encode($data,JSON_UNESCAPED_UNICODE)	json_response() の JSON。Content-Type が application/json で、HTML として出さない
+XSS	app/pages/admin_faq_logs.php	$csvBody	CSV のダウンロード。Content-Type が text/csv で attachment、send_security_headers で nosniff を出す
 XSS	app/pages/admin_logs.php	$body	CSV のダウンロード。Content-Type が text/csv で attachment、send_security_headers で nosniff を出す
 XSS	app/pages/admin_org.php	$organizationCsvBody	CSV のダウンロード。Content-Type が text/csv で attachment、send_security_headers で nosniff を出す
 XSS	app/pages/admin_projects.php	$projectCsvBody	CSV のダウンロード。Content-Type が text/csv で attachment、send_security_headers で nosniff を出す

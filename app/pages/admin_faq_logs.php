@@ -18,8 +18,46 @@ $canSeeAskedUser = true;   // 管理者・補佐とも聞いた人を見られ�
 $noticeLevels = faq_chat_log_notice_levels($user);
 $canReceiveNotice = $noticeLevels !== [];
 
-// ---- 心の不調らしい文に「対応した」（§2.8） ----
-if (is_post()) {
+// ---- メンテナンス用の CSV を取り込む（§2.19。読んで計画を作るだけ。計画はセッションに置き、「反映する」で使う） ----
+$faqCsvPlan = null;
+$faqCsvErrorTextList = [];
+if (is_post() && post_str('action') === 'faq_csv_preview') {
+    $uploadedFile = $_FILES['faq_csv'] ?? null;
+    if (!is_array($uploadedFile) || ($uploadedFile['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK || !is_uploaded_file((string) $uploadedFile['tmp_name'])) {
+        $faqCsvErrorTextList[] = msg('CSV のファイルを選んでください');
+    } elseif ((int) $uploadedFile['size'] > FAQ_CSV_MAX_BYTES) {
+        $faqCsvErrorTextList[] = msg('ファイルが大きすぎます（2 MB まで）');
+    } else {
+        $uploadedCsvText = (string) file_get_contents((string) $uploadedFile['tmp_name']);
+        if (preg_match('//u', $uploadedCsvText) !== 1) {   // UTF-8 として正しいか
+            $faqCsvErrorTextList[] = msg('CSV は UTF-8 で保存してください（出力したファイルを Excel で直したときは「CSV UTF-8」で保存）');
+        } else {
+            $faqCsvPlan = faq_csv_plan($uploadedCsvText);
+            $faqCsvPlan['token'] = random_token(16);
+            $_SESSION['faq_csv_plan'] = ['token' => $faqCsvPlan['token'], 'createdAt' => time(), 'plan' => $faqCsvPlan];
+        }
+    }
+} elseif (is_post() && post_str('action') === 'faq_csv_apply') {
+    rk_begin('faq_csv.apply', (int) $user['id']);
+    $storedPlan = $_SESSION['faq_csv_plan'] ?? null;
+    if (!is_array($storedPlan) || !hash_equals((string) $storedPlan['token'], post_str('plan_token')) || time() - (int) $storedPlan['createdAt'] > 1800
+        || $storedPlan['plan']['errorTextList']) {
+        rk_cancel();
+        flash('error', msg('取り込んだ内容が見つからないか、30 分を過ぎました。もう一度取り込んでください'));
+        redirect('/admin/faq_logs.php#faq-csv');
+    }
+    $appliedCount = faq_csv_apply($storedPlan['plan'], (int) $user['id']);
+    unset($_SESSION['faq_csv_plan']);
+    if ($appliedCount === null) {
+        rk_cancel();
+        flash('error', msg('取り込んで確かめたあとに、画面で直された・消された質問があります。何も変えていません。もう一度 CSV を出して直してください'));
+        redirect('/admin/faq_logs.php#faq-csv');
+    }
+    audit_log('admin', 'faq:csv_import;added=' . $appliedCount['added'] . ';updated=' . $appliedCount['updated'] . ';deleted=' . $appliedCount['deleted']);
+    flash('success', msg('よくある質問を反映しました（足した {added} 件・直した {updated} 件・消した {deleted} 件）', $appliedCount));
+    rk_done('/admin/faq_logs.php#faq-csv');
+} elseif (is_post()) {
+    // ---- 心の不調らしい文に「対応した」（§2.8） ----
     if (post_str('action') !== 'distress_handled') {
         error_page(400);
     }
@@ -154,6 +192,32 @@ if ($conversationFilter !== '') {
     })));
 }
 
+// ---- CSV で出す（§2.19）: 記録（?csv=log）と、メンテナンス用（?csv=maintenance。載っている質問・まだ載っていない標準の質問・答えられなかった質問） ----
+$csvKind = is_string($_GET['csv'] ?? null) ? (string) $_GET['csv'] : '';
+if ($csvKind === 'log' || $csvKind === 'maintenance') {
+    $csvTitleLines = ['社外秘', '出力者: ' . $user['login_id'] . '  出力日時: ' . date('Y-m-d H:i') . '  期間: 直近 ' . $periodDays . ' 日'];
+    if ($csvKind === 'log') {
+        audit_log('export', 'export:faq_chat_logs;days=' . $periodDays);
+        $csvBody = export_csv(array_merge([$csvTitleLines[0], 'よくある質問の記録'], array_slice($csvTitleLines, 1)), FAQ_LOG_CSV_COLUMNS, faq_csv_log_rows($logRowList));
+        $csvFileName = 'faq_chat_log_' . date('Ymd-Hi') . '.csv';
+    } else {
+        audit_log('export', 'export:faq_maintenance;days=' . $periodDays);
+        $csvBody = export_csv(
+            array_merge([$csvTitleLines[0], 'よくある質問のメンテナンス用（答えを書いた行を足し、変えた行を直し、「消す」に 1 を入れた行を消します。番号と直した日時は変えないでください）'], array_slice($csvTitleLines, 1)),
+            FAQ_CSV_COLUMNS,
+            faq_csv_maintenance_rows($groupByQuestion(array_filter($logRowList, static function (array $logRow): bool {
+                return $logRow['is_unanswered'] && $logRow['result'] !== 'category';
+            }), FAQ_CSV_UNANSWERED_MAX_COUNT), $feedbackCountByFaqId)
+        );
+        $csvFileName = 'faq_maintenance_' . date('Ymd-Hi') . '.csv';
+    }
+    send_security_headers();
+    header('Content-Type: text/csv; charset=UTF-8');
+    header('Content-Disposition: attachment; filename="' . $csvFileName . '"');
+    echo $csvBody;
+    exit;
+}
+
 audit_log('admin', 'faq_chat_logs:view;days=' . $periodDays);
 render('admin_faq_logs', [
     'title'                => 'よくある質問の記録',
@@ -176,4 +240,6 @@ render('admin_faq_logs', [
     'conversationCountById' => $conversationCountById,
     'conversationFilter'   => $conversationFilter,
     'faqQuestionById'      => $faqQuestionById,
+    'faqCsvPlan'           => $faqCsvPlan,
+    'faqCsvErrorTextList'  => $faqCsvErrorTextList,
 ]);
