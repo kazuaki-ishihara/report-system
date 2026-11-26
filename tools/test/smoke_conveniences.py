@@ -414,6 +414,15 @@ def main():
           not (set(related_id_list) & {related_row["id"] for related_row in json.loads(related_excluded_json_text).get("matches", [])}))
     check("J: 解決しない: 関係がありそうな質問を出しても、チャットの記録は増やさない",
           database.execute("SELECT COUNT(*) FROM faq_chat_logs").fetchone()[0] == log_count_before_related)
+    # 関係がありそうな質問は、同じ分野を先に出す（言葉 1 つだけで関係の薄い分野へずれない。2026-11-26 の不適当な答えの直し）
+    smartphone_faq_row = database.execute("SELECT id, category FROM faq_entries WHERE question = 'スマホで 1 問ずつ出る（一覧で見たい）'").fetchone()
+    if smartphone_faq_row is not None:
+        _status_code, _location, smartphone_related_json_text = leader_client.get("/faq.php?format=json&related=%d&exclude=%d" % (smartphone_faq_row[0], smartphone_faq_row[0]))
+        smartphone_related_list = json.loads(smartphone_related_json_text).get("matches", [])
+        check("J: 解決しない: 関係がありそうな質問は、同じ分野の質問を先に出す（「スマホ」だけでログインの質問を出さない）",
+              smartphone_related_list and all(database.execute("SELECT category FROM faq_entries WHERE id = ?", (related_row["id"],)).fetchone()[0] == smartphone_faq_row[1]
+                                              for related_row in smartphone_related_list)
+              and all("スマホをなくした" not in related_row["question"] for related_row in smartphone_related_list), [related_row["question"] for related_row in smartphone_related_list])
     admin_only_faq_row = database.execute("SELECT id FROM faq_entries WHERE category = 'admin' ORDER BY id LIMIT 1").fetchone()
     if admin_only_faq_row is not None:
         _status_code, _location, hidden_related_json_text = leader_client.get("/faq.php?format=json&related=%d" % admin_only_faq_row[0])

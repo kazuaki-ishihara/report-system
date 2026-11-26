@@ -1125,14 +1125,17 @@
       chatLog.scrollTop = 0;
       questionInput.focus();
     }
-    function askSolved(logId, faqId) {
+    // rootFaqId: 関係がありそうな質問を探す元（最初に出した答えの質問）。関係がありそうな質問から選んだ答えで「解決しない」を押しても、
+    //   選んだ質問ではなく最初の質問を元に探す（選ぶたびに元が変わると、関係の薄い分野へずれていくため。2026-11-26）
+    function askSolved(logId, faqId, rootFaqId) {
+      var relatedBaseFaqId = rootFaqId || faqId;
       addChoices([
         { label: M('解決した'), onChoose: function () {
           // 解決したら、チャットを開いたときと同じ状態に戻す（サーバーは、この反応で会話を終える）
           sendFeedback(logId, 'solved', faqId);
           resetChat();
         } },
-        { label: M('解決しない'), onChoose: function () { sendFeedback(logId, 'unsolved', faqId); offerRelated(logId, faqId); } }
+        { label: M('解決しない'), onChoose: function () { sendFeedback(logId, 'unsolved', faqId); offerRelated(logId, relatedBaseFaqId); } }
       ]);
     }
     /**
@@ -1152,7 +1155,7 @@
           if (relatedList.length === 0) { offerNextSteps(logId); return; }
           addBubble('bot', M('お役に立てず、すみません。関係がありそうな質問です。近いものはありますか？'));
           addChoices(relatedList.map(function (faqEntry) {
-            return { label: faqEntry.question, onChoose: function () { addBubble('user', faqEntry.question); showAnswer(faqEntry); askSolved(logId, faqEntry.id); } };
+            return { label: faqEntry.question, onChoose: function () { addBubble('user', faqEntry.question); showAnswer(faqEntry); askSolved(logId, faqEntry.id, faqId); } };
           }).concat([{ label: M('この中にない'), onChoose: function () { offerNextSteps(logId); } }]));
         })
         .catch(function () { waitingBubble.remove(); offerNextSteps(logId); });
