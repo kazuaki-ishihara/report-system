@@ -77,3 +77,8 @@ public/js/app.js	if (askTextarea && lastQuestionText === '') { askTextarea.focus
 public/js/app.js	return { label: faqEntry.question, onChoose: function () { addBubble('user', faqEntry.question); showAnswer(faqEntry); askSolved(logId, faqEntry.id); 	関連する質問の選択肢の組み立て
 public/js/app.js	if (!waitingBubble.parentNode) { return; }	待ちの表示が消えていたときの守り
 public/js/app.js	if (!isTimedOut || !waitingBubble.parentNode) { return; }	待ちの表示が消えていたときの守り
+app/bin/rotate_key.php	if (crypto_version() !== $oldVersion) {	同時に 2 つの入れ替えを流したときの守り（前の確かめとトランザクションの間に、ほかのプロセスが入れ替えを終えたときだけ通る。メンテナンス中に人が流すコマンドで、タイミングに頼るため自動で再現できない）
+app/bin/rotate_key.php	if (dec($newBlob, $aad) !== $plainText) {	暗号化し直した値が元に戻らないときの守り（同じ鍵で暗号化して復号するので、暗号の処理か鍵のファイルが壊れたときだけ通る）
+app/bin/rotate_key.php	if ($unreadable) {	復号できない値の守り（その前の確かめで復号できない値があれば止めているので、確かめとトランザクションの間に壊れた値が書かれたときだけ通る。メンテナンス中で書き込みは止めている）
+app/bin/rotate_key.php	if ($leftCount > 0) {	新しい鍵になっていない値の守り（入れ替えはトランザクションの中で対象の列のすべての値を書き換えるので、途中で古い鍵の値が足されたときだけ通る）
+app/bin/rotate_key.php	if ($unreadableCountByColumn || $verifiedCount < $rotatedCount || crypto_version() !== $newVersion) {	入れ替えのあとの読み直しが合わないときの守り（書き込んだ直後に同じ鍵で読み直すので、DB か鍵のファイルが書き込みのあとに壊れたときだけ通る）

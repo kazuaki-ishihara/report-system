@@ -75,7 +75,7 @@ flowchart LR
 ```text
 ~/www/                               ← Web に公開される
 └── report-system/                   ← リポジトリの public/ の中身
-    ├── .htaccess                      HTTPS への転送、一覧表示の禁止、app/ などの拒否、拡張子の拒否
+    ├── .htaccess                      HTTPS への転送、一覧表示の禁止、app/ などの拒否、.php・.css・.js のほかは拒否
     ├── _boot.php                      app/ を探して読み込む（Web からは拒否）
     ├── index.php  login.php  ...      各画面の入り口（中身は app/ を読み込むだけ）
     ├── css/  js/                      画面の見た目と最小限の JavaScript
@@ -91,7 +91,7 @@ flowchart LR
 ```
 
 - `app/` は **二重に拒否する**: `app/.htaccess`（すべて拒否）と、`report-system/.htaccess` の `RedirectMatch 404`（`.htaccess` の上げ忘れに備える）。後者は `docs/`・`tools/`・`public/`・`__pycache__`・隠しフォルダーも 404 にする。
-- 拡張子でも拒否する（DB・鍵・ログ・`.md`・`.py`・`.pyc`・`.json` など）。
+- 送るファイルは `.php`・`.css`・`.js`（小文字）だけにする（許すものだけを書く形）。二重の守りとして、DB・鍵・控え・圧縮ファイルなどの拡張子も拒否する（大文字・小文字を区別しない）。
 - 反映は、`tools/deploy/build_package.py` で作った一式（`public/` の中身＋`app/`。`docs/`・`tools/`・ローカル用の設定は入らない）を、`~/www/report-system/` に上書きで上げる。一式に DB・鍵・記録は入らないので、上書きしても消えない。
 - 反映のあとは `tools/deploy/check_prod.py` で、外から DB・鍵・設定・ソースが取れないことを確かめる。
 - 鍵ファイルとバックアップは、ファイルの権限を所有者だけが読める設定にする。

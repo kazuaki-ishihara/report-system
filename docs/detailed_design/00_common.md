@@ -163,7 +163,9 @@ require APP_DIR . '/pages/home.php';
 - HTTP で来た要求を HTTPS へ転送する（301）。さくらのレンタルサーバーは SSL をプロキシで終えるため、`HTTPS` が off で、かつ `X-Sakura-Forwarded-For` が空のときだけ転送する。
 - ファイルの一覧を出さない（`Options -Indexes`）。
 - `_boot.php` を直接開かせない。
-- `.sqlite .sqlite3 .db .key .bak .backup .log .md .sql .json .ini .sh .py` を拒否する。
+- 送るファイルは、システムが送る `.php`・`.css`・`.js`（小文字）だけにする（許すものだけを書く形。`mod_rewrite` で、置かれているファイルのうち、ほかの拡張子・拡張子のないもの・大文字の `.PHP` などを 403 にする）。フォルダー（`index.php` への切り替え）と無いもの（404）はそのまま。`.well-known/` は除く。
+- 二重の守りとして、DB・鍵・証明書・控え・ソース・事務の文書・圧縮ファイル（形式を問わない。`.css.br`・`.js.gz` などの事前圧縮も）・名前が `~` で終わるものの拡張子を、大文字・小文字を区別せずに拒否する（`mod_rewrite` が効かないときの備え。一覧は `.htaccess` と `公開範囲.txt`）。
+- 手元の検証（PHP の組み込みサーバー）は `.htaccess` を読まないので、`.htaccess` を変えたら、反映のあとにサーバーで確かめる（`公開範囲.txt` の「反映のあとに確かめること」）。
 
 ---
 
