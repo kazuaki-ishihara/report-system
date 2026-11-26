@@ -85,7 +85,7 @@ JavaScript が無いときは、入れて「送る」で `?q=` の画面を開�
 | `survey` | 臨時の調査 |
 | `account` | アカウント設定・画面の表示 |
 | `request` | 要望・依頼・よくある質問 |
-| `department` | 課の管理・項目（課長） |
+| `department` | 課の管理・項目（課長）。**課長（どこかの課の `is_final = 1`）・項目管理者（`department_admins`）・システム管理者・補佐にだけ見せる**（`FAQ_DEPARTMENT_MANAGER_ONLY_CATEGORIES`・`faq_is_department_manager()`・`faq_visible_entries()`。一般の利用者（部下・課長代理・主任など）には、チャットの答え・分野のボタン・すべての質問の一覧のどこにも出さない。2026-11-26 指示） |
 | `admin` | システムの管理（管理者・補佐）。**システム管理者・補佐にだけ見せる**（`FAQ_STAFF_ONLY_CATEGORIES`・`faq_visible_entries()`。ほかの人には、チャットの答え・分野のボタン・すべての質問の一覧のどこにも出さない） |
 | `device` | スマートフォン・PC・ブラウザー |
 | （空） | そのほか |
