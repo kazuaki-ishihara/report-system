@@ -1,0 +1,899 @@
+/* 月次報告: スマートフォンを最優先にした共通の見た目 */
+:root {
+  --bg: #f5f6f8;
+  --card: #ffffff;
+  --text: #1f2328;
+  --muted: #59636e;
+  --line: #d0d7de;
+  --primary: #1f6feb;
+  --primary-text: #ffffff;
+  --danger: #cf222e;
+  --warn-bg: #fff8c5;
+  --warn-line: #d4a72c;
+  --ok-bg: #dafbe1;
+  --err-bg: #ffebe9;
+  --radius: 8px;
+  --font-body: "BIZ UDGothic", "BIZ UDゴシック", "Noto Sans JP", "Noto Sans CJK JP", "Hiragino Sans", Meiryo, sans-serif;
+  --input-bg: #ffffff;
+  --button-bg: #f6f8fa;
+  --info-bg: #ddf4ff;
+  --row-alt-bg: #fafbfc;
+  --row-hover-bg: #eef4ff;
+  --panel-bg: #f8fbff;
+  --shadow: rgba(0, 0, 0, .12);
+  --tag-neutral-bg: #f6f8fa; --tag-neutral-text: #3a3f45; --tag-neutral-line: #afb8c1;
+  --tag-info-bg: #ddf4ff; --tag-info-text: #0a3069; --tag-info-line: #54aeff;
+  --tag-ok-bg: #dafbe1; --tag-ok-text: #116329; --tag-ok-line: #4ac26b;
+  --tag-ok-strong-bg: #1a7f37; --tag-ok-strong-text: #ffffff;
+  --tag-warn-bg: #fff8c5; --tag-warn-text: #6c4400; --tag-warn-line: #d4a72c;
+  --tag-danger-bg: #ffebe9; --tag-danger-text: #a40e26; --tag-danger-line: #cf222e;
+  --tag-restricted-bg: #cf222e; --tag-restricted-text: #ffffff;
+  --tag-internal-bg: #fbefff; --tag-internal-text: #6e40c9; --tag-internal-line: #a475f9;
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  /* 文字は BIZ UDゴシックで統一する（Windows 10 以降は標準で入っている）。
+     system-ui は Windows で細い游ゴシックになり読みにくいので使わない。BIZ UDゴシックがない端末（Linux・Mac）は Noto Sans JP などで出す */
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.6;
+}
+a { color: var(--primary); }
+.app-header {
+  position: sticky; top: 0; z-index: 10;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 16px; background: var(--card); border-bottom: 1px solid var(--line);
+}
+.app-title { font-weight: 700; color: var(--text); text-decoration: none; }
+.app-menu summary { cursor: pointer; padding: 8px 12px; border: 1px solid var(--line); border-radius: var(--radius); list-style: none; }
+.app-menu nav {
+  position: absolute; right: 16px; top: 52px; min-width: 200px;
+  background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+  box-shadow: 0 4px 12px var(--shadow); display: flex; flex-direction: column;
+  /* 項目の多い役割（管理者・補佐・課長）でも一番下の「ログアウト」まで届くように、表示領域の高さに収めてメニューの中でスクロールする */
+  max-height: calc(100vh - 64px); max-height: calc(100dvh - 64px);
+  overflow-y: auto; overscroll-behavior: contain;
+}
+.app-menu nav a, .app-menu nav .link-button { padding: 12px 16px; text-decoration: none; color: var(--text); text-align: left; }
+.app-menu nav a:hover { background: var(--bg); }
+.app-main { max-width: 720px; margin: 0 auto; padding: 16px; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; margin-bottom: 16px; }
+.card.narrow { max-width: 420px; margin: 24px auto; }
+h1 { font-size: 1.3rem; margin: 0 0 12px; }
+h2 { font-size: 1.1rem; margin: 0 0 8px; }
+.greeting { margin: 0 0 12px; color: var(--muted); }
+.role-summary summary { cursor: pointer; min-height: 32px; }
+.role-permission-list { margin: 4px 0 0; padding-left: 1.4em; }
+.form { display: flex; flex-direction: column; gap: 6px; }
+.form label { font-weight: 600; margin-top: 8px; }
+.form label.check { font-weight: 400; display: flex; gap: 8px; align-items: center; }
+/* 入力欄・ボタンは、ブラウザーの既定では本文の字体を引き継がないので、本文と同じ字体にする */
+input, select, textarea, button { font-family: inherit; }
+input[type=text], input[type=password], input[type=date], input[type=month], input[type=number], select, textarea {
+  width: 100%; padding: 10px 12px; font-size: 16px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--input-bg); color: var(--text);
+}
+textarea { min-height: 96px; resize: vertical; }
+button, .button {
+  display: inline-block; min-height: 44px; padding: 10px 16px; font-size: 16px; text-align: center; text-decoration: none;
+  color: var(--text); background: var(--button-bg); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer;
+}
+button.primary, .button.primary { background: var(--primary); color: var(--primary-text); border-color: var(--primary); }
+button.danger { color: var(--danger); border-color: var(--danger); background: var(--input-bg); }
+.button.big { display: block; width: 100%; font-size: 18px; padding: 14px; margin-top: 8px; }
+.form button[type=submit] { margin-top: 16px; }
+.link-button { background: none; border: none; min-height: 0; padding: 0; font: inherit; cursor: pointer; }
+.password-field { display: flex; gap: 8px; }
+.password-field input { flex: 1; }
+.password-field button { flex: none; }
+.flash { padding: 10px 12px; border-radius: var(--radius); margin-bottom: 12px; border: 1px solid var(--line); }
+.flash-success { background: var(--ok-bg); }
+.flash-info { background: var(--info-bg); }
+.flash-error { background: var(--err-bg); border-color: var(--danger); }
+.flash-warning .inline-form { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 8px; }
+.warn { color: var(--danger); font-weight: 600; }
+.note { color: var(--muted); font-size: 0.9rem; }
+.sub-link { margin-top: 16px; }
+.list { list-style: none; padding: 0; margin: 0; }
+.list li { padding: 10px 0; border-bottom: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; }
+/* 一覧の下に続くボタン（ホームの「コメントの一覧」、自分の報告の「もっと見る」）は、一覧の下の線から離す */
+.list + .button { margin-top: 12px; }
+.tabs { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 12px; }
+.tabs a { padding: 8px 12px; border: 1px solid var(--line); border-radius: var(--radius); text-decoration: none; color: var(--text); }
+.tabs a.active { background: var(--primary); color: var(--primary-text); border-color: var(--primary); }
+.steps { padding-left: 20px; }
+.steps li { margin-bottom: 12px; }
+.setup-guide { border: 1px solid var(--line); border-left: 4px solid var(--primary); border-radius: var(--radius); padding: 8px 12px; margin: 12px 0; background: var(--bg); }
+.setup-guide p { margin: 6px 0; }
+.setup-guide ol { padding-left: 20px; margin: 6px 0; }
+.setup-guide .authenticator-apps { margin: 6px 0; }
+.setup-guide .app-list { list-style: none; padding: 0; margin: 6px 0; }
+.setup-guide .app-list li { display: flex; flex-wrap: wrap; gap: 2px 12px; padding: 6px 0; border-bottom: 1px solid var(--line); }
+.setup-guide .app-list li strong { min-width: 14em; }
+.setup-guide .app-list li span { color: var(--muted); flex: 1 1 18em; }
+/* PC 向けの案内: スマートフォン・タブレット（指で操作する端末）では出さない */
+.setup-pc-hint { display: none; border-top: 1px dashed var(--line); margin-top: 8px; padding-top: 4px; }
+@media (hover: hover) and (pointer: fine) { .setup-pc-hint { display: block; } }
+.secret { font-family: ui-monospace, Consolas, monospace; font-size: 1.1rem; letter-spacing: 1px; background: var(--bg); padding: 8px; border-radius: var(--radius); word-break: break-all; }
+.codes { font-family: ui-monospace, Consolas, monospace; font-size: 1.1rem; columns: 2; padding-left: 20px; }
+form.inline { display: inline; }
+.field-warning { background: var(--warn-bg); border: 1px solid var(--warn-line); border-radius: var(--radius); padding: 6px 10px; font-size: 0.9rem; }
+.badge { display: inline-block; font-size: 0.75rem; padding: 1px 6px; border-radius: 4px; border: 1px solid var(--line); margin-left: 6px; vertical-align: middle; }
+.badge-internal { background: var(--warn-bg); }
+.badge-restricted { background: var(--err-bg); border-color: var(--danger); }
+.reviewer h2 { color: var(--primary); }
+@media print {
+  .app-header, .no-print { display: none !important; }
+  body { background: #fff; }
+  .card { border: none; }
+}
+
+/* ---- 表・管理画面 ---- */
+.card.wide { max-width: none; }
+.app-main:has(.card.wide) { max-width: 1100px; }
+.table { width: 100%; border-collapse: collapse; margin: 8px 0 16px; font-size: 0.95rem; }
+.table th, .table td { border-bottom: 1px solid var(--line); padding: 8px 6px; text-align: left; vertical-align: top; }
+.table th { background: var(--bg); font-weight: 600; }
+.table tr.muted td { color: var(--muted); }
+.filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 8px 0 12px; }
+.filters input[type=text], .filters select { width: auto; min-width: 140px; }
+.actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+button.small, .button.small { min-height: 32px; padding: 4px 10px; font-size: 0.85rem; }
+label.check.small { font-size: 0.85rem; }
+.tag { display: inline-block; font-size: 0.8rem; padding: 1px 8px; border-radius: 10px; background: var(--bg); border: 1px solid var(--line); margin-right: 4px; font-weight: 400; }
+.tag-open { background: var(--warn-bg); border-color: var(--warn-line); }
+.tag-answered { background: var(--tag-info-bg); color: var(--tag-info-text); border-color: var(--tag-info-line); }
+.tag-resolved { background: var(--ok-bg); }
+.tag-changed { background: var(--info-bg); border-color: var(--primary); }
+.tag-warning { background: var(--warn-bg); border-color: var(--warn-line); }
+.muted { color: var(--muted); }
+fieldset.sub { border: 1px solid var(--line); border-radius: var(--radius); padding: 8px 12px; margin: 12px 0; }
+fieldset.sub legend { font-weight: 600; padding: 0 4px; }
+
+/* ---- 報告の入力 ---- */
+fieldset.block { border: 1px solid var(--line); border-radius: var(--radius); padding: 8px 12px 12px; margin: 0 0 16px; background: var(--card); }
+fieldset.block legend { font-weight: 700; padding: 0 6px; }
+fieldset.block-new { border-style: dashed; background: var(--bg); }
+.field { margin-top: 12px; }
+.field > label { display: block; font-weight: 600; margin-bottom: 4px; }
+.field .note { margin: 4px 0 0; }
+.field-error { color: var(--danger); font-weight: 600; margin: 4px 0 0; }
+.field-warning { margin: 6px 0 0; }
+.choices { display: flex; flex-direction: column; gap: 4px; }
+.choice { display: flex; gap: 8px; align-items: center; min-height: 40px; padding: 4px 8px; border: 1px solid var(--line); border-radius: var(--radius); font-weight: 400; }
+.choice input { width: 20px; height: 20px; }
+.badge-required { background: transparent; color: var(--tag-danger-text); border-color: var(--tag-danger-line); font-weight: 700; }
+.sticky-actions { position: sticky; bottom: 0; background: var(--card); border-top: 1px solid var(--line); padding: 10px 0; display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; margin-top: 12px; z-index: 5; }
+.table-input { overflow-x: auto; }
+.table-input td input, .table-input td select, .table-input td textarea { min-width: 120px; }
+
+/* ---- 報告の表示・コメント ---- */
+.view-field { padding: 10px 0; border-bottom: 1px solid var(--line); }
+.view-label { font-weight: 600; color: var(--muted); font-size: 0.9rem; }
+.view-value { margin-top: 2px; word-break: break-word; }
+.thread { margin: 8px 0 0 8px; padding-left: 8px; border-left: 3px solid var(--line); }
+.comment { padding: 6px 0; }
+.comment.reply { margin-left: 16px; }
+.comment-text { margin-top: 2px; word-break: break-word; }
+details.comment-form, details.reply-form { margin: 6px 0 0 8px; }
+details summary { cursor: pointer; color: var(--primary); }
+.list.compact li { padding: 4px 0; }
+
+/* ---- 横並び・出力 ---- */
+.table.compare td.changed { background: var(--tag-info-bg); }
+.unchanged-box { background: var(--ok-bg); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px; margin-bottom: 16px; }
+.copy-box { border: 1px solid var(--line); border-radius: var(--radius); padding: 12px; margin-bottom: 16px; }
+.copy-box select { max-width: 100%; }
+.print-page { background: #fff; padding: 16px; }
+.print-table { font-size: 10pt; }
+.print-table .print-nowrap { white-space: nowrap; }   /* 月次報告の印刷: 短い値（対象月・氏名・案件・選択）は途中で折り返さない */
+@media print {
+  @page { size: A4 landscape; margin: 12mm; }
+  .app-main { max-width: none; padding: 0; }
+  .print-page { padding: 0; }
+  .print-table { font-size: 9pt; }
+  .print-table tr { page-break-inside: avoid; }
+  .print-table thead { display: table-header-group; }
+}
+.message-list { list-style: none; padding: 0; margin: 0; }
+.message-item { border-top: 1px solid var(--line); padding: 10px 0; }
+.message-item.is-changed { background: var(--ok-bg); }
+.message-default { color: var(--muted, #555); margin: 4px 0; }
+.message-form input[type=text] { width: 100%; }
+.remind-box { background: var(--tag-warn-bg); color: var(--tag-warn-text); border: 1px solid var(--tag-warn-line); border-radius: var(--radius); padding: 12px; margin: 12px 0; }
+.bulk-check-box { background: var(--ok-bg); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px; margin: 12px 0; }
+.previous-value { font-size: 0.9em; margin: 2px 0 8px; padding: 4px 8px; border-left: 3px solid var(--line); }
+.comment-snippet { color: var(--muted, #555); font-size: 0.9em; margin-top: 2px; }
+
+/* ---- メニューの見出し・管理画面の見た目 ---- */
+.app-menu nav .menu-group { padding: 8px 16px 2px; font-size: 0.75rem; color: var(--muted); font-weight: 700; letter-spacing: 0.05em; border-top: 1px solid var(--line); }
+.app-menu nav .menu-group:first-child { border-top: none; }
+.card.wide h1 { margin-top: 0; }
+.table thead th { position: sticky; top: 0; z-index: 1; }
+.table tbody tr:nth-child(even) td { background: var(--row-alt-bg); }
+.table tbody tr:hover td { background: var(--row-hover-bg); }
+.table td.actions form.inline { margin: 0; }
+.tabs { border-bottom: 1px solid var(--line); gap: 0; }
+.tabs a { border: none; border-bottom: 3px solid transparent; border-radius: 0; margin-bottom: -1px; }
+.tabs a.active { background: none; color: var(--primary); border-bottom-color: var(--primary); font-weight: 700; }
+fieldset.sub { border: 1px solid var(--line); border-radius: var(--radius); padding: 8px 12px 12px; margin: 12px 0; }
+fieldset.sub legend { font-weight: 700; padding: 0 6px; }
+.edit-panel { border: 2px solid var(--primary); border-radius: var(--radius); padding: 12px 16px; margin: 12px 0 20px; background: var(--panel-bg); }
+.table-filter { max-width: 320px; margin: 4px 0 8px; }
+.show-when-values { margin: 6px 0; }
+@media (max-width: 720px) {
+  .card.wide .table { display: block; overflow-x: auto; white-space: nowrap; }
+  .table thead th { position: static; }
+}
+
+/* ---- 画面のテーマ（G-16 §4.5。利用者ごとに html の data-theme で切り替える） ---- */
+/* 自動（data-theme なし）: 端末がダークならダーク */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --bg: #0d1117;
+    --card: #161b22;
+    --text: #e6edf3;
+    --muted: #b1bac4;
+    --line: #30363d;
+    --primary: #4493f8;
+    --primary-text: #0d1117;
+    --danger: #ff7b72;
+    --warn-bg: #3b2e00;
+    --warn-line: #d29922;
+    --ok-bg: #12261e;
+    --err-bg: #3c1618;
+    --input-bg: #0d1117;
+    --button-bg: #21262d;
+    --info-bg: #102a43;
+    --row-alt-bg: #1f252e;
+    --row-hover-bg: #1c2433;
+    --panel-bg: #111a26;
+    --shadow: rgba(0, 0, 0, .5);
+    --tag-neutral-bg: #2d333b; --tag-neutral-text: #d1d7e0; --tag-neutral-line: #656c76;
+    --tag-info-bg: #0c2d6b; --tag-info-text: #a5d6ff; --tag-info-line: #4493f8;
+    --tag-ok-bg: #12361b; --tag-ok-text: #7ee787; --tag-ok-line: #3fb950;
+    --tag-ok-strong-bg: #238636; --tag-ok-strong-text: #ffffff;
+    --tag-warn-bg: #4b3800; --tag-warn-text: #f2cc60; --tag-warn-line: #d29922;
+    --tag-danger-bg: #4c1d1f; --tag-danger-text: #ffa198; --tag-danger-line: #f85149;
+    --tag-restricted-bg: #da3633; --tag-restricted-text: #ffffff;
+    --tag-internal-bg: #3c1e70; --tag-internal-text: #d2a8ff; --tag-internal-line: #a371f7;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0d1117;
+  --card: #161b22;
+  --text: #e6edf3;
+  --muted: #b1bac4;
+  --line: #30363d;
+  --primary: #4493f8;
+  --primary-text: #0d1117;
+  --danger: #ff7b72;
+  --warn-bg: #3b2e00;
+  --warn-line: #d29922;
+  --ok-bg: #12261e;
+  --err-bg: #3c1618;
+  --input-bg: #0d1117;
+  --button-bg: #21262d;
+  --info-bg: #102a43;
+  --row-alt-bg: #1f252e;
+  --row-hover-bg: #1c2433;
+  --panel-bg: #111a26;
+  --shadow: rgba(0, 0, 0, .5);
+  --tag-neutral-bg: #2d333b; --tag-neutral-text: #d1d7e0; --tag-neutral-line: #656c76;
+  --tag-info-bg: #0c2d6b; --tag-info-text: #a5d6ff; --tag-info-line: #4493f8;
+  --tag-ok-bg: #12361b; --tag-ok-text: #7ee787; --tag-ok-line: #3fb950;
+  --tag-ok-strong-bg: #238636; --tag-ok-strong-text: #ffffff;
+  --tag-warn-bg: #4b3800; --tag-warn-text: #f2cc60; --tag-warn-line: #d29922;
+  --tag-danger-bg: #4c1d1f; --tag-danger-text: #ffa198; --tag-danger-line: #f85149;
+  --tag-restricted-bg: #da3633; --tag-restricted-text: #ffffff;
+  --tag-internal-bg: #3c1e70; --tag-internal-text: #d2a8ff; --tag-internal-line: #a371f7;
+  color-scheme: dark;
+}
+/* さくら: 淡い桜色。見出しに花を一輪。背景・枝・花びらは下の「テーマの飾り」 */
+:root[data-theme="sakura"] {
+  --bg: #fff6f9;
+  --card: #ffffff;
+  --text: #3a2a30;
+  --muted: #7d6570;
+  --line: #f3d3df;
+  --primary: #c2185b;
+  --primary-text: #ffffff;
+  --button-bg: #fff2f6;
+  --info-bg: #fde7ef;
+  --row-alt-bg: #fff9fb;
+  --row-hover-bg: #ffeef4;
+  --panel-bg: #fff7fa;
+}
+:root[data-theme="sakura"] .app-title::before { content: "🌸 "; }
+/* 夜桜1・夜桜2（yozakura・yozakura2）: さくらから派生した暗いテーマ。夜桜2 は桜をソメイヨシノの色（白に近い淡い桜色）にしたもの（下の「テーマの飾り」）。夜空の紺に桜色の強調。見出しに月。背景の月・星・枝・花びらは下の「テーマの飾り」 */
+:root[data-theme^="yozakura"] {
+  --bg: #0e1630;
+  --card: #1c1729;
+  --text: #f3e9f0;
+  --muted: #c9b6c4;
+  --line: #3a2f4a;
+  --primary: #f48fb1;
+  --primary-text: #1a0f1a;
+  --danger: #ff8a80;
+  --warn-bg: #3b2e00;
+  --warn-line: #d29922;
+  --ok-bg: #12261e;
+  --err-bg: #3c1618;
+  --input-bg: #15111f;
+  --button-bg: #2a2238;
+  --info-bg: #2c1b33;
+  --row-alt-bg: #221c30;
+  --row-hover-bg: #2e2340;
+  --panel-bg: #191426;
+  --shadow: rgba(0, 0, 0, .55);
+  --tag-neutral-bg: #2d2a36; --tag-neutral-text: #ddd5e0; --tag-neutral-line: #6f6680;
+  --tag-info-bg: #0c2d6b; --tag-info-text: #a5d6ff; --tag-info-line: #4493f8;
+  --tag-ok-bg: #12361b; --tag-ok-text: #7ee787; --tag-ok-line: #3fb950;
+  --tag-ok-strong-bg: #238636; --tag-ok-strong-text: #ffffff;
+  --tag-warn-bg: #4b3800; --tag-warn-text: #f2cc60; --tag-warn-line: #d29922;
+  --tag-danger-bg: #4c1d1f; --tag-danger-text: #ffa198; --tag-danger-line: #f85149;
+  --tag-restricted-bg: #da3633; --tag-restricted-text: #ffffff;
+  --tag-internal-bg: #3c1e70; --tag-internal-text: #d2a8ff; --tag-internal-line: #a371f7;
+  color-scheme: dark;
+}
+:root[data-theme^="yozakura"] .app-title::before { content: "🌙 "; }
+/* 見分けやすい色（cud。カラーユニバーサルデザイン）: 色覚の型に関係なく見分けやすい配色。赤と緑の対比をやめ、青（済み・強調）・黄（注意・待ち）・朱（エラー・限定）で分ける。文字と背景の明るさの比は 7 以上。札には形の印（下の「見分けやすい色の形の印」） */
+:root[data-theme="cud"] {
+  --bg: #f4f5f2;
+  --card: #ffffff;
+  --text: #111111;
+  --muted: #3b3b3b;
+  --line: #8c8c8c;
+  --primary: #0039b3;
+  --primary-text: #ffffff;
+  --danger: #9a2600;
+  --warn-bg: #ffefb0;
+  --warn-line: #b37a00;
+  --ok-bg: #e3edff;
+  --err-bg: #ffe7dc;
+  --input-bg: #ffffff;
+  --button-bg: #f1f1ef;
+  --info-bg: #e4f5fb;
+  --row-alt-bg: #f8f8f6;
+  --row-hover-bg: #e3edff;
+  --panel-bg: #f7f9ff;
+  --shadow: rgba(0, 0, 0, .16);
+  --tag-neutral-bg: #f1f1ef; --tag-neutral-text: #2b2b2b; --tag-neutral-line: #6e6e6e;
+  --tag-info-bg: #e4f5fb; --tag-info-text: #003a52; --tag-info-line: #1a8ab8;
+  --tag-ok-bg: #e3edff; --tag-ok-text: #002a80; --tag-ok-line: #005aff;
+  --tag-ok-strong-bg: #00308f; --tag-ok-strong-text: #ffffff;
+  --tag-warn-bg: #ffefb0; --tag-warn-text: #3d2900; --tag-warn-line: #b37a00;
+  --tag-danger-bg: #ffe7dc; --tag-danger-text: #7a1f00; --tag-danger-line: #d64000;
+  --tag-restricted-bg: #9a2600; --tag-restricted-text: #ffffff;
+  --tag-internal-bg: #ececec; --tag-internal-text: #1f1f1f; --tag-internal-line: #4d4d4d;
+  color-scheme: light;
+}
+/* 若葉・若葉2（wakaba・wakaba2）: 落ち着いた緑。見出しに葉を一枚。若葉2 は画面の下に清流が流れる（下の「テーマの飾り」） */
+:root[data-theme^="wakaba"] {
+  --bg: #f3f8f2;
+  --card: #ffffff;
+  --text: #1f2d24;
+  --muted: #5d6f62;
+  --line: #c9dccb;
+  --primary: #2e7d32;
+  --primary-text: #ffffff;
+  --button-bg: #eef6ee;
+  --info-bg: #e3f2e5;
+  --row-alt-bg: #f8fbf7;
+  --row-hover-bg: #e8f3e8;
+  --panel-bg: #f4faf3;
+}
+:root[data-theme^="wakaba"] .app-title::before { content: "🌱 "; }
+/* テーマを選ぶ画面の見本 */
+.theme-choice-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; }
+.theme-choice { display: flex !important; align-items: center; gap: 8px; border: 1px solid var(--line); border-radius: var(--radius); padding: 8px 10px; font-weight: 400 !important; cursor: pointer; }
+.theme-swatch { display: inline-flex; border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
+.theme-swatch span { width: 14px; height: 22px; }
+.theme-swatch-light span:nth-child(1) { background: #f5f6f8; } .theme-swatch-light span:nth-child(2) { background: #ffffff; } .theme-swatch-light span:nth-child(3) { background: #1f6feb; }
+.theme-swatch-dark span:nth-child(1) { background: #0d1117; } .theme-swatch-dark span:nth-child(2) { background: #161b22; } .theme-swatch-dark span:nth-child(3) { background: #4493f8; }
+.theme-swatch-sakura span:nth-child(1) { background: #fff5f8; } .theme-swatch-sakura span:nth-child(2) { background: #f1cad8; } .theme-swatch-sakura span:nth-child(3) { background: #c2185b; }
+.theme-swatch-yozakura span:nth-child(1) { background: #0e1630; } .theme-swatch-yozakura span:nth-child(2) { background: #3a2f4a; } .theme-swatch-yozakura span:nth-child(3) { background: #f48fb1; }
+.theme-swatch-yozakura2 span:nth-child(1) { background: #0e1630; } .theme-swatch-yozakura2 span:nth-child(2) { background: #3a2f4a; } .theme-swatch-yozakura2 span:nth-child(3) { background: #fbe6ee; }
+.theme-swatch-cud span:nth-child(1) { background: #005aff; } .theme-swatch-cud span:nth-child(2) { background: #f6aa00; } .theme-swatch-cud span:nth-child(3) { background: #d64000; }
+.theme-swatch-wakaba2 span:nth-child(1) { background: #f3f8f2; } .theme-swatch-wakaba2 span:nth-child(2) { background: #c9dccb; } .theme-swatch-wakaba2 span:nth-child(3) { background: #6bbcc8; }
+.theme-swatch-wakaba span:nth-child(1) { background: #f3f8f2; } .theme-swatch-wakaba span:nth-child(2) { background: #c9dccb; } .theme-swatch-wakaba span:nth-child(3) { background: #2e7d32; }
+.theme-swatch-auto span:nth-child(1) { background: #f5f6f8; } .theme-swatch-auto span:nth-child(2) { background: #0d1117; } .theme-swatch-auto span:nth-child(3) { background: #1f6feb; }
+@media print {
+  :root[data-theme] { --bg: #ffffff; --card: #ffffff; --text: #000000; color-scheme: light; }
+  :root[data-theme] .app-title::before { content: none; }
+}
+.autosave-status, .duplicate-note { white-space: pre-line; }
+.message-form textarea { width: 100%; min-height: 3em; }
+
+/* ---- 管理画面の道しるべ・管理のトップ（G-21） ---- */
+.admin-main { max-width: 1080px; }
+.admin-nav { margin-bottom: 12px; }
+.admin-nav .breadcrumb { margin: 0 0 6px; font-size: 0.9rem; color: var(--muted); }
+.admin-section-tabs { display: flex; flex-wrap: wrap; gap: 4px; }
+.admin-section-tabs a { padding: 4px 10px; border: 1px solid var(--line); border-radius: 999px; text-decoration: none; color: var(--text); background: var(--card); font-size: 0.9rem; }
+.admin-section-tabs a.active { background: var(--primary); border-color: var(--primary); color: var(--primary-text); }
+.admin-card-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+.admin-card { display: flex; flex-direction: column; gap: 6px; padding: 14px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); text-decoration: none; color: var(--text); }
+.admin-card:hover { border-color: var(--primary); background: var(--row-hover-bg); }
+.admin-card-title { font-weight: 700; font-size: 1.05rem; color: var(--primary); }
+.admin-card-status { display: flex; flex-wrap: wrap; gap: 4px; }
+/* ページの中のタブ（課の編集の節など。JavaScript が動くときだけ切り替え、動かないときは全部出す） */
+.section-tabs { display: flex; flex-wrap: wrap; gap: 0; border-bottom: 1px solid var(--line); margin: 8px 0 12px; }
+.section-tabs button { min-height: 36px; padding: 6px 14px; border: none; border-bottom: 3px solid transparent; border-radius: 0; background: none; color: var(--text); }
+.section-tabs button.active { border-bottom-color: var(--primary); color: var(--primary); font-weight: 700; }
+
+/* ---- 要望・依頼（G-22） ---- */
+.support-status-open { background: var(--warn-bg); border-color: var(--warn-line); }
+.support-status-reviewing, .support-status-in_progress, .support-status-testing, .support-status-release_waiting { background: var(--info-bg); border-color: var(--primary); }
+.support-status-released, .support-status-done { background: var(--ok-bg); }
+.support-status-declined, .support-status-withdrawn { color: var(--muted); }
+.support-status-buttons { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 8px; }
+.support-status-buttons button { color: var(--text); }
+.support-status-buttons button.is-current { font-weight: 700; opacity: .7; }
+.support-request-link { margin: 8px 0 24px; text-align: right; font-size: 0.9rem; }
+.chip-choices { border: none; padding: 0; margin: 8px 0 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.chip-choices legend { font-weight: 600; margin-bottom: 4px; padding: 0; }
+.chip-choice { display: inline-flex !important; margin: 0 !important; font-weight: 400 !important; cursor: pointer; }
+.chip-choice input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.chip-choice span { display: inline-block; padding: 6px 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--card); font-size: 0.9rem; }
+.chip-choice input:checked + span { background: var(--primary); border-color: var(--primary); color: var(--primary-text); font-weight: 700; }
+.chip-choice input:focus-visible + span { outline: 2px solid var(--primary); outline-offset: 2px; }
+.support-request-new { margin: 8px 0 16px; }
+.support-request-new summary { font-weight: 700; }
+.support-request-body { white-space: normal; padding: 8px 0; word-break: break-word; }
+.support-message-staff { background: var(--panel-bg); border-left: 3px solid var(--primary); padding-left: 8px; }
+.support-staff-form { margin-top: 12px; }
+.support-withdraw { margin-top: 12px; }
+
+/* ==== 画面確認の指摘の直し（APP-015〜018・020・024・026・043・044） ==== */
+
+/* ---- 札と状態の色（既定とダークで読める色の組。APP-015・016・017） ---- */
+.tag { background: var(--tag-neutral-bg); color: var(--tag-neutral-text); border-color: var(--tag-neutral-line); }
+.tag-open, .tag-warning { background: var(--tag-warn-bg); color: var(--tag-warn-text); border-color: var(--tag-warn-line); }
+.tag-warning::before { content: "! "; font-weight: 700; }
+.tag-resolved { background: var(--tag-ok-bg); color: var(--tag-ok-text); border-color: var(--tag-ok-line); }
+.tag-changed { background: var(--tag-info-bg); color: var(--tag-info-text); border-color: var(--tag-info-line); }
+.badge { margin: 0 6px 0 0; font-weight: 700; }
+.badge-internal { background: var(--tag-internal-bg); color: var(--tag-internal-text); border-color: var(--tag-internal-line); }
+.badge-restricted { background: var(--tag-restricted-bg); color: var(--tag-restricted-text); border-color: var(--tag-restricted-bg); }
+.status-tag { font-weight: 700; }
+.status-none { background: transparent; border-style: dashed; color: var(--muted); }
+.status-draft { background: var(--tag-info-bg); color: var(--tag-info-text); border-color: var(--tag-info-line); }
+.status-submitted { background: var(--tag-ok-bg); color: var(--tag-ok-text); border-color: var(--tag-ok-line); }
+.status-confirmed { background: var(--tag-ok-strong-bg); color: var(--tag-ok-strong-text); border-color: var(--tag-ok-strong-bg); }
+.status-confirmed::before { content: "✓ "; }
+.support-status-open { background: var(--tag-warn-bg); color: var(--tag-warn-text); border-color: var(--tag-warn-line); }
+.support-status-reviewing, .support-status-in_progress, .support-status-testing, .support-status-release_waiting { background: var(--tag-info-bg); color: var(--tag-info-text); border-color: var(--tag-info-line); }
+.support-status-released, .support-status-done { background: var(--tag-ok-bg); color: var(--tag-ok-text); border-color: var(--tag-ok-line); }
+.field-warning { color: var(--tag-warn-text); background: var(--tag-warn-bg); border-color: var(--tag-warn-line); }
+.flash-info { background: var(--tag-info-bg); color: var(--tag-info-text); border-color: var(--tag-info-line); }
+.flash-success { background: var(--tag-ok-bg); color: var(--tag-ok-text); border-color: var(--tag-ok-line); }
+.flash-error { background: var(--tag-danger-bg); color: var(--tag-danger-text); border-color: var(--tag-danger-line); }
+/* 提出のお知らせ（締め日が近い・促された。reminder.php） */
+.flash-warning { background: var(--tag-warn-bg); color: var(--tag-warn-text); border-color: var(--tag-warn-line); border-left-width: 6px; }
+.flash a { color: inherit; font-weight: 700; }
+
+/* 提出状況の進み具合（APP-017） */
+.status-progress { margin: 8px 0 12px; }
+.status-progress p { margin: 0 0 6px; }
+.progress-label { display: flex; align-items: center; gap: 8px; font-size: 0.9rem; color: var(--muted); margin: 2px 0; }
+.progress-label progress { -webkit-appearance: none; appearance: none; flex: 1; height: 12px; max-width: 360px; border: 1px solid var(--tag-neutral-line); border-radius: 6px; background: var(--tag-neutral-bg); overflow: hidden; }
+.progress-label progress::-webkit-progress-bar { background: var(--tag-neutral-bg); }
+.progress-label progress::-webkit-progress-value { background: var(--tag-ok-line); }
+.progress-label progress::-moz-progress-bar { background: var(--tag-ok-line); }
+.progress-label progress.progress-confirmed::-webkit-progress-value { background: var(--tag-ok-strong-bg); }
+.progress-label progress.progress-confirmed::-moz-progress-bar { background: var(--tag-ok-strong-bg); }
+
+/* ---- 報告の入力: 設問の区切り・項目名と入力欄の間・必須（APP-018・043） ---- */
+fieldset.block { counter-reset: question-number; }
+fieldset.block .field { margin-top: 0; padding: 12px 0 12px 10px; border-top: 1px solid var(--line); border-left: 3px solid transparent; counter-increment: question-number; }
+fieldset.block .field:first-of-type { border-top: none; }
+fieldset.block .field.is-required { border-left-color: var(--tag-danger-line); }
+fieldset.block .field > label .field-label-text::before { content: counter(question-number) ". "; color: var(--muted); font-weight: 400; }
+.field > label { display: flex; flex-wrap: wrap; align-items: center; gap: 0; margin: 0 0 6px; font-weight: 700; }
+.field .choices { margin-top: 0; }
+.form .field label.choice { margin-top: 0; }
+.field .choice { min-height: 40px; }
+.required-remaining { margin-right: auto; align-self: center; font-weight: 700; color: var(--tag-danger-text); }
+.required-remaining[hidden] { display: none; }
+
+/* 報告の作成の上の欄: 知らせ（青）と「変更なしで提出」（緑の枠）を分ける（APP-044） */
+.unchanged-box { background: var(--card); border: 2px solid var(--tag-ok-line); }
+.copy-box button { margin-top: 8px; }
+
+/* ---- 報告の詳細: 「チェック」の見出しと、チェックのボタン（APP-043） ---- */
+.section-heading { margin-top: 20px; padding-top: 12px; border-top: 1px solid var(--line); }
+.review-actions { justify-content: stretch; }
+.review-actions form.inline { display: block; flex: 1 1 220px; }
+.review-actions button { width: 100%; }
+
+/* ---- ボタンとリンクのボタンの高さを揃える（APP-043） ---- */
+button, .button { line-height: 1.5; vertical-align: middle; }
+.button { display: inline-flex; align-items: center; justify-content: center; }
+.button.big { display: flex; }
+
+/* ---- 検索の対象月: PC は横並び、狭い幅は縦（APP-044） ---- */
+.period-range { flex-wrap: nowrap; }
+.period-range input[type=month] { width: auto; flex: 1 1 0; min-width: 0; }
+@media (max-width: 560px) {
+  .period-range { flex-wrap: wrap; }
+  .period-range input[type=month] { width: 100%; flex-basis: 100%; }
+}
+
+/* ---- 項目マスタなどの表: 操作の列が表の行からずれない（APP-020） ---- */
+td.actions { display: table-cell; white-space: nowrap; }
+td.actions > *, td.actions form.inline { display: inline-block; margin: 2px 4px 2px 0; vertical-align: middle; }
+
+/* ---- 管理者のホームの入口をボタンに（APP-024） ---- */
+.shortcut-list { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; }
+.shortcut-list a { display: flex; align-items: center; min-height: 48px; padding: 10px 14px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--button-bg); color: var(--text); text-decoration: none; font-weight: 700; }
+.shortcut-list a:hover { border-color: var(--primary); background: var(--row-hover-bg); }
+
+/* ---- 選んだテーマが分かるように（APP-015） ---- */
+input[type=radio], input[type=checkbox] { accent-color: var(--primary); }
+.theme-choice:has(input:checked) { border: 2px solid var(--primary); background: var(--row-hover-bg); font-weight: 700 !important; }
+
+/* ---- テーマの飾り（APP-026）。さくら: 花びらが画面の端をゆっくり舞う。若葉: 背景に淡い葉の模様 ---- */
+.theme-decoration { display: none; }
+.app-main { position: relative; z-index: 1; }
+:root[data-theme="sakura"] body { background: linear-gradient(180deg, #fde4ec 0, #fff3f7 380px, #fffafc 100%) fixed; background-color: #fffafc; }
+:root[data-theme="sakura"] .app-header { background: rgba(255, 255, 255, .92); border-bottom: none; box-shadow: 0 3px 0 0 #f8c8d8, 0 4px 0 0 #e891ad; }
+:root[data-theme="sakura"] .app-title { color: #ad1457; }
+:root[data-theme="sakura"] .card { border-color: #f3d3df; box-shadow: 0 1px 3px rgba(194, 24, 91, .06); }
+:root[data-theme="sakura"] .theme-decoration::before, :root[data-theme="sakura"] .theme-decoration::after, :root[data-theme^="yozakura"] .theme-decoration::before, :root[data-theme^="yozakura"] .theme-decoration::after { content: ""; position: absolute; background-repeat: no-repeat; background-size: contain; }
+:root[data-theme="sakura"] .theme-decoration::before, :root[data-theme^="yozakura"] .theme-decoration::before { top: 62px; right: 0; width: 280px; height: 560px; background-image: url("data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20viewBox=%220%200%20280%20560%22%3E%3Cdefs%3E%3ClinearGradient%20id=%22fp%22%20x1=%220%22%20y1=%221%22%20x2=%220%22%20y2=%220%22%3E%3Cstop%20offset=%220%22%20stop-color=%22%23f8a5c2%22/%3E%3Cstop%20offset=%220.6%22%20stop-color=%22%23fcd3e1%22/%3E%3Cstop%20offset=%221%22%20stop-color=%22%23fff5f8%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath%20d=%22M286%20-4%20C250%2030%20236%2080%20222%20130%20C206%20186%20214%20240%20196%20296%20C180%20346%20150%20384%20132%20440%22%20fill=%22none%22%20stroke=%22%236d4335%22%20stroke-width=%226%22%20stroke-linecap=%22round%22/%3E%3Cpath%20d=%22M226%20118%20C196%20100%20168%20104%20140%20122%22%20fill=%22none%22%20stroke=%22%236d4335%22%20stroke-width=%223.5%22%20stroke-linecap=%22round%22/%3E%3Cpath%20d=%22M206%20270%20C232%20300%20246%20336%20250%20380%22%20fill=%22none%22%20stroke=%22%236d4335%22%20stroke-width=%223.5%22%20stroke-linecap=%22round%22/%3E%3Cpath%20d=%22M168%20360%20C140%20364%20116%20378%2096%20400%22%20fill=%22none%22%20stroke=%22%236d4335%22%20stroke-width=%223%22%20stroke-linecap=%22round%22/%3E%3Cg%20transform=%22translate(250.0%2040.0)%20scale(1.45)%22%20opacity=%220.97%22%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(190.0)%20translate(-10%20-24)%22/%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(262.0)%20translate(-10%20-24)%22/%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(334.0)%20translate(-10%20-24)%22/%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(406.0)%20translate(-10%20-24)%22/%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(478.0)%20translate(-10%20-24)%22/%3E%3Ccircle%20r=%222.6%22%20fill=%22%23f06292%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%225.91%22%20y2=%221.04%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%226.50%22%20cy=%221.15%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%223.44%22%20y2=%224.91%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%223.79%22%20cy=%225.41%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%22-1.04%22%20y2=%225.91%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%22-1.15%22%20cy=%226.50%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%22-4.91%22%20y2=%223.44%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%22-5.41%22%20cy=%223.79%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%22-5.91%22%20y2=%22-1.04%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%22-6.50%22%20cy=%22-1.15%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%22-3.44%22%20y2=%22-4.91%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%22-3.79%22%20cy=%22-5.41%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%221.04%22%20y2=%22-5.91%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%221.15%22%20cy=%22-6.50%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%224.91%22%20y2=%22-3.44%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%225.41%22%20cy=%22-3.79%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3C/g%3E%3Cg%20transform=%22translate(214.0%2082.0)%20scale(1.20)%22%20opacity=%220.95%22%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(220.0)%20translate(-10%20-24)%22/%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(292.0)%20translate(-10%20-24)%22/%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(364.0)%20translate(-10%20-24)%22/%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(436.0)%20translate(-10%20-24)%22/%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(508.0)%20translate(-10%20-24)%22/%3E%3Ccircle%20r=%222.6%22%20fill=%22%23f06292%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%224.60%22%20y2=%223.86%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%225.06%22%20cy=%224.24%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%220.52%22%20y2=%225.98%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%220.58%22%20cy=%226.57%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%22-3.86%22%20y2=%224.60%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%22-4.24%22%20cy=%225.06%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%22-5.98%22%20y2=%220.52%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%22-6.57%22%20cy=%220.58%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%22-4.60%22%20y2=%22-3.86%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%22-5.06%22%20cy=%22-4.24%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%22-0.52%22%20y2=%22-5.98%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%22-0.58%22%20cy=%22-6.57%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%223.86%22%20y2=%22-4.60%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%224.24%22%20cy=%22-5.06%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%225.98%22%20y2=%22-0.52%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%226.57%22%20cy=%22-0.58%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3C/g%3E%3Cg%20transform=%22translate(146.0%20118.0)%20scale(1.30)%22%20opacity=%220.96%22%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(205.0)%20translate(-10%20-24)%22/%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(277.0)%20translate(-10%20-24)%22/%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(349.0)%20translate(-10%20-24)%22/%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(421.0)%20translate(-10%20-24)%22/%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(493.0)%20translate(-10%20-24)%22/%3E%3Ccircle%20r=%222.6%22%20fill=%22%23f06292%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%225.44%22%20y2=%222.54%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%225.98%22%20cy=%222.79%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%222.05%22%20y2=%225.64%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%222.26%22%20cy=%226.20%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%22-2.54%22%20y2=%225.44%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%22-2.79%22%20cy=%225.98%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%22-5.64%22%20y2=%222.05%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%22-6.20%22%20cy=%222.26%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%22-5.44%22%20y2=%22-2.54%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%22-5.98%22%20cy=%22-2.79%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%22-2.05%22%20y2=%22-5.64%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%22-2.26%22%20cy=%22-6.20%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%222.54%22%20y2=%22-5.44%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%222.79%22%20cy=%22-5.98%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%225.64%22%20y2=%22-2.05%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%226.20%22%20cy=%22-2.26%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3C/g%3E%3Cg%20transform=%22translate(232.0%20172.0)%20scale(1.40)%22%20opacity=%220.97%22%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(235.0)%20translate(-10%20-24)%22/%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(307.0)%20translate(-10%20-24)%22/%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(379.0)%20translate(-10%20-24)%22/%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(451.0)%20translate(-10%20-24)%22/%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(523.0)%20translate(-10%20-24)%22/%3E%3Ccircle%20r=%222.6%22%20fill=%22%23f06292%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%223.44%22%20y2=%224.91%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%223.79%22%20cy=%225.41%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%22-1.04%22%20y2=%225.91%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%22-1.15%22%20cy=%226.50%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%22-4.91%22%20y2=%223.44%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%22-5.41%22%20cy=%223.79%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%22-5.91%22%20y2=%22-1.04%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%22-6.50%22%20cy=%22-1.15%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%22-3.44%22%20y2=%22-4.91%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%22-3.79%22%20cy=%22-5.41%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%221.04%22%20y2=%22-5.91%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%221.15%22%20cy=%22-6.50%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%224.91%22%20y2=%22-3.44%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%225.41%22%20cy=%22-3.79%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%225.91%22%20y2=%221.04%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%226.50%22%20cy=%221.15%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3C/g%3E%3Cg%20transform=%22translate(196.0%20226.0)%20scale(1.15)%22%20opacity=%220.94%22%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(185.0)%20translate(-10%20-24)%22/%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(257.0)%20translate(-10%20-24)%22/%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(329.0)%20translate(-10%20-24)%22/%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(401.0)%20translate(-10%20-24)%22/%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(473.0)%20translate(-10%20-24)%22/%3E%3Ccircle%20r=%222.6%22%20fill=%22%23f06292%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%225.98%22%20y2=%220.52%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%226.57%22%20cy=%220.58%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%223.86%22%20y2=%224.60%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%224.24%22%20cy=%225.06%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%22-0.52%22%20y2=%225.98%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%22-0.58%22%20cy=%226.57%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%22-4.60%22%20y2=%223.86%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%22-5.06%22%20cy=%224.24%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%22-5.98%22%20y2=%22-0.52%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%22-6.57%22%20cy=%22-0.58%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%22-3.86%22%20y2=%22-4.60%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%22-4.24%22%20cy=%22-5.06%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%220.52%22%20y2=%22-5.98%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%220.58%22%20cy=%22-6.57%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%224.60%22%20y2=%22-3.86%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%225.06%22%20cy=%22-4.24%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3C/g%3E%3Cg%20transform=%22translate(250.0%20384.0)%20scale(1.30)%22%20opacity=%220.95%22%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(210.0)%20translate(-10%20-24)%22/%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(282.0)%20translate(-10%20-24)%22/%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(354.0)%20translate(-10%20-24)%22/%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(426.0)%20translate(-10%20-24)%22/%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(498.0)%20translate(-10%20-24)%22/%3E%3Ccircle%20r=%222.6%22%20fill=%22%23f06292%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%225.20%22%20y2=%223.00%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%225.72%22%20cy=%223.30%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%221.55%22%20y2=%225.80%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%221.71%22%20cy=%226.38%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%22-3.00%22%20y2=%225.20%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%22-3.30%22%20cy=%225.72%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%22-5.80%22%20y2=%221.55%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%22-6.38%22%20cy=%221.71%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%22-5.20%22%20y2=%22-3.00%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%22-5.72%22%20cy=%22-3.30%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%22-1.55%22%20y2=%22-5.80%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%22-1.71%22%20cy=%22-6.38%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%223.00%22%20y2=%22-5.20%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%223.30%22%20cy=%22-5.72%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%225.80%22%20y2=%22-1.55%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%226.38%22%20cy=%22-1.71%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3C/g%3E%3Cg%20transform=%22translate(226.0%20312.0)%20scale(1.10)%22%20opacity=%220.93%22%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(240.0)%20translate(-10%20-24)%22/%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(312.0)%20translate(-10%20-24)%22/%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(384.0)%20translate(-10%20-24)%22/%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(456.0)%20translate(-10%20-24)%22/%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(528.0)%20translate(-10%20-24)%22/%3E%3Ccircle%20r=%222.6%22%20fill=%22%23f06292%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%223.00%22%20y2=%225.20%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%223.30%22%20cy=%225.72%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%22-1.55%22%20y2=%225.80%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%22-1.71%22%20cy=%226.38%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%22-5.20%22%20y2=%223.00%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%22-5.72%22%20cy=%223.30%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%22-5.80%22%20y2=%22-1.55%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%22-6.38%22%20cy=%22-1.71%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%22-3.00%22%20y2=%22-5.20%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%22-3.30%22%20cy=%22-5.72%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%221.55%22%20y2=%22-5.80%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%221.71%22%20cy=%22-6.38%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%225.20%22%20y2=%22-3.00%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%225.72%22%20cy=%22-3.30%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%225.80%22%20y2=%221.55%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%226.38%22%20cy=%221.71%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3C/g%3E%3Cg%20transform=%22translate(176.0%20336.0)%20scale(1.35)%22%20opacity=%220.96%22%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(195.0)%20translate(-10%20-24)%22/%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(267.0)%20translate(-10%20-24)%22/%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(339.0)%20translate(-10%20-24)%22/%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(411.0)%20translate(-10%20-24)%22/%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(483.0)%20translate(-10%20-24)%22/%3E%3Ccircle%20r=%222.6%22%20fill=%22%23f06292%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%225.80%22%20y2=%221.55%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%226.38%22%20cy=%221.71%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%223.00%22%20y2=%225.20%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%223.30%22%20cy=%225.72%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%22-1.55%22%20y2=%225.80%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%22-1.71%22%20cy=%226.38%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%22-5.20%22%20y2=%223.00%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%22-5.72%22%20cy=%223.30%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%22-5.80%22%20y2=%22-1.55%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%22-6.38%22%20cy=%22-1.71%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%22-3.00%22%20y2=%22-5.20%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%22-3.30%22%20cy=%22-5.72%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%221.55%22%20y2=%22-5.80%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%221.71%22%20cy=%22-6.38%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%225.20%22%20y2=%22-3.00%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%225.72%22%20cy=%22-3.30%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3C/g%3E%3Cg%20transform=%22translate(100.0%20400.0)%20scale(1.20)%22%20opacity=%220.94%22%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(225.0)%20translate(-10%20-24)%22/%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(297.0)%20translate(-10%20-24)%22/%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(369.0)%20translate(-10%20-24)%22/%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(441.0)%20translate(-10%20-24)%22/%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(513.0)%20translate(-10%20-24)%22/%3E%3Ccircle%20r=%222.6%22%20fill=%22%23f06292%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%224.24%22%20y2=%224.24%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%224.67%22%20cy=%224.67%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%220.00%22%20y2=%226.00%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%220.00%22%20cy=%226.60%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%22-4.24%22%20y2=%224.24%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%22-4.67%22%20cy=%224.67%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%22-6.00%22%20y2=%220.00%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%22-6.60%22%20cy=%220.00%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%22-4.24%22%20y2=%22-4.24%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%22-4.67%22%20cy=%22-4.67%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%22-0.00%22%20y2=%22-6.00%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%22-0.00%22%20cy=%22-6.60%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%224.24%22%20y2=%22-4.24%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%224.67%22%20cy=%22-4.67%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%226.00%22%20y2=%22-0.00%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%226.60%22%20cy=%22-0.00%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3C/g%3E%3Cg%20transform=%22translate(136.0%20446.0)%20scale(1.30)%22%20opacity=%220.95%22%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(200.0)%20translate(-10%20-24)%22/%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(272.0)%20translate(-10%20-24)%22/%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(344.0)%20translate(-10%20-24)%22/%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(416.0)%20translate(-10%20-24)%22/%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(488.0)%20translate(-10%20-24)%22/%3E%3Ccircle%20r=%222.6%22%20fill=%22%23f06292%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%225.64%22%20y2=%222.05%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%226.20%22%20cy=%222.26%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%222.54%22%20y2=%225.44%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%222.79%22%20cy=%225.98%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%22-2.05%22%20y2=%225.64%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%22-2.26%22%20cy=%226.20%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%22-5.44%22%20y2=%222.54%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%22-5.98%22%20cy=%222.79%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%22-5.64%22%20y2=%22-2.05%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%22-6.20%22%20cy=%22-2.26%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%22-2.54%22%20y2=%22-5.44%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%22-2.79%22%20cy=%22-5.98%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%222.05%22%20y2=%22-5.64%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%222.26%22%20cy=%22-6.20%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%225.44%22%20y2=%22-2.54%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%225.98%22%20cy=%22-2.79%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3C/g%3E%3Cg%20transform=%22translate(186.0%20106.0)%20rotate(60.0)%22%3E%3Cellipse%20rx=%223.4%22%20ry=%225.6%22%20fill=%22%23f06292%22/%3E%3Cpath%20d=%22M-3%203%20Q0%209%203%203%22%20fill=%22%238bb174%22/%3E%3C/g%3E%3Cg%20transform=%22translate(244.0%20130.0)%20rotate(-20.0)%22%3E%3Cellipse%20rx=%223.4%22%20ry=%225.6%22%20fill=%22%23f06292%22/%3E%3Cpath%20d=%22M-3%203%20Q0%209%203%203%22%20fill=%22%238bb174%22/%3E%3C/g%3E%3Cg%20transform=%22translate(212.0%20268.0)%20rotate(30.0)%22%3E%3Cellipse%20rx=%223.4%22%20ry=%225.6%22%20fill=%22%23f06292%22/%3E%3Cpath%20d=%22M-3%203%20Q0%209%203%203%22%20fill=%22%238bb174%22/%3E%3C/g%3E%3Cg%20transform=%22translate(150.0%20380.0)%20rotate(-40.0)%22%3E%3Cellipse%20rx=%223.4%22%20ry=%225.6%22%20fill=%22%23f06292%22/%3E%3Cpath%20d=%22M-3%203%20Q0%209%203%203%22%20fill=%22%238bb174%22/%3E%3C/g%3E%3Cg%20transform=%22translate(120.0%20476.0)%20rotate(10.0)%22%3E%3Cellipse%20rx=%223.4%22%20ry=%225.6%22%20fill=%22%23f06292%22/%3E%3Cpath%20d=%22M-3%203%20Q0%209%203%203%22%20fill=%22%238bb174%22/%3E%3C/g%3E%3C/svg%3E"); background-position: top right; }
+:root[data-theme="sakura"] .theme-decoration::after, :root[data-theme^="yozakura"] .theme-decoration::after { top: 150px; left: 0; width: 230px; height: 460px; background-image: url("data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20viewBox=%220%200%20280%20560%22%3E%3Cg%20transform=%22translate(280%200)%20scale(-1%201)%22%3E%3Cdefs%3E%3ClinearGradient%20id=%22fp%22%20x1=%220%22%20y1=%221%22%20x2=%220%22%20y2=%220%22%3E%3Cstop%20offset=%220%22%20stop-color=%22%23f8a5c2%22/%3E%3Cstop%20offset=%220.6%22%20stop-color=%22%23fcd3e1%22/%3E%3Cstop%20offset=%221%22%20stop-color=%22%23fff5f8%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath%20d=%22M286%20-4%20C250%2030%20236%2080%20222%20130%20C206%20186%20214%20240%20196%20296%20C180%20346%20150%20384%20132%20440%22%20fill=%22none%22%20stroke=%22%236d4335%22%20stroke-width=%226%22%20stroke-linecap=%22round%22/%3E%3Cpath%20d=%22M226%20118%20C196%20100%20168%20104%20140%20122%22%20fill=%22none%22%20stroke=%22%236d4335%22%20stroke-width=%223.5%22%20stroke-linecap=%22round%22/%3E%3Cpath%20d=%22M206%20270%20C232%20300%20246%20336%20250%20380%22%20fill=%22none%22%20stroke=%22%236d4335%22%20stroke-width=%223.5%22%20stroke-linecap=%22round%22/%3E%3Cpath%20d=%22M168%20360%20C140%20364%20116%20378%2096%20400%22%20fill=%22none%22%20stroke=%22%236d4335%22%20stroke-width=%223%22%20stroke-linecap=%22round%22/%3E%3Cg%20transform=%22translate(250.0%2040.0)%20scale(1.45)%22%20opacity=%220.97%22%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(190.0)%20translate(-10%20-24)%22/%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(262.0)%20translate(-10%20-24)%22/%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(334.0)%20translate(-10%20-24)%22/%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(406.0)%20translate(-10%20-24)%22/%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(478.0)%20translate(-10%20-24)%22/%3E%3Ccircle%20r=%222.6%22%20fill=%22%23f06292%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%225.91%22%20y2=%221.04%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%226.50%22%20cy=%221.15%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%223.44%22%20y2=%224.91%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%223.79%22%20cy=%225.41%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%22-1.04%22%20y2=%225.91%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%22-1.15%22%20cy=%226.50%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%22-4.91%22%20y2=%223.44%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%22-5.41%22%20cy=%223.79%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%22-5.91%22%20y2=%22-1.04%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%22-6.50%22%20cy=%22-1.15%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%22-3.44%22%20y2=%22-4.91%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%22-3.79%22%20cy=%22-5.41%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%221.04%22%20y2=%22-5.91%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%221.15%22%20cy=%22-6.50%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%224.91%22%20y2=%22-3.44%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%225.41%22%20cy=%22-3.79%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3C/g%3E%3Cg%20transform=%22translate(214.0%2082.0)%20scale(1.20)%22%20opacity=%220.95%22%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(220.0)%20translate(-10%20-24)%22/%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(292.0)%20translate(-10%20-24)%22/%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(364.0)%20translate(-10%20-24)%22/%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(436.0)%20translate(-10%20-24)%22/%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(508.0)%20translate(-10%20-24)%22/%3E%3Ccircle%20r=%222.6%22%20fill=%22%23f06292%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%224.60%22%20y2=%223.86%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%225.06%22%20cy=%224.24%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%220.52%22%20y2=%225.98%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%220.58%22%20cy=%226.57%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%22-3.86%22%20y2=%224.60%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%22-4.24%22%20cy=%225.06%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%22-5.98%22%20y2=%220.52%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%22-6.57%22%20cy=%220.58%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%22-4.60%22%20y2=%22-3.86%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%22-5.06%22%20cy=%22-4.24%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%22-0.52%22%20y2=%22-5.98%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%22-0.58%22%20cy=%22-6.57%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%223.86%22%20y2=%22-4.60%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%224.24%22%20cy=%22-5.06%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%225.98%22%20y2=%22-0.52%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%226.57%22%20cy=%22-0.58%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3C/g%3E%3Cg%20transform=%22translate(146.0%20118.0)%20scale(1.30)%22%20opacity=%220.96%22%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(205.0)%20translate(-10%20-24)%22/%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(277.0)%20translate(-10%20-24)%22/%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(349.0)%20translate(-10%20-24)%22/%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(421.0)%20translate(-10%20-24)%22/%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(493.0)%20translate(-10%20-24)%22/%3E%3Ccircle%20r=%222.6%22%20fill=%22%23f06292%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%225.44%22%20y2=%222.54%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%225.98%22%20cy=%222.79%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%222.05%22%20y2=%225.64%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%222.26%22%20cy=%226.20%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%22-2.54%22%20y2=%225.44%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%22-2.79%22%20cy=%225.98%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%22-5.64%22%20y2=%222.05%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%22-6.20%22%20cy=%222.26%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%22-5.44%22%20y2=%22-2.54%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%22-5.98%22%20cy=%22-2.79%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%22-2.05%22%20y2=%22-5.64%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%22-2.26%22%20cy=%22-6.20%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%222.54%22%20y2=%22-5.44%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%222.79%22%20cy=%22-5.98%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%225.64%22%20y2=%22-2.05%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%226.20%22%20cy=%22-2.26%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3C/g%3E%3Cg%20transform=%22translate(232.0%20172.0)%20scale(1.40)%22%20opacity=%220.97%22%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(235.0)%20translate(-10%20-24)%22/%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(307.0)%20translate(-10%20-24)%22/%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(379.0)%20translate(-10%20-24)%22/%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(451.0)%20translate(-10%20-24)%22/%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(523.0)%20translate(-10%20-24)%22/%3E%3Ccircle%20r=%222.6%22%20fill=%22%23f06292%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%223.44%22%20y2=%224.91%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%223.79%22%20cy=%225.41%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%22-1.04%22%20y2=%225.91%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%22-1.15%22%20cy=%226.50%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%22-4.91%22%20y2=%223.44%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%22-5.41%22%20cy=%223.79%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%22-5.91%22%20y2=%22-1.04%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%22-6.50%22%20cy=%22-1.15%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%22-3.44%22%20y2=%22-4.91%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%22-3.79%22%20cy=%22-5.41%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%221.04%22%20y2=%22-5.91%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%221.15%22%20cy=%22-6.50%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%224.91%22%20y2=%22-3.44%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%225.41%22%20cy=%22-3.79%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%225.91%22%20y2=%221.04%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%226.50%22%20cy=%221.15%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3C/g%3E%3Cg%20transform=%22translate(196.0%20226.0)%20scale(1.15)%22%20opacity=%220.94%22%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(185.0)%20translate(-10%20-24)%22/%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(257.0)%20translate(-10%20-24)%22/%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(329.0)%20translate(-10%20-24)%22/%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(401.0)%20translate(-10%20-24)%22/%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(473.0)%20translate(-10%20-24)%22/%3E%3Ccircle%20r=%222.6%22%20fill=%22%23f06292%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%225.98%22%20y2=%220.52%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%226.57%22%20cy=%220.58%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%223.86%22%20y2=%224.60%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%224.24%22%20cy=%225.06%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%22-0.52%22%20y2=%225.98%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%22-0.58%22%20cy=%226.57%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%22-4.60%22%20y2=%223.86%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%22-5.06%22%20cy=%224.24%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%22-5.98%22%20y2=%22-0.52%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%22-6.57%22%20cy=%22-0.58%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%22-3.86%22%20y2=%22-4.60%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%22-4.24%22%20cy=%22-5.06%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%220.52%22%20y2=%22-5.98%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%220.58%22%20cy=%22-6.57%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%224.60%22%20y2=%22-3.86%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%225.06%22%20cy=%22-4.24%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3C/g%3E%3Cg%20transform=%22translate(250.0%20384.0)%20scale(1.30)%22%20opacity=%220.95%22%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(210.0)%20translate(-10%20-24)%22/%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(282.0)%20translate(-10%20-24)%22/%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(354.0)%20translate(-10%20-24)%22/%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(426.0)%20translate(-10%20-24)%22/%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(498.0)%20translate(-10%20-24)%22/%3E%3Ccircle%20r=%222.6%22%20fill=%22%23f06292%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%225.20%22%20y2=%223.00%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%225.72%22%20cy=%223.30%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%221.55%22%20y2=%225.80%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%221.71%22%20cy=%226.38%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%22-3.00%22%20y2=%225.20%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%22-3.30%22%20cy=%225.72%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%22-5.80%22%20y2=%221.55%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%22-6.38%22%20cy=%221.71%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%22-5.20%22%20y2=%22-3.00%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%22-5.72%22%20cy=%22-3.30%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%22-1.55%22%20y2=%22-5.80%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%22-1.71%22%20cy=%22-6.38%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%223.00%22%20y2=%22-5.20%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%223.30%22%20cy=%22-5.72%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%225.80%22%20y2=%22-1.55%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%226.38%22%20cy=%22-1.71%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3C/g%3E%3Cg%20transform=%22translate(226.0%20312.0)%20scale(1.10)%22%20opacity=%220.93%22%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(240.0)%20translate(-10%20-24)%22/%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(312.0)%20translate(-10%20-24)%22/%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(384.0)%20translate(-10%20-24)%22/%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(456.0)%20translate(-10%20-24)%22/%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(528.0)%20translate(-10%20-24)%22/%3E%3Ccircle%20r=%222.6%22%20fill=%22%23f06292%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%223.00%22%20y2=%225.20%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%223.30%22%20cy=%225.72%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%22-1.55%22%20y2=%225.80%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%22-1.71%22%20cy=%226.38%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%22-5.20%22%20y2=%223.00%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%22-5.72%22%20cy=%223.30%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%22-5.80%22%20y2=%22-1.55%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%22-6.38%22%20cy=%22-1.71%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%22-3.00%22%20y2=%22-5.20%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%22-3.30%22%20cy=%22-5.72%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%221.55%22%20y2=%22-5.80%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%221.71%22%20cy=%22-6.38%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%225.20%22%20y2=%22-3.00%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%225.72%22%20cy=%22-3.30%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%225.80%22%20y2=%221.55%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%226.38%22%20cy=%221.71%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3C/g%3E%3Cg%20transform=%22translate(176.0%20336.0)%20scale(1.35)%22%20opacity=%220.96%22%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(195.0)%20translate(-10%20-24)%22/%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(267.0)%20translate(-10%20-24)%22/%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(339.0)%20translate(-10%20-24)%22/%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(411.0)%20translate(-10%20-24)%22/%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(483.0)%20translate(-10%20-24)%22/%3E%3Ccircle%20r=%222.6%22%20fill=%22%23f06292%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%225.80%22%20y2=%221.55%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%226.38%22%20cy=%221.71%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%223.00%22%20y2=%225.20%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%223.30%22%20cy=%225.72%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%22-1.55%22%20y2=%225.80%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%22-1.71%22%20cy=%226.38%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%22-5.20%22%20y2=%223.00%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%22-5.72%22%20cy=%223.30%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%22-5.80%22%20y2=%22-1.55%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%22-6.38%22%20cy=%22-1.71%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%22-3.00%22%20y2=%22-5.20%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%22-3.30%22%20cy=%22-5.72%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%221.55%22%20y2=%22-5.80%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%221.71%22%20cy=%22-6.38%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%225.20%22%20y2=%22-3.00%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%225.72%22%20cy=%22-3.30%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3C/g%3E%3Cg%20transform=%22translate(100.0%20400.0)%20scale(1.20)%22%20opacity=%220.94%22%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(225.0)%20translate(-10%20-24)%22/%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(297.0)%20translate(-10%20-24)%22/%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(369.0)%20translate(-10%20-24)%22/%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(441.0)%20translate(-10%20-24)%22/%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(513.0)%20translate(-10%20-24)%22/%3E%3Ccircle%20r=%222.6%22%20fill=%22%23f06292%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%224.24%22%20y2=%224.24%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%224.67%22%20cy=%224.67%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%220.00%22%20y2=%226.00%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%220.00%22%20cy=%226.60%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%22-4.24%22%20y2=%224.24%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%22-4.67%22%20cy=%224.67%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%22-6.00%22%20y2=%220.00%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%22-6.60%22%20cy=%220.00%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%22-4.24%22%20y2=%22-4.24%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%22-4.67%22%20cy=%22-4.67%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%22-0.00%22%20y2=%22-6.00%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%22-0.00%22%20cy=%22-6.60%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%224.24%22%20y2=%22-4.24%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%224.67%22%20cy=%22-4.67%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%226.00%22%20y2=%22-0.00%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%226.60%22%20cy=%22-0.00%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3C/g%3E%3Cg%20transform=%22translate(136.0%20446.0)%20scale(1.30)%22%20opacity=%220.95%22%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(200.0)%20translate(-10%20-24)%22/%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(272.0)%20translate(-10%20-24)%22/%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(344.0)%20translate(-10%20-24)%22/%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(416.0)%20translate(-10%20-24)%22/%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23fp)%22%20transform=%22rotate(488.0)%20translate(-10%20-24)%22/%3E%3Ccircle%20r=%222.6%22%20fill=%22%23f06292%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%225.64%22%20y2=%222.05%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%226.20%22%20cy=%222.26%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%222.54%22%20y2=%225.44%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%222.79%22%20cy=%225.98%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%22-2.05%22%20y2=%225.64%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%22-2.26%22%20cy=%226.20%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%22-5.44%22%20y2=%222.54%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%22-5.98%22%20cy=%222.79%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%22-5.64%22%20y2=%22-2.05%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%22-6.20%22%20cy=%22-2.26%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%22-2.54%22%20y2=%22-5.44%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%22-2.79%22%20cy=%22-5.98%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%222.05%22%20y2=%22-5.64%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%222.26%22%20cy=%22-6.20%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3Cline%20x1=%220%22%20y1=%220%22%20x2=%225.44%22%20y2=%22-2.54%22%20stroke=%22%23e57399%22%20stroke-width=%220.7%22/%3E%3Ccircle%20cx=%225.98%22%20cy=%22-2.79%22%20r=%220.9%22%20fill=%22%23f9d56e%22/%3E%3C/g%3E%3Cg%20transform=%22translate(186.0%20106.0)%20rotate(60.0)%22%3E%3Cellipse%20rx=%223.4%22%20ry=%225.6%22%20fill=%22%23f06292%22/%3E%3Cpath%20d=%22M-3%203%20Q0%209%203%203%22%20fill=%22%238bb174%22/%3E%3C/g%3E%3Cg%20transform=%22translate(244.0%20130.0)%20rotate(-20.0)%22%3E%3Cellipse%20rx=%223.4%22%20ry=%225.6%22%20fill=%22%23f06292%22/%3E%3Cpath%20d=%22M-3%203%20Q0%209%203%203%22%20fill=%22%238bb174%22/%3E%3C/g%3E%3Cg%20transform=%22translate(212.0%20268.0)%20rotate(30.0)%22%3E%3Cellipse%20rx=%223.4%22%20ry=%225.6%22%20fill=%22%23f06292%22/%3E%3Cpath%20d=%22M-3%203%20Q0%209%203%203%22%20fill=%22%238bb174%22/%3E%3C/g%3E%3Cg%20transform=%22translate(150.0%20380.0)%20rotate(-40.0)%22%3E%3Cellipse%20rx=%223.4%22%20ry=%225.6%22%20fill=%22%23f06292%22/%3E%3Cpath%20d=%22M-3%203%20Q0%209%203%203%22%20fill=%22%238bb174%22/%3E%3C/g%3E%3Cg%20transform=%22translate(120.0%20476.0)%20rotate(10.0)%22%3E%3Cellipse%20rx=%223.4%22%20ry=%225.6%22%20fill=%22%23f06292%22/%3E%3Cpath%20d=%22M-3%203%20Q0%209%203%203%22%20fill=%22%238bb174%22/%3E%3C/g%3E%3C/g%3E%3C/svg%3E"); background-position: top left; }
+@media (max-width: 720px) {
+  :root[data-theme="sakura"] .theme-decoration::before, :root[data-theme^="yozakura"] .theme-decoration::before { top: 58px; right: -24px; width: 150px; height: 300px; }
+  :root[data-theme="sakura"] .theme-decoration::after, :root[data-theme^="yozakura"] .theme-decoration::after { top: 110px; left: -26px; width: 120px; height: 240px; }
+}
+:root[data-theme="sakura"] .theme-decoration, :root[data-theme^="yozakura"] .theme-decoration { display: block; position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 0; }
+:root[data-theme="sakura"] .theme-decoration span, :root[data-theme^="yozakura"] .theme-decoration span {
+  position: absolute; top: -30px; width: 16px; height: 19px; opacity: .9;
+  background: url("data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20viewBox=%220%200%2020%2024%22%3E%3Cdefs%3E%3ClinearGradient%20id=%22g%22%20x1=%220%22%20y1=%221%22%20x2=%220%22%20y2=%220%22%3E%3Cstop%20offset=%220%22%20stop-color=%22%23f48fb1%22/%3E%3Cstop%20offset=%220.55%22%20stop-color=%22%23f8bbd0%22/%3E%3Cstop%20offset=%221%22%20stop-color=%22%23fff0f5%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath%20d=%22M10%2024%20C3.5%2018.5%200.5%2012.5%201.8%206.8%20C2.8%202.4%206.2%200.6%208.3%202.6%20L10%205.2%20L11.7%202.6%20C13.8%200.6%2017.2%202.4%2018.2%206.8%20C19.5%2012.5%2016.5%2018.5%2010%2024%20Z%22%20fill=%22url(%23g)%22/%3E%3C/svg%3E") no-repeat center / contain;
+  animation: sakura-fall 16s linear infinite, sakura-flutter 3.2s ease-in-out infinite;
+}
+:root[data-theme="sakura"] .theme-decoration span:nth-child(1), :root[data-theme^="yozakura"] .theme-decoration span:nth-child(1) { left: 6%; animation-delay: 0s, 0s; }
+:root[data-theme="sakura"] .theme-decoration span:nth-child(2), :root[data-theme^="yozakura"] .theme-decoration span:nth-child(2) { left: 14%; animation-delay: -6s, -1s; animation-duration: 19s, 2.8s; width: 11px; height: 13px; }
+:root[data-theme="sakura"] .theme-decoration span:nth-child(3), :root[data-theme^="yozakura"] .theme-decoration span:nth-child(3) { left: 24%; animation-delay: -11s, -2s; animation-duration: 15s, 3.6s; }
+:root[data-theme="sakura"] .theme-decoration span:nth-child(4), :root[data-theme^="yozakura"] .theme-decoration span:nth-child(4) { left: 74%; animation-delay: -3s, -.5s; animation-duration: 18s, 3s; width: 12px; height: 15px; }
+:root[data-theme="sakura"] .theme-decoration span:nth-child(5), :root[data-theme^="yozakura"] .theme-decoration span:nth-child(5) { left: 82%; animation-delay: -9s, -1.5s; animation-duration: 17s, 3.4s; width: 16px; height: 19px; }
+:root[data-theme="sakura"] .theme-decoration span:nth-child(6), :root[data-theme^="yozakura"] .theme-decoration span:nth-child(6) { left: 90%; animation-delay: -13s, -2.4s; animation-duration: 21s, 2.6s; }
+:root[data-theme="sakura"] .theme-decoration span:nth-child(7), :root[data-theme^="yozakura"] .theme-decoration span:nth-child(7) { left: 64%; animation-delay: -15s, -.8s; animation-duration: 23s, 3.8s; opacity: .7; width: 10px; height: 12px; }
+:root[data-theme="sakura"] .theme-decoration span:nth-child(8), :root[data-theme^="yozakura"] .theme-decoration span:nth-child(8) { left: 96%; animation-delay: -4s, -3s; animation-duration: 20s, 3.1s; opacity: .8; }
+/* 夜桜: 夜空の紺のグラデーション（面は紫寄りの黒のまま）、左上に満月（淡い光の輪）、小さな星。枝と花びらはさくらと同じ絵（夜空に浮かぶ） */
+:root[data-theme^="yozakura"] body {
+  background:
+    radial-gradient(circle at 10% 96px, #fffbe8 0, #fff6d6 30px, #f5e7bf 33px, rgba(255, 240, 200, .32) 35px, rgba(255, 236, 196, .10) 68px, rgba(255, 236, 196, 0) 120px),
+    radial-gradient(1.4px 1.4px at 22% 46px, #fff 50%, transparent 51%),
+    radial-gradient(1.2px 1.2px at 34% 150px, #fdeaff 50%, transparent 51%),
+    radial-gradient(1.6px 1.6px at 58% 70px, #fff 50%, transparent 51%),
+    radial-gradient(1.2px 1.2px at 71% 190px, #ffe9f2 50%, transparent 51%),
+    radial-gradient(1.4px 1.4px at 6% 260px, #fff 50%, transparent 51%),
+    radial-gradient(1.2px 1.2px at 46% 240px, #fff 50%, transparent 51%),
+    linear-gradient(180deg, #081028 0, #14214a 360px, #0e1733 100%);
+  background-attachment: fixed; background-color: #0e1733;
+}
+:root[data-theme^="yozakura"] .app-header { background: rgba(10, 16, 38, .9); border-bottom: none; box-shadow: 0 3px 0 0 #6b3a5c, 0 4px 0 0 #f48fb1; }
+:root[data-theme^="yozakura"] .app-title { color: #ffd1e1; }
+:root[data-theme^="yozakura"] .card { border-color: #3a2f4a; box-shadow: 0 1px 4px rgba(0, 0, 0, .45); }
+:root[data-theme^="yozakura"] .theme-decoration::before, :root[data-theme^="yozakura"] .theme-decoration::after { opacity: .78; }
+:root[data-theme^="yozakura"] .theme-decoration span { opacity: .75; }
+/* 夜桜2: 桜をソメイヨシノの色に（彩度を下げて明るく、ほんのり光らせる。花の中心の紅は残る） */
+:root[data-theme="yozakura2"] .theme-decoration::before, :root[data-theme="yozakura2"] .theme-decoration::after { opacity: 1; filter: saturate(.45) brightness(1.18) drop-shadow(0 0 5px rgba(255, 236, 244, .45)); }
+:root[data-theme="yozakura2"] .theme-decoration span { opacity: .95; filter: saturate(.45) brightness(1.2); }
+@media (max-width: 720px) {
+  :root[data-theme^="yozakura"] body {
+    background:
+      radial-gradient(1.2px 1.2px at 40% 40px, #fff 50%, transparent 51%),
+      radial-gradient(1.2px 1.2px at 64% 130px, #fff 50%, transparent 51%),
+      radial-gradient(1.2px 1.2px at 22% 210px, #ffe9f2 50%, transparent 51%),
+      linear-gradient(180deg, #081028 0, #14214a 300px, #0e1733 100%);
+    background-attachment: fixed; background-color: #0e1733;
+  }
+  /* スマートフォンでは本文が幅いっぱいで空に月が隠れるので、ヘッダーの中に小さな月を浮かべる */
+  :root[data-theme^="yozakura"] .app-header {
+    background: radial-gradient(circle at 62% 50%, #fffbe8 0, #fff6d6 11px, #f5e7bf 12px, rgba(255, 240, 200, .28) 14px, rgba(255, 236, 196, 0) 36px), rgba(10, 16, 38, .9);
+  }
+}
+@keyframes sakura-fall {
+  0%   { top: -30px; margin-left: 0; }
+  25%  { margin-left: 40px; }
+  50%  { margin-left: -10px; }
+  75%  { margin-left: 30px; }
+  100% { top: 105vh; margin-left: -20px; }
+}
+@keyframes sakura-flutter {
+  0%   { transform: rotate(-20deg) rotateX(0deg); }
+  50%  { transform: rotate(25deg) rotateX(65deg); }
+  100% { transform: rotate(-20deg) rotateX(0deg); }
+}
+/* 若葉: 上から淡い若草色が薄れていく背景に、左上から木漏れ日が差す。ヘッダーの下に若草色の線。右上と左に若葉の枝（葉の濃淡・葉脈・新芽。CSS の中の SVG）、小さな若葉がゆっくり舞い落ちる */
+:root[data-theme^="wakaba"] body { background: linear-gradient(180deg, #e4f4d8 0, #f3faee 380px, #fbfdf9 100%) fixed; background-color: #fbfdf9; }
+:root[data-theme^="wakaba"] .app-header {
+  background: rgba(255, 255, 255, .92); border-bottom: none;
+  box-shadow: 0 3px 0 0 #b9e39a, 0 4px 0 0 #5cae5a;
+}
+:root[data-theme^="wakaba"] .app-title { color: #2d6a30; }
+:root[data-theme^="wakaba"] .card { border-color: #d6e9d2; box-shadow: 0 1px 3px rgba(46, 125, 50, .07); }
+:root[data-theme^="wakaba"] .theme-decoration {
+  display: block; position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 0;
+  /* 木漏れ日: 左上の柔らかい光、斜めの淡い光の筋、小さな光の粒 */
+  background:
+    radial-gradient(circle at 30% 120px, rgba(255, 255, 230, .7) 0 5px, rgba(255, 255, 230, 0) 9px),
+    radial-gradient(circle at 18% 210px, rgba(255, 255, 230, .6) 0 4px, rgba(255, 255, 230, 0) 8px),
+    radial-gradient(circle at 76% 150px, rgba(255, 255, 230, .55) 0 4px, rgba(255, 255, 230, 0) 8px),
+    radial-gradient(circle at 64% 90px, rgba(255, 255, 230, .5) 0 3px, rgba(255, 255, 230, 0) 7px),
+    linear-gradient(118deg, rgba(255, 253, 225, 0) 8%, rgba(255, 253, 225, .55) 14%, rgba(255, 253, 225, 0) 20%, rgba(255, 253, 225, 0) 26%, rgba(255, 253, 225, .4) 31%, rgba(255, 253, 225, 0) 37%) 0 0 / 100% 520px no-repeat,
+    radial-gradient(ellipse 55% 42% at 0 0, rgba(255, 251, 214, .85), rgba(255, 251, 214, 0) 70%);
+}
+/* 若葉の枝（右上と左。左は右の絵を左右に返す。固定の飾りの層なので、スクロールしても途切れない） */
+:root[data-theme^="wakaba"] .theme-decoration::before, :root[data-theme^="wakaba"] .theme-decoration::after { content: ""; position: absolute; background-repeat: no-repeat; background-size: contain; background-image: url("data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20viewBox=%220%200%20280%20560%22%3E%3Cdefs%3E%3ClinearGradient%20id=%22g1%22%20x1=%220%22%20y1=%220%22%20x2=%221%22%20y2=%220%22%3E%3Cstop%20offset=%220%22%20stop-color=%22%235fae46%22/%3E%3Cstop%20offset=%22.6%22%20stop-color=%22%2394d064%22/%3E%3Cstop%20offset=%221%22%20stop-color=%22%23c7ec8e%22/%3E%3C/linearGradient%3E%3ClinearGradient%20id=%22g2%22%20x1=%220%22%20y1=%220%22%20x2=%221%22%20y2=%220%22%3E%3Cstop%20offset=%220%22%20stop-color=%22%234b9c3c%22/%3E%3Cstop%20offset=%22.6%22%20stop-color=%22%237cc356%22/%3E%3Cstop%20offset=%221%22%20stop-color=%22%23b3e27c%22/%3E%3C/linearGradient%3E%3ClinearGradient%20id=%22g3%22%20x1=%220%22%20y1=%220%22%20x2=%221%22%20y2=%220%22%3E%3Cstop%20offset=%220%22%20stop-color=%22%2386c95a%22/%3E%3Cstop%20offset=%22.6%22%20stop-color=%22%23b9e682%22/%3E%3Cstop%20offset=%221%22%20stop-color=%22%23e2f7b4%22/%3E%3C/linearGradient%3E%3ClinearGradient%20id=%22gb%22%20x1=%220%22%20y1=%220%22%20x2=%221%22%20y2=%220%22%3E%3Cstop%20offset=%220%22%20stop-color=%22%23a9dc72%22/%3E%3Cstop%20offset=%221%22%20stop-color=%22%23eefac8%22/%3E%3C/linearGradient%3E%3ClinearGradient%20id=%22st%22%20x1=%220%22%20y1=%220%22%20x2=%220%22%20y2=%221%22%3E%3Cstop%20offset=%220%22%20stop-color=%22%236b5a3a%22/%3E%3Cstop%20offset=%22.5%22%20stop-color=%22%237c8a45%22/%3E%3Cstop%20offset=%221%22%20stop-color=%22%238fb257%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath%20d=%22M292%20-8%20C232%2070%20226%20200%20196%20300%22%20fill=%22none%22%20stroke=%22url(%23st)%22%20stroke-width=%225%22%20stroke-linecap=%22round%22/%3E%3Cpath%20d=%22M196%20300%20C172%20380%20150%20430%20132%20520%22%20fill=%22none%22%20stroke=%22url(%23st)%22%20stroke-width=%223.4%22%20stroke-linecap=%22round%22/%3E%3Cpath%20d=%22M228%20118%20C200%20126%20180%20146%20170%20176%22%20fill=%22none%22%20stroke=%22%237f9a4c%22%20stroke-width=%222.2%22%20stroke-linecap=%22round%22/%3E%3Cpath%20d=%22M206%20270%20C238%20288%20250%20316%20252%20346%22%20fill=%22none%22%20stroke=%22%237f9a4c%22%20stroke-width=%222.2%22%20stroke-linecap=%22round%22/%3E%3Cpath%20d=%22M168%20396%20C140%20402%20120%20420%20110%20446%22%20fill=%22none%22%20stroke=%22%237f9a4c%22%20stroke-width=%222.2%22%20stroke-linecap=%22round%22/%3E%3Cg%20transform=%22translate(275.5%2016.9)%20rotate(171.7)%20scale(1.34)%22%3E%3Cpath%20d=%22M0%200%20C7%20-10%2022%20-13%2035%20-7%20C41%20-4%2045%20-1%2048%200%20C42%202%2036%205%2029%207%20C17%2010%206%207%200%200%20Z%22%20fill=%22url(%23g2)%22/%3E%3Cpath%20d=%22M0%200%20C6%207%2017%2010%2029%207%20C36%205%2042%202%2048%200%20C34%201%2016%202%200%200%20Z%22%20fill=%22%232f7d32%22%20fill-opacity=%22.22%22/%3E%3Cpath%20d=%22M1%200%20C14%20-1%2030%20-1%2046%200%22%20fill=%22none%22%20stroke=%22%23f4ffe0%22%20stroke-opacity=%22.85%22%20stroke-width=%221.1%22%20stroke-linecap=%22round%22/%3E%3Cpath%20d=%22M12%20-0.6%20L19%20-6%20M22%20-0.8%20L29%20-6.5%20M32%20-0.6%20L38%20-4.5%22%20fill=%22none%22%20stroke=%22%23f4ffe0%22%20stroke-opacity=%22.45%22%20stroke-width=%22.7%22%20stroke-linecap=%22round%22/%3E%3C/g%3E%3Cg%20transform=%22translate(256.9%2056.5)%20rotate(59.4)%20scale(1.48)%22%3E%3Cpath%20d=%22M0%200%20C7%20-10%2022%20-13%2035%20-7%20C41%20-4%2045%20-1%2048%200%20C42%202%2036%205%2029%207%20C17%2010%206%207%200%200%20Z%22%20fill=%22url(%23g2)%22/%3E%3Cpath%20d=%22M0%200%20C6%207%2017%2010%2029%207%20C36%205%2042%202%2048%200%20C34%201%2016%202%200%200%20Z%22%20fill=%22%232f7d32%22%20fill-opacity=%22.22%22/%3E%3Cpath%20d=%22M1%200%20C14%20-1%2030%20-1%2046%200%22%20fill=%22none%22%20stroke=%22%23f4ffe0%22%20stroke-opacity=%22.85%22%20stroke-width=%221.1%22%20stroke-linecap=%22round%22/%3E%3Cpath%20d=%22M12%20-0.6%20L19%20-6%20M22%20-0.8%20L29%20-6.5%20M32%20-0.6%20L38%20-4.5%22%20fill=%22none%22%20stroke=%22%23f4ffe0%22%20stroke-opacity=%22.45%22%20stroke-width=%22.7%22%20stroke-linecap=%22round%22/%3E%3C/g%3E%3Cg%20transform=%22translate(242.4%20100.0)%20rotate(157.9)%20scale(1.44)%22%3E%3Cpath%20d=%22M0%200%20C7%20-10%2022%20-13%2035%20-7%20C41%20-4%2045%20-1%2048%200%20C42%202%2036%205%2029%207%20C17%2010%206%207%200%200%20Z%22%20fill=%22url(%23g2)%22/%3E%3Cpath%20d=%22M0%200%20C6%207%2017%2010%2029%207%20C36%205%2042%202%2048%200%20C34%201%2016%202%200%200%20Z%22%20fill=%22%232f7d32%22%20fill-opacity=%22.22%22/%3E%3Cpath%20d=%22M1%200%20C14%20-1%2030%20-1%2046%200%22%20fill=%22none%22%20stroke=%22%23f4ffe0%22%20stroke-opacity=%22.85%22%20stroke-width=%221.1%22%20stroke-linecap=%22round%22/%3E%3Cpath%20d=%22M12%20-0.6%20L19%20-6%20M22%20-0.8%20L29%20-6.5%20M32%20-0.6%20L38%20-4.5%22%20fill=%22none%22%20stroke=%22%23f4ffe0%22%20stroke-opacity=%22.45%22%20stroke-width=%22.7%22%20stroke-linecap=%22round%22/%3E%3C/g%3E%3Cg%20transform=%22translate(230.9%20146.0)%20rotate(50.7)%20scale(1.24)%22%3E%3Cpath%20d=%22M0%200%20C7%20-10%2022%20-13%2035%20-7%20C41%20-4%2045%20-1%2048%200%20C42%202%2036%205%2029%207%20C17%2010%206%207%200%200%20Z%22%20fill=%22url(%23g2)%22/%3E%3Cpath%20d=%22M0%200%20C6%207%2017%2010%2029%207%20C36%205%2042%202%2048%200%20C34%201%2016%202%200%200%20Z%22%20fill=%22%232f7d32%22%20fill-opacity=%22.22%22/%3E%3Cpath%20d=%22M1%200%20C14%20-1%2030%20-1%2046%200%22%20fill=%22none%22%20stroke=%22%23f4ffe0%22%20stroke-opacity=%22.85%22%20stroke-width=%221.1%22%20stroke-linecap=%22round%22/%3E%3Cpath%20d=%22M12%20-0.6%20L19%20-6%20M22%20-0.8%20L29%20-6.5%20M32%20-0.6%20L38%20-4.5%22%20fill=%22none%22%20stroke=%22%23f4ffe0%22%20stroke-opacity=%22.45%22%20stroke-width=%22.7%22%20stroke-linecap=%22round%22/%3E%3C/g%3E%3Cg%20transform=%22translate(220.9%20193.0)%20rotate(153.6)%20scale(1.37)%22%3E%3Cpath%20d=%22M0%200%20C7%20-10%2022%20-13%2035%20-7%20C41%20-4%2045%20-1%2048%200%20C42%202%2036%205%2029%207%20C17%2010%206%207%200%200%20Z%22%20fill=%22url(%23g2)%22/%3E%3Cpath%20d=%22M0%200%20C6%207%2017%2010%2029%207%20C36%205%2042%202%2048%200%20C34%201%2016%202%200%200%20Z%22%20fill=%22%232f7d32%22%20fill-opacity=%22.22%22/%3E%3Cpath%20d=%22M1%200%20C14%20-1%2030%20-1%2046%200%22%20fill=%22none%22%20stroke=%22%23f4ffe0%22%20stroke-opacity=%22.85%22%20stroke-width=%221.1%22%20stroke-linecap=%22round%22/%3E%3Cpath%20d=%22M12%20-0.6%20L19%20-6%20M22%20-0.8%20L29%20-6.5%20M32%20-0.6%20L38%20-4.5%22%20fill=%22none%22%20stroke=%22%23f4ffe0%22%20stroke-opacity=%22.45%22%20stroke-width=%22.7%22%20stroke-linecap=%22round%22/%3E%3C/g%3E%3Cg%20transform=%22translate(211.2%20239.8)%20rotate(50.3)%20scale(1.33)%22%3E%3Cpath%20d=%22M0%200%20C7%20-10%2022%20-13%2035%20-7%20C41%20-4%2045%20-1%2048%200%20C42%202%2036%205%2029%207%20C17%2010%206%207%200%200%20Z%22%20fill=%22url(%23g1)%22/%3E%3Cpath%20d=%22M0%200%20C6%207%2017%2010%2029%207%20C36%205%2042%202%2048%200%20C34%201%2016%202%200%200%20Z%22%20fill=%22%232f7d32%22%20fill-opacity=%22.22%22/%3E%3Cpath%20d=%22M1%200%20C14%20-1%2030%20-1%2046%200%22%20fill=%22none%22%20stroke=%22%23f4ffe0%22%20stroke-opacity=%22.85%22%20stroke-width=%221.1%22%20stroke-linecap=%22round%22/%3E%3Cpath%20d=%22M12%20-0.6%20L19%20-6%20M22%20-0.8%20L29%20-6.5%20M32%20-0.6%20L38%20-4.5%22%20fill=%22none%22%20stroke=%22%23f4ffe0%22%20stroke-opacity=%22.45%22%20stroke-width=%22.7%22%20stroke-linecap=%22round%22/%3E%3C/g%3E%3Cg%20transform=%22translate(200.3%20284.8)%20rotate(157.1)%20scale(1.13)%22%3E%3Cpath%20d=%22M0%200%20C7%20-10%2022%20-13%2035%20-7%20C41%20-4%2045%20-1%2048%200%20C42%202%2036%205%2029%207%20C17%2010%206%207%200%200%20Z%22%20fill=%22url(%23g1)%22/%3E%3Cpath%20d=%22M0%200%20C6%207%2017%2010%2029%207%20C36%205%2042%202%2048%200%20C34%201%2016%202%200%200%20Z%22%20fill=%22%232f7d32%22%20fill-opacity=%22.22%22/%3E%3Cpath%20d=%22M1%200%20C14%20-1%2030%20-1%2046%200%22%20fill=%22none%22%20stroke=%22%23f4ffe0%22%20stroke-opacity=%22.85%22%20stroke-width=%221.1%22%20stroke-linecap=%22round%22/%3E%3Cpath%20d=%22M12%20-0.6%20L19%20-6%20M22%20-0.8%20L29%20-6.5%20M32%20-0.6%20L38%20-4.5%22%20fill=%22none%22%20stroke=%22%23f4ffe0%22%20stroke-opacity=%22.45%22%20stroke-width=%22.7%22%20stroke-linecap=%22round%22/%3E%3C/g%3E%3Cg%20transform=%22translate(188.9%20323.2)%20rotate(55.5)%20scale(1.10)%22%3E%3Cpath%20d=%22M0%200%20C7%20-10%2022%20-13%2035%20-7%20C41%20-4%2045%20-1%2048%200%20C42%202%2036%205%2029%207%20C17%2010%206%207%200%200%20Z%22%20fill=%22url(%23g1)%22/%3E%3Cpath%20d=%22M0%200%20C6%207%2017%2010%2029%207%20C36%205%2042%202%2048%200%20C34%201%2016%202%200%200%20Z%22%20fill=%22%232f7d32%22%20fill-opacity=%22.22%22/%3E%3Cpath%20d=%22M1%200%20C14%20-1%2030%20-1%2046%200%22%20fill=%22none%22%20stroke=%22%23f4ffe0%22%20stroke-opacity=%22.85%22%20stroke-width=%221.1%22%20stroke-linecap=%22round%22/%3E%3Cpath%20d=%22M12%20-0.6%20L19%20-6%20M22%20-0.8%20L29%20-6.5%20M32%20-0.6%20L38%20-4.5%22%20fill=%22none%22%20stroke=%22%23f4ffe0%22%20stroke-opacity=%22.45%22%20stroke-width=%22.7%22%20stroke-linecap=%22round%22/%3E%3C/g%3E%3Cg%20transform=%22translate(177.0%20359.6)%20rotate(160.3)%20scale(1.20)%22%3E%3Cpath%20d=%22M0%200%20C7%20-10%2022%20-13%2035%20-7%20C41%20-4%2045%20-1%2048%200%20C42%202%2036%205%2029%207%20C17%2010%206%207%200%200%20Z%22%20fill=%22url(%23g1)%22/%3E%3Cpath%20d=%22M0%200%20C6%207%2017%2010%2029%207%20C36%205%2042%202%2048%200%20C34%201%2016%202%200%200%20Z%22%20fill=%22%232f7d32%22%20fill-opacity=%22.22%22/%3E%3Cpath%20d=%22M1%200%20C14%20-1%2030%20-1%2046%200%22%20fill=%22none%22%20stroke=%22%23f4ffe0%22%20stroke-opacity=%22.85%22%20stroke-width=%221.1%22%20stroke-linecap=%22round%22/%3E%3Cpath%20d=%22M12%20-0.6%20L19%20-6%20M22%20-0.8%20L29%20-6.5%20M32%20-0.6%20L38%20-4.5%22%20fill=%22none%22%20stroke=%22%23f4ffe0%22%20stroke-opacity=%22.45%22%20stroke-width=%22.7%22%20stroke-linecap=%22round%22/%3E%3C/g%3E%3Cg%20transform=%22translate(165.7%20394.1)%20rotate(56.0)%20scale(1.15)%22%3E%3Cpath%20d=%22M0%200%20C7%20-10%2022%20-13%2035%20-7%20C41%20-4%2045%20-1%2048%200%20C42%202%2036%205%2029%207%20C17%2010%206%207%200%200%20Z%22%20fill=%22url(%23g3)%22/%3E%3Cpath%20d=%22M0%200%20C6%207%2017%2010%2029%207%20C36%205%2042%202%2048%200%20C34%201%2016%202%200%200%20Z%22%20fill=%22%232f7d32%22%20fill-opacity=%22.22%22/%3E%3Cpath%20d=%22M1%200%20C14%20-1%2030%20-1%2046%200%22%20fill=%22none%22%20stroke=%22%23f4ffe0%22%20stroke-opacity=%22.85%22%20stroke-width=%221.1%22%20stroke-linecap=%22round%22/%3E%3Cpath%20d=%22M12%20-0.6%20L19%20-6%20M22%20-0.8%20L29%20-6.5%20M32%20-0.6%20L38%20-4.5%22%20fill=%22none%22%20stroke=%22%23f4ffe0%22%20stroke-opacity=%22.45%22%20stroke-width=%22.7%22%20stroke-linecap=%22round%22/%3E%3C/g%3E%3Cg%20transform=%22translate(154.8%20428.8)%20rotate(158.7)%20scale(0.97)%22%3E%3Cpath%20d=%22M0%200%20C7%20-10%2022%20-13%2035%20-7%20C41%20-4%2045%20-1%2048%200%20C42%202%2036%205%2029%207%20C17%2010%206%207%200%200%20Z%22%20fill=%22url(%23g3)%22/%3E%3Cpath%20d=%22M0%200%20C6%207%2017%2010%2029%207%20C36%205%2042%202%2048%200%20C34%201%2016%202%200%200%20Z%22%20fill=%22%232f7d32%22%20fill-opacity=%22.22%22/%3E%3Cpath%20d=%22M1%200%20C14%20-1%2030%20-1%2046%200%22%20fill=%22none%22%20stroke=%22%23f4ffe0%22%20stroke-opacity=%22.85%22%20stroke-width=%221.1%22%20stroke-linecap=%22round%22/%3E%3Cpath%20d=%22M12%20-0.6%20L19%20-6%20M22%20-0.8%20L29%20-6.5%20M32%20-0.6%20L38%20-4.5%22%20fill=%22none%22%20stroke=%22%23f4ffe0%22%20stroke-opacity=%22.45%22%20stroke-width=%22.7%22%20stroke-linecap=%22round%22/%3E%3C/g%3E%3Cg%20transform=%22translate(144.4%20465.7)%20rotate(52.5)%20scale(1.06)%22%3E%3Cpath%20d=%22M0%200%20C7%20-10%2022%20-13%2035%20-7%20C41%20-4%2045%20-1%2048%200%20C42%202%2036%205%2029%207%20C17%2010%206%207%200%200%20Z%22%20fill=%22url(%23g3)%22/%3E%3Cpath%20d=%22M0%200%20C6%207%2017%2010%2029%207%20C36%205%2042%202%2048%200%20C34%201%2016%202%200%200%20Z%22%20fill=%22%232f7d32%22%20fill-opacity=%22.22%22/%3E%3Cpath%20d=%22M1%200%20C14%20-1%2030%20-1%2046%200%22%20fill=%22none%22%20stroke=%22%23f4ffe0%22%20stroke-opacity=%22.85%22%20stroke-width=%221.1%22%20stroke-linecap=%22round%22/%3E%3Cpath%20d=%22M12%20-0.6%20L19%20-6%20M22%20-0.8%20L29%20-6.5%20M32%20-0.6%20L38%20-4.5%22%20fill=%22none%22%20stroke=%22%23f4ffe0%22%20stroke-opacity=%22.45%22%20stroke-width=%22.7%22%20stroke-linecap=%22round%22/%3E%3C/g%3E%3Cg%20transform=%22translate(134.7%20506.8)%20rotate(154.0)%20scale(1.01)%22%3E%3Cpath%20d=%22M0%200%20C7%20-10%2022%20-13%2035%20-7%20C41%20-4%2045%20-1%2048%200%20C42%202%2036%205%2029%207%20C17%2010%206%207%200%200%20Z%22%20fill=%22url(%23g3)%22/%3E%3Cpath%20d=%22M0%200%20C6%207%2017%2010%2029%207%20C36%205%2042%202%2048%200%20C34%201%2016%202%200%200%20Z%22%20fill=%22%232f7d32%22%20fill-opacity=%22.22%22/%3E%3Cpath%20d=%22M1%200%20C14%20-1%2030%20-1%2046%200%22%20fill=%22none%22%20stroke=%22%23f4ffe0%22%20stroke-opacity=%22.85%22%20stroke-width=%221.1%22%20stroke-linecap=%22round%22/%3E%3Cpath%20d=%22M12%20-0.6%20L19%20-6%20M22%20-0.8%20L29%20-6.5%20M32%20-0.6%20L38%20-4.5%22%20fill=%22none%22%20stroke=%22%23f4ffe0%22%20stroke-opacity=%22.45%22%20stroke-width=%22.7%22%20stroke-linecap=%22round%22/%3E%3C/g%3E%3Cg%20transform=%22translate(201.6%20130.7)%20rotate(191.9)%20scale(1.00)%22%3E%3Cpath%20d=%22M0%200%20C7%20-10%2022%20-13%2035%20-7%20C41%20-4%2045%20-1%2048%200%20C42%202%2036%205%2029%207%20C17%2010%206%207%200%200%20Z%22%20fill=%22url(%23g1)%22/%3E%3Cpath%20d=%22M0%200%20C6%207%2017%2010%2029%207%20C36%205%2042%202%2048%200%20C34%201%2016%202%200%200%20Z%22%20fill=%22%232f7d32%22%20fill-opacity=%22.22%22/%3E%3Cpath%20d=%22M1%200%20C14%20-1%2030%20-1%2046%200%22%20fill=%22none%22%20stroke=%22%23f4ffe0%22%20stroke-opacity=%22.85%22%20stroke-width=%221.1%22%20stroke-linecap=%22round%22/%3E%3Cpath%20d=%22M12%20-0.6%20L19%20-6%20M22%20-0.8%20L29%20-6.5%20M32%20-0.6%20L38%20-4.5%22%20fill=%22none%22%20stroke=%22%23f4ffe0%22%20stroke-opacity=%22.45%22%20stroke-width=%22.7%22%20stroke-linecap=%22round%22/%3E%3C/g%3E%3Cg%20transform=%22translate(181.6%20151.8)%20rotate(75.6)%20scale(1.00)%22%3E%3Cpath%20d=%22M0%200%20C7%20-10%2022%20-13%2035%20-7%20C41%20-4%2045%20-1%2048%200%20C42%202%2036%205%2029%207%20C17%2010%206%207%200%200%20Z%22%20fill=%22url(%23g1)%22/%3E%3Cpath%20d=%22M0%200%20C6%207%2017%2010%2029%207%20C36%205%2042%202%2048%200%20C34%201%2016%202%200%200%20Z%22%20fill=%22%232f7d32%22%20fill-opacity=%22.22%22/%3E%3Cpath%20d=%22M1%200%20C14%20-1%2030%20-1%2046%200%22%20fill=%22none%22%20stroke=%22%23f4ffe0%22%20stroke-opacity=%22.85%22%20stroke-width=%221.1%22%20stroke-linecap=%22round%22/%3E%3Cpath%20d=%22M12%20-0.6%20L19%20-6%20M22%20-0.8%20L29%20-6.5%20M32%20-0.6%20L38%20-4.5%22%20fill=%22none%22%20stroke=%22%23f4ffe0%22%20stroke-opacity=%22.45%22%20stroke-width=%22.7%22%20stroke-linecap=%22round%22/%3E%3C/g%3E%3Cg%20transform=%22translate(170.0%20176.0)%20rotate(156.4)%20scale(0.85)%22%3E%3Cpath%20d=%22M0%200%20C7%20-10%2022%20-13%2035%20-7%20C41%20-4%2045%20-1%2048%200%20C42%202%2036%205%2029%207%20C17%2010%206%207%200%200%20Z%22%20fill=%22url(%23g3)%22/%3E%3Cpath%20d=%22M0%200%20C6%207%2017%2010%2029%207%20C36%205%2042%202%2048%200%20C34%201%2016%202%200%200%20Z%22%20fill=%22%232f7d32%22%20fill-opacity=%22.22%22/%3E%3Cpath%20d=%22M1%200%20C14%20-1%2030%20-1%2046%200%22%20fill=%22none%22%20stroke=%22%23f4ffe0%22%20stroke-opacity=%22.85%22%20stroke-width=%221.1%22%20stroke-linecap=%22round%22/%3E%3Cpath%20d=%22M12%20-0.6%20L19%20-6%20M22%20-0.8%20L29%20-6.5%20M32%20-0.6%20L38%20-4.5%22%20fill=%22none%22%20stroke=%22%23f4ffe0%22%20stroke-opacity=%22.45%22%20stroke-width=%22.7%22%20stroke-linecap=%22round%22/%3E%3C/g%3E%3Cg%20transform=%22translate(232.7%20292.2)%20rotate(99.3)%20scale(1.00)%22%3E%3Cpath%20d=%22M0%200%20C7%20-10%2022%20-13%2035%20-7%20C41%20-4%2045%20-1%2048%200%20C42%202%2036%205%2029%207%20C17%2010%206%207%200%200%20Z%22%20fill=%22url(%23g1)%22/%3E%3Cpath%20d=%22M0%200%20C6%207%2017%2010%2029%207%20C36%205%2042%202%2048%200%20C34%201%2016%202%200%200%20Z%22%20fill=%22%232f7d32%22%20fill-opacity=%22.22%22/%3E%3Cpath%20d=%22M1%200%20C14%20-1%2030%20-1%2046%200%22%20fill=%22none%22%20stroke=%22%23f4ffe0%22%20stroke-opacity=%22.85%22%20stroke-width=%221.1%22%20stroke-linecap=%22round%22/%3E%3Cpath%20d=%22M12%20-0.6%20L19%20-6%20M22%20-0.8%20L29%20-6.5%20M32%20-0.6%20L38%20-4.5%22%20fill=%22none%22%20stroke=%22%23f4ffe0%22%20stroke-opacity=%22.45%22%20stroke-width=%22.7%22%20stroke-linecap=%22round%22/%3E%3C/g%3E%3Cg%20transform=%22translate(247.2%20319.8)%20rotate(24.4)%20scale(1.00)%22%3E%3Cpath%20d=%22M0%200%20C7%20-10%2022%20-13%2035%20-7%20C41%20-4%2045%20-1%2048%200%20C42%202%2036%205%2029%207%20C17%2010%206%207%200%200%20Z%22%20fill=%22url(%23g1)%22/%3E%3Cpath%20d=%22M0%200%20C6%207%2017%2010%2029%207%20C36%205%2042%202%2048%200%20C34%201%2016%202%200%200%20Z%22%20fill=%22%232f7d32%22%20fill-opacity=%22.22%22/%3E%3Cpath%20d=%22M1%200%20C14%20-1%2030%20-1%2046%200%22%20fill=%22none%22%20stroke=%22%23f4ffe0%22%20stroke-opacity=%22.85%22%20stroke-width=%221.1%22%20stroke-linecap=%22round%22/%3E%3Cpath%20d=%22M12%20-0.6%20L19%20-6%20M22%20-0.8%20L29%20-6.5%20M32%20-0.6%20L38%20-4.5%22%20fill=%22none%22%20stroke=%22%23f4ffe0%22%20stroke-opacity=%22.45%22%20stroke-width=%22.7%22%20stroke-linecap=%22round%22/%3E%3C/g%3E%3Cg%20transform=%22translate(252.0%20346.0)%20rotate(134.2)%20scale(0.85)%22%3E%3Cpath%20d=%22M0%200%20C7%20-10%2022%20-13%2035%20-7%20C41%20-4%2045%20-1%2048%200%20C42%202%2036%205%2029%207%20C17%2010%206%207%200%200%20Z%22%20fill=%22url(%23g3)%22/%3E%3Cpath%20d=%22M0%200%20C6%207%2017%2010%2029%207%20C36%205%2042%202%2048%200%20C34%201%2016%202%200%200%20Z%22%20fill=%22%232f7d32%22%20fill-opacity=%22.22%22/%3E%3Cpath%20d=%22M1%200%20C14%20-1%2030%20-1%2046%200%22%20fill=%22none%22%20stroke=%22%23f4ffe0%22%20stroke-opacity=%22.85%22%20stroke-width=%221.1%22%20stroke-linecap=%22round%22/%3E%3Cpath%20d=%22M12%20-0.6%20L19%20-6%20M22%20-0.8%20L29%20-6.5%20M32%20-0.6%20L38%20-4.5%22%20fill=%22none%22%20stroke=%22%23f4ffe0%22%20stroke-opacity=%22.45%22%20stroke-width=%22.7%22%20stroke-linecap=%22round%22/%3E%3C/g%3E%3Cg%20transform=%22translate(141.6%20406.5)%20rotate(195.9)%20scale(1.00)%22%3E%3Cpath%20d=%22M0%200%20C7%20-10%2022%20-13%2035%20-7%20C41%20-4%2045%20-1%2048%200%20C42%202%2036%205%2029%207%20C17%2010%206%207%200%200%20Z%22%20fill=%22url(%23g1)%22/%3E%3Cpath%20d=%22M0%200%20C6%207%2017%2010%2029%207%20C36%205%2042%202%2048%200%20C34%201%2016%202%200%200%20Z%22%20fill=%22%232f7d32%22%20fill-opacity=%22.22%22/%3E%3Cpath%20d=%22M1%200%20C14%20-1%2030%20-1%2046%200%22%20fill=%22none%22%20stroke=%22%23f4ffe0%22%20stroke-opacity=%22.85%22%20stroke-width=%221.1%22%20stroke-linecap=%22round%22/%3E%3Cpath%20d=%22M12%20-0.6%20L19%20-6%20M22%20-0.8%20L29%20-6.5%20M32%20-0.6%20L38%20-4.5%22%20fill=%22none%22%20stroke=%22%23f4ffe0%22%20stroke-opacity=%22.45%22%20stroke-width=%22.7%22%20stroke-linecap=%22round%22/%3E%3C/g%3E%3Cg%20transform=%22translate(121.6%20424.9)%20rotate(79.2)%20scale(1.00)%22%3E%3Cpath%20d=%22M0%200%20C7%20-10%2022%20-13%2035%20-7%20C41%20-4%2045%20-1%2048%200%20C42%202%2036%205%2029%207%20C17%2010%206%207%200%200%20Z%22%20fill=%22url(%23g1)%22/%3E%3Cpath%20d=%22M0%200%20C6%207%2017%2010%2029%207%20C36%205%2042%202%2048%200%20C34%201%2016%202%200%200%20Z%22%20fill=%22%232f7d32%22%20fill-opacity=%22.22%22/%3E%3Cpath%20d=%22M1%200%20C14%20-1%2030%20-1%2046%200%22%20fill=%22none%22%20stroke=%22%23f4ffe0%22%20stroke-opacity=%22.85%22%20stroke-width=%221.1%22%20stroke-linecap=%22round%22/%3E%3Cpath%20d=%22M12%20-0.6%20L19%20-6%20M22%20-0.8%20L29%20-6.5%20M32%20-0.6%20L38%20-4.5%22%20fill=%22none%22%20stroke=%22%23f4ffe0%22%20stroke-opacity=%22.45%22%20stroke-width=%22.7%22%20stroke-linecap=%22round%22/%3E%3C/g%3E%3Cg%20transform=%22translate(110.0%20446.0)%20rotate(159.0)%20scale(0.85)%22%3E%3Cpath%20d=%22M0%200%20C7%20-10%2022%20-13%2035%20-7%20C41%20-4%2045%20-1%2048%200%20C42%202%2036%205%2029%207%20C17%2010%206%207%200%200%20Z%22%20fill=%22url(%23g3)%22/%3E%3Cpath%20d=%22M0%200%20C6%207%2017%2010%2029%207%20C36%205%2042%202%2048%200%20C34%201%2016%202%200%200%20Z%22%20fill=%22%232f7d32%22%20fill-opacity=%22.22%22/%3E%3Cpath%20d=%22M1%200%20C14%20-1%2030%20-1%2046%200%22%20fill=%22none%22%20stroke=%22%23f4ffe0%22%20stroke-opacity=%22.85%22%20stroke-width=%221.1%22%20stroke-linecap=%22round%22/%3E%3Cpath%20d=%22M12%20-0.6%20L19%20-6%20M22%20-0.8%20L29%20-6.5%20M32%20-0.6%20L38%20-4.5%22%20fill=%22none%22%20stroke=%22%23f4ffe0%22%20stroke-opacity=%22.45%22%20stroke-width=%22.7%22%20stroke-linecap=%22round%22/%3E%3C/g%3E%3Cg%20transform=%22translate(132%20520)%20rotate(100)%20scale(1.3)%22%3E%3Cpath%20d=%22M0%200%20C4%20-6%2012%20-8%2018%20-4%20C14%20-1%2010%203%204%203%20C2%203%201%202%200%200%20Z%22%20fill=%22url(%23gb)%22/%3E%3Cpath%20d=%22M1%200%20C6%20-2%2011%20-3%2016%20-4%22%20fill=%22none%22%20stroke=%22%23ffffff%22%20stroke-opacity=%22.7%22%20stroke-width=%22.8%22/%3E%3C/g%3E%3Cg%20transform=%22translate(170%20176)%20rotate(70)%20scale(1.3)%22%3E%3Cpath%20d=%22M0%200%20C4%20-6%2012%20-8%2018%20-4%20C14%20-1%2010%203%204%203%20C2%203%201%202%200%200%20Z%22%20fill=%22url(%23gb)%22/%3E%3Cpath%20d=%22M1%200%20C6%20-2%2011%20-3%2016%20-4%22%20fill=%22none%22%20stroke=%22%23ffffff%22%20stroke-opacity=%22.7%22%20stroke-width=%22.8%22/%3E%3C/g%3E%3Cg%20transform=%22translate(252%20346)%20rotate(95)%20scale(1.3)%22%3E%3Cpath%20d=%22M0%200%20C4%20-6%2012%20-8%2018%20-4%20C14%20-1%2010%203%204%203%20C2%203%201%202%200%200%20Z%22%20fill=%22url(%23gb)%22/%3E%3Cpath%20d=%22M1%200%20C6%20-2%2011%20-3%2016%20-4%22%20fill=%22none%22%20stroke=%22%23ffffff%22%20stroke-opacity=%22.7%22%20stroke-width=%22.8%22/%3E%3C/g%3E%3Cg%20transform=%22translate(110%20446)%20rotate(120)%20scale(1.3)%22%3E%3Cpath%20d=%22M0%200%20C4%20-6%2012%20-8%2018%20-4%20C14%20-1%2010%203%204%203%20C2%203%201%202%200%200%20Z%22%20fill=%22url(%23gb)%22/%3E%3Cpath%20d=%22M1%200%20C6%20-2%2011%20-3%2016%20-4%22%20fill=%22none%22%20stroke=%22%23ffffff%22%20stroke-opacity=%22.7%22%20stroke-width=%22.8%22/%3E%3C/g%3E%3C/svg%3E"); }
+:root[data-theme^="wakaba"] .theme-decoration::before { top: 62px; right: 0; width: 280px; height: 560px; }
+:root[data-theme^="wakaba"] .theme-decoration::after { top: 150px; left: 0; width: 230px; height: 460px; transform: scaleX(-1); }
+@media (max-width: 720px) {
+  :root[data-theme^="wakaba"] .theme-decoration::before { top: 58px; right: -24px; width: 150px; height: 300px; }
+  :root[data-theme^="wakaba"] .theme-decoration::after { top: 110px; left: -26px; width: 120px; height: 240px; }
+}
+/* 舞い落ちる若葉（さくらの花びらと同じ動き。数を減らし、ゆっくり） */
+:root[data-theme^="wakaba"] .theme-decoration span {
+  position: absolute; top: -30px; width: 20px; height: 17px; opacity: .9;
+  background: url("data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20viewBox=%220%200%2024%2020%22%3E%3Cdefs%3E%3ClinearGradient%20id=%22f%22%20x1=%220%22%20y1=%220%22%20x2=%221%22%20y2=%220%22%3E%3Cstop%20offset=%220%22%20stop-color=%22%235fae46%22/%3E%3Cstop%20offset=%221%22%20stop-color=%22%23cbee93%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Cg%20transform=%22translate(1%2010)%22%3E%3Cpath%20d=%22M0%200%20C4%20-7%2013%20-9%2020%20-4%20C21%20-2%2022%20-1%2022%200%20C18%202%2013%205%208%205%20C4%205%201%203%200%200%20Z%22%20fill=%22url(%23f)%22/%3E%3Cpath%20d=%22M1%200%20C8%20-1%2015%20-1%2021%200%22%20fill=%22none%22%20stroke=%22%23f4ffe0%22%20stroke-opacity=%22.8%22%20stroke-width=%22.8%22/%3E%3C/g%3E%3C/svg%3E") no-repeat center / contain;
+  animation: sakura-fall 22s linear infinite, sakura-flutter 4.2s ease-in-out infinite;
+}
+:root[data-theme^="wakaba"] .theme-decoration span:nth-child(1) { left: 8%; animation-delay: -2s, 0s; }
+:root[data-theme^="wakaba"] .theme-decoration span:nth-child(2) { left: 20%; animation-delay: -12s, -1.5s; animation-duration: 26s, 3.8s; width: 15px; height: 13px; }
+:root[data-theme^="wakaba"] .theme-decoration span:nth-child(3) { left: 78%; animation-delay: -7s, -.8s; animation-duration: 24s, 4.6s; }
+:root[data-theme^="wakaba"] .theme-decoration span:nth-child(4) { left: 90%; animation-delay: -17s, -2.2s; animation-duration: 28s, 4s; width: 16px; height: 14px; }
+:root[data-theme^="wakaba"] .theme-decoration span:nth-child(5) { left: 66%; animation-delay: -21s, -3s; animation-duration: 30s, 5s; opacity: .7; width: 13px; height: 11px; }
+:root[data-theme^="wakaba"] .theme-decoration span:nth-child(n+6) { display: none; }
+/* 若葉2: 左下の隅に、奥から手前へ蛇行するせせらぎ（水・苔の岸・石・草。さざ波は流れに沿って動き、水面がきらめく。SVG の中の動き）。飾りの層の 6 番目の span を使う。PC では本文の外の余白に収まる */
+:root[data-theme="wakaba2"] .theme-decoration span:nth-child(6) {
+  display: block; top: auto; bottom: 0; left: 0; width: 380px; height: 222px; margin-left: 0; opacity: 1; transform: none; animation: none;
+  background: url("data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20viewBox=%220%200%20360%20210%22%3E%3Cdefs%3E%3ClinearGradient%20id=%22w%22%20x1=%221%22%20y1=%220%22%20x2=%220%22%20y2=%221%22%3E%3Cstop%20offset=%220%22%20stop-color=%22%23dff5f0%22/%3E%3Cstop%20offset=%22.45%22%20stop-color=%22%23a7dcd8%22/%3E%3Cstop%20offset=%221%22%20stop-color=%22%235fb0c0%22/%3E%3C/linearGradient%3E%3ClinearGradient%20id=%22s%22%20x1=%220%22%20y1=%220%22%20x2=%220%22%20y2=%221%22%3E%3Cstop%20offset=%220%22%20stop-color=%22%23d3d9d0%22/%3E%3Cstop%20offset=%221%22%20stop-color=%22%238f9b8d%22/%3E%3C/linearGradient%3E%3ClinearGradient%20id=%22g%22%20x1=%220%22%20y1=%221%22%20x2=%220%22%20y2=%220%22%3E%3Cstop%20offset=%220%22%20stop-color=%22%234f9a3f%22/%3E%3Cstop%20offset=%221%22%20stop-color=%22%23b2e386%22/%3E%3C/linearGradient%3E%3CradialGradient%20id=%22fade%22%20cx=%220%22%20cy=%221%22%20r=%221.15%22%3E%3Cstop%20offset=%22.72%22%20stop-color=%22%23fff%22/%3E%3Cstop%20offset=%221%22%20stop-color=%22%23fff%22%20stop-opacity=%220%22/%3E%3C/radialGradient%3E%3Cmask%20id=%22m%22%3E%3Crect%20width=%22360%22%20height=%22210%22%20fill=%22url(%23fade)%22/%3E%3C/mask%3E%3C/defs%3E%3Cg%20mask=%22url(%23m)%22%3E%3Cpath%20d=%22M0%20124%20C60%20114%20110%2096%20160%2082%20C214%2066%20262%2050%20318%2034%22%20fill=%22none%22%20stroke=%22%239fd27a%22%20stroke-opacity=%22.55%22%20stroke-width=%2212%22%20stroke-linecap=%22round%22/%3E%3Cpath%20d=%22M346%2048%20C302%2070%20264%2096%20226%20126%20C188%20156%20152%20184%20134%20212%22%20fill=%22none%22%20stroke=%22%239fd27a%22%20stroke-opacity=%22.55%22%20stroke-width=%2212%22%20stroke-linecap=%22round%22/%3E%3Cpath%20d=%22M0%20128%20C60%20118%20110%20100%20160%2086%20C214%2070%20262%2054%20318%2038%20L344%2044%20C300%2066%20262%2092%20224%20122%20C186%20152%20150%20180%20132%20210%20L0%20210%20Z%22%20fill=%22url(%23w)%22/%3E%3Cpath%20d=%22M0%20128%20C60%20118%20110%20100%20160%2086%20C214%2070%20262%2054%20318%2038%22%20fill=%22none%22%20stroke=%22%23ffffff%22%20stroke-opacity=%22.75%22%20stroke-width=%221.4%22/%3E%3Cpath%20d=%22M344%2044%20C300%2066%20262%2092%20224%20122%20C186%20152%20150%20180%20132%20210%22%20fill=%22none%22%20stroke=%22%23ffffff%22%20stroke-opacity=%22.6%22%20stroke-width=%221.2%22/%3E%3Cpath%20d=%22M322%2044%20C280%2062%20236%2082%20190%20104%20C140%20128%2090%20150%2030%20176%22%20fill=%22none%22%20stroke=%22%23ffffff%22%20stroke-opacity=%22.8%22%20stroke-width=%221.6%22%20stroke-linecap=%22round%22%20stroke-dasharray=%229%2034%22%3E%3Canimate%20attributeName=%22stroke-dashoffset%22%20from=%220%22%20to=%22-43%22%20dur=%226s%22%20repeatCount=%22indefinite%22/%3E%3C/path%3E%3Cpath%20d=%22M330%2046%20C292%2068%20252%2094%20214%20120%20C176%20146%20136%20170%2096%20196%22%20fill=%22none%22%20stroke=%22%23ffffff%22%20stroke-opacity=%22.65%22%20stroke-width=%221.4%22%20stroke-linecap=%22round%22%20stroke-dasharray=%227%2030%22%3E%3Canimate%20attributeName=%22stroke-dashoffset%22%20from=%220%22%20to=%22-37%22%20dur=%225s%22%20repeatCount=%22indefinite%22/%3E%3C/path%3E%3Cpath%20d=%22M312%2042%20C268%2058%20222%2078%20176%2098%20C126%20118%2070%20136%2010%20152%22%20fill=%22none%22%20stroke=%22%23ffffff%22%20stroke-opacity=%22.55%22%20stroke-width=%221.2%22%20stroke-linecap=%22round%22%20stroke-dasharray=%226%2028%22%3E%3Canimate%20attributeName=%22stroke-dashoffset%22%20from=%220%22%20to=%22-34%22%20dur=%227s%22%20repeatCount=%22indefinite%22/%3E%3C/path%3E%3Cpath%20d=%22M326%2045%20C288%2064%20246%2088%20204%20112%20C160%20138%20112%20164%2060%20190%22%20fill=%22none%22%20stroke=%22%23ffffff%22%20stroke-opacity=%22.5%22%20stroke-width=%221.1%22%20stroke-linecap=%22round%22%20stroke-dasharray=%225%2026%22%3E%3Canimate%20attributeName=%22stroke-dashoffset%22%20from=%220%22%20to=%22-31%22%20dur=%225.5s%22%20repeatCount=%22indefinite%22/%3E%3C/path%3E%3Cellipse%20cx=%22150%22%20cy=%22128%22%20rx=%2214%22%20ry=%227%22%20fill=%22url(%23s)%22/%3E%3Cellipse%20cx=%22145.8%22%20cy=%22124.85%22%20rx=%226.3%22%20ry=%222.1%22%20fill=%22%23ffffff%22%20fill-opacity=%22.5%22/%3E%3Cpath%20d=%22M133%20132.2%20c9.799999999999999%203%2019.599999999999998%203%2034%200%22%20fill=%22none%22%20stroke=%22%23ffffff%22%20stroke-opacity=%22.85%22%20stroke-width=%221.3%22%20stroke-linecap=%22round%22/%3E%3Cellipse%20cx=%22228%22%20cy=%2292%22%20rx=%229%22%20ry=%224.5%22%20fill=%22url(%23s)%22/%3E%3Cellipse%20cx=%22225.3%22%20cy=%2289.975%22%20rx=%224.05%22%20ry=%221.3499999999999999%22%20fill=%22%23ffffff%22%20fill-opacity=%22.5%22/%3E%3Cpath%20d=%22M216%2094.7%20c6.3%203%2012.6%203%2024%200%22%20fill=%22none%22%20stroke=%22%23ffffff%22%20stroke-opacity=%22.85%22%20stroke-width=%221.3%22%20stroke-linecap=%22round%22/%3E%3Cellipse%20cx=%2270%22%20cy=%22168%22%20rx=%2211%22%20ry=%225.5%22%20fill=%22url(%23s)%22/%3E%3Cellipse%20cx=%2266.7%22%20cy=%22165.525%22%20rx=%224.95%22%20ry=%221.65%22%20fill=%22%23ffffff%22%20fill-opacity=%22.5%22/%3E%3Cpath%20d=%22M56%20171.3%20c7.699999999999999%203%2015.399999999999999%203%2028%200%22%20fill=%22none%22%20stroke=%22%23ffffff%22%20stroke-opacity=%22.85%22%20stroke-width=%221.3%22%20stroke-linecap=%22round%22/%3E%3Cellipse%20cx=%2230%22%20cy=%22122%22%20rx=%2213%22%20ry=%226%22%20fill=%22url(%23s)%22/%3E%3Cellipse%20cx=%2252%22%20cy=%22126%22%20rx=%227%22%20ry=%224%22%20fill=%22url(%23s)%22/%3E%3Cellipse%20cx=%22196%22%20cy=%2272%22%20rx=%2210%22%20ry=%225%22%20fill=%22url(%23s)%22/%3E%3Cellipse%20cx=%22262%22%20cy=%2256%22%20rx=%228%22%20ry=%224%22%20fill=%22url(%23s)%22/%3E%3Cellipse%20cx=%22250%22%20cy=%22116%22%20rx=%2211%22%20ry=%225.5%22%20fill=%22url(%23s)%22/%3E%3Cellipse%20cx=%22176%22%20cy=%22170%22%20rx=%2213%22%20ry=%226%22%20fill=%22url(%23s)%22/%3E%3Cellipse%20cx=%22300%22%20cy=%2278%22%20rx=%228%22%20ry=%224%22%20fill=%22url(%23s)%22/%3E%3Cg%20fill=%22url(%23g)%22%3E%3Cg%20transform=%22translate(18%20118)%20scale(1.0)%22%3E%3Cpath%20d=%22M0%200%20C-2%20-9%20-5%20-16%20-9%20-22%20C-3%20-16%201%20-9%203%200%20Z%22/%3E%3Cpath%20d=%22M3%200%20C3%20-11%205%20-19%209%20-27%20C7%20-18%206%20-9%206%200%20Z%22/%3E%3Cpath%20d=%22M6%200%20C8%20-7%2012%20-12%2017%20-15%20C13%20-10%2010%20-5%209%200%20Z%22/%3E%3C/g%3E%3Cg%20transform=%22translate(96%20104)%20scale(0.9)%22%3E%3Cpath%20d=%22M0%200%20C-2%20-9%20-5%20-16%20-9%20-22%20C-3%20-16%201%20-9%203%200%20Z%22/%3E%3Cpath%20d=%22M3%200%20C3%20-11%205%20-19%209%20-27%20C7%20-18%206%20-9%206%200%20Z%22/%3E%3Cpath%20d=%22M6%200%20C8%20-7%2012%20-12%2017%20-15%20C13%20-10%2010%20-5%209%200%20Z%22/%3E%3C/g%3E%3Cg%20transform=%22translate(240%2062)%20scale(0.8)%22%3E%3Cpath%20d=%22M0%200%20C-2%20-9%20-5%20-16%20-9%20-22%20C-3%20-16%201%20-9%203%200%20Z%22/%3E%3Cpath%20d=%22M3%200%20C3%20-11%205%20-19%209%20-27%20C7%20-18%206%20-9%206%200%20Z%22/%3E%3Cpath%20d=%22M6%200%20C8%20-7%2012%20-12%2017%20-15%20C13%20-10%2010%20-5%209%200%20Z%22/%3E%3C/g%3E%3Cg%20transform=%22translate(286%2050)%20scale(0.7)%22%3E%3Cpath%20d=%22M0%200%20C-2%20-9%20-5%20-16%20-9%20-22%20C-3%20-16%201%20-9%203%200%20Z%22/%3E%3Cpath%20d=%22M3%200%20C3%20-11%205%20-19%209%20-27%20C7%20-18%206%20-9%206%200%20Z%22/%3E%3Cpath%20d=%22M6%200%20C8%20-7%2012%20-12%2017%20-15%20C13%20-10%2010%20-5%209%200%20Z%22/%3E%3C/g%3E%3Cg%20transform=%22translate(268%20108)%20scale(0.9)%22%3E%3Cpath%20d=%22M0%200%20C-2%20-9%20-5%20-16%20-9%20-22%20C-3%20-16%201%20-9%203%200%20Z%22/%3E%3Cpath%20d=%22M3%200%20C3%20-11%205%20-19%209%20-27%20C7%20-18%206%20-9%206%200%20Z%22/%3E%3Cpath%20d=%22M6%200%20C8%20-7%2012%20-12%2017%20-15%20C13%20-10%2010%20-5%209%200%20Z%22/%3E%3C/g%3E%3Cg%20transform=%22translate(196%20160)%20scale(1.0)%22%3E%3Cpath%20d=%22M0%200%20C-2%20-9%20-5%20-16%20-9%20-22%20C-3%20-16%201%20-9%203%200%20Z%22/%3E%3Cpath%20d=%22M3%200%20C3%20-11%205%20-19%209%20-27%20C7%20-18%206%20-9%206%200%20Z%22/%3E%3Cpath%20d=%22M6%200%20C8%20-7%2012%20-12%2017%20-15%20C13%20-10%2010%20-5%209%200%20Z%22/%3E%3C/g%3E%3Cg%20transform=%22translate(160%20194)%20scale(1.1)%22%3E%3Cpath%20d=%22M0%200%20C-2%20-9%20-5%20-16%20-9%20-22%20C-3%20-16%201%20-9%203%200%20Z%22/%3E%3Cpath%20d=%22M3%200%20C3%20-11%205%20-19%209%20-27%20C7%20-18%206%20-9%206%200%20Z%22/%3E%3Cpath%20d=%22M6%200%20C8%20-7%2012%20-12%2017%20-15%20C13%20-10%2010%20-5%209%200%20Z%22/%3E%3C/g%3E%3C/g%3E%3Ccircle%20cx=%22120%22%20cy=%22140%22%20r=%221.6%22%20fill=%22%23ffffff%22%3E%3Canimate%20attributeName=%22opacity%22%20values=%220;.95;0%22%20dur=%223s%22%20begin=%220s%22%20repeatCount=%22indefinite%22/%3E%3C/circle%3E%3Ccircle%20cx=%22250%22%20cy=%2284%22%20r=%221.6%22%20fill=%22%23ffffff%22%3E%3Canimate%20attributeName=%22opacity%22%20values=%220;.95;0%22%20dur=%224s%22%20begin=%221.2s%22%20repeatCount=%22indefinite%22/%3E%3C/circle%3E%3Ccircle%20cx=%2260%22%20cy=%22186%22%20r=%221.6%22%20fill=%22%23ffffff%22%3E%3Canimate%20attributeName=%22opacity%22%20values=%220;.95;0%22%20dur=%223.6s%22%20begin=%222s%22%20repeatCount=%22indefinite%22/%3E%3C/circle%3E%3C/g%3E%3C/svg%3E") no-repeat left bottom / contain;
+}
+@media (max-width: 720px) {
+  :root[data-theme="wakaba2"] .theme-decoration span:nth-child(6) { width: 230px; height: 134px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  :root[data-theme="sakura"] .theme-decoration span, :root[data-theme^="yozakura"] .theme-decoration span { display: none; }
+  :root[data-theme^="wakaba"] .theme-decoration span { display: none; }
+  /* 若葉2 のせせらぎは、動きのない絵で出す */
+  :root[data-theme="wakaba2"] .theme-decoration span:nth-child(6) { display: block; background-image: url("data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20viewBox=%220%200%20360%20210%22%3E%3Cdefs%3E%3ClinearGradient%20id=%22w%22%20x1=%221%22%20y1=%220%22%20x2=%220%22%20y2=%221%22%3E%3Cstop%20offset=%220%22%20stop-color=%22%23dff5f0%22/%3E%3Cstop%20offset=%22.45%22%20stop-color=%22%23a7dcd8%22/%3E%3Cstop%20offset=%221%22%20stop-color=%22%235fb0c0%22/%3E%3C/linearGradient%3E%3ClinearGradient%20id=%22s%22%20x1=%220%22%20y1=%220%22%20x2=%220%22%20y2=%221%22%3E%3Cstop%20offset=%220%22%20stop-color=%22%23d3d9d0%22/%3E%3Cstop%20offset=%221%22%20stop-color=%22%238f9b8d%22/%3E%3C/linearGradient%3E%3ClinearGradient%20id=%22g%22%20x1=%220%22%20y1=%221%22%20x2=%220%22%20y2=%220%22%3E%3Cstop%20offset=%220%22%20stop-color=%22%234f9a3f%22/%3E%3Cstop%20offset=%221%22%20stop-color=%22%23b2e386%22/%3E%3C/linearGradient%3E%3CradialGradient%20id=%22fade%22%20cx=%220%22%20cy=%221%22%20r=%221.15%22%3E%3Cstop%20offset=%22.72%22%20stop-color=%22%23fff%22/%3E%3Cstop%20offset=%221%22%20stop-color=%22%23fff%22%20stop-opacity=%220%22/%3E%3C/radialGradient%3E%3Cmask%20id=%22m%22%3E%3Crect%20width=%22360%22%20height=%22210%22%20fill=%22url(%23fade)%22/%3E%3C/mask%3E%3C/defs%3E%3Cg%20mask=%22url(%23m)%22%3E%3Cpath%20d=%22M0%20124%20C60%20114%20110%2096%20160%2082%20C214%2066%20262%2050%20318%2034%22%20fill=%22none%22%20stroke=%22%239fd27a%22%20stroke-opacity=%22.55%22%20stroke-width=%2212%22%20stroke-linecap=%22round%22/%3E%3Cpath%20d=%22M346%2048%20C302%2070%20264%2096%20226%20126%20C188%20156%20152%20184%20134%20212%22%20fill=%22none%22%20stroke=%22%239fd27a%22%20stroke-opacity=%22.55%22%20stroke-width=%2212%22%20stroke-linecap=%22round%22/%3E%3Cpath%20d=%22M0%20128%20C60%20118%20110%20100%20160%2086%20C214%2070%20262%2054%20318%2038%20L344%2044%20C300%2066%20262%2092%20224%20122%20C186%20152%20150%20180%20132%20210%20L0%20210%20Z%22%20fill=%22url(%23w)%22/%3E%3Cpath%20d=%22M0%20128%20C60%20118%20110%20100%20160%2086%20C214%2070%20262%2054%20318%2038%22%20fill=%22none%22%20stroke=%22%23ffffff%22%20stroke-opacity=%22.75%22%20stroke-width=%221.4%22/%3E%3Cpath%20d=%22M344%2044%20C300%2066%20262%2092%20224%20122%20C186%20152%20150%20180%20132%20210%22%20fill=%22none%22%20stroke=%22%23ffffff%22%20stroke-opacity=%22.6%22%20stroke-width=%221.2%22/%3E%3Cpath%20d=%22M322%2044%20C280%2062%20236%2082%20190%20104%20C140%20128%2090%20150%2030%20176%22%20fill=%22none%22%20stroke=%22%23ffffff%22%20stroke-opacity=%22.8%22%20stroke-width=%221.6%22%20stroke-linecap=%22round%22%20stroke-dasharray=%229%2034%22%3E%3C/path%3E%3Cpath%20d=%22M330%2046%20C292%2068%20252%2094%20214%20120%20C176%20146%20136%20170%2096%20196%22%20fill=%22none%22%20stroke=%22%23ffffff%22%20stroke-opacity=%22.65%22%20stroke-width=%221.4%22%20stroke-linecap=%22round%22%20stroke-dasharray=%227%2030%22%3E%3C/path%3E%3Cpath%20d=%22M312%2042%20C268%2058%20222%2078%20176%2098%20C126%20118%2070%20136%2010%20152%22%20fill=%22none%22%20stroke=%22%23ffffff%22%20stroke-opacity=%22.55%22%20stroke-width=%221.2%22%20stroke-linecap=%22round%22%20stroke-dasharray=%226%2028%22%3E%3C/path%3E%3Cpath%20d=%22M326%2045%20C288%2064%20246%2088%20204%20112%20C160%20138%20112%20164%2060%20190%22%20fill=%22none%22%20stroke=%22%23ffffff%22%20stroke-opacity=%22.5%22%20stroke-width=%221.1%22%20stroke-linecap=%22round%22%20stroke-dasharray=%225%2026%22%3E%3C/path%3E%3Cellipse%20cx=%22150%22%20cy=%22128%22%20rx=%2214%22%20ry=%227%22%20fill=%22url(%23s)%22/%3E%3Cellipse%20cx=%22145.8%22%20cy=%22124.85%22%20rx=%226.3%22%20ry=%222.1%22%20fill=%22%23ffffff%22%20fill-opacity=%22.5%22/%3E%3Cpath%20d=%22M133%20132.2%20c9.799999999999999%203%2019.599999999999998%203%2034%200%22%20fill=%22none%22%20stroke=%22%23ffffff%22%20stroke-opacity=%22.85%22%20stroke-width=%221.3%22%20stroke-linecap=%22round%22/%3E%3Cellipse%20cx=%22228%22%20cy=%2292%22%20rx=%229%22%20ry=%224.5%22%20fill=%22url(%23s)%22/%3E%3Cellipse%20cx=%22225.3%22%20cy=%2289.975%22%20rx=%224.05%22%20ry=%221.3499999999999999%22%20fill=%22%23ffffff%22%20fill-opacity=%22.5%22/%3E%3Cpath%20d=%22M216%2094.7%20c6.3%203%2012.6%203%2024%200%22%20fill=%22none%22%20stroke=%22%23ffffff%22%20stroke-opacity=%22.85%22%20stroke-width=%221.3%22%20stroke-linecap=%22round%22/%3E%3Cellipse%20cx=%2270%22%20cy=%22168%22%20rx=%2211%22%20ry=%225.5%22%20fill=%22url(%23s)%22/%3E%3Cellipse%20cx=%2266.7%22%20cy=%22165.525%22%20rx=%224.95%22%20ry=%221.65%22%20fill=%22%23ffffff%22%20fill-opacity=%22.5%22/%3E%3Cpath%20d=%22M56%20171.3%20c7.699999999999999%203%2015.399999999999999%203%2028%200%22%20fill=%22none%22%20stroke=%22%23ffffff%22%20stroke-opacity=%22.85%22%20stroke-width=%221.3%22%20stroke-linecap=%22round%22/%3E%3Cellipse%20cx=%2230%22%20cy=%22122%22%20rx=%2213%22%20ry=%226%22%20fill=%22url(%23s)%22/%3E%3Cellipse%20cx=%2252%22%20cy=%22126%22%20rx=%227%22%20ry=%224%22%20fill=%22url(%23s)%22/%3E%3Cellipse%20cx=%22196%22%20cy=%2272%22%20rx=%2210%22%20ry=%225%22%20fill=%22url(%23s)%22/%3E%3Cellipse%20cx=%22262%22%20cy=%2256%22%20rx=%228%22%20ry=%224%22%20fill=%22url(%23s)%22/%3E%3Cellipse%20cx=%22250%22%20cy=%22116%22%20rx=%2211%22%20ry=%225.5%22%20fill=%22url(%23s)%22/%3E%3Cellipse%20cx=%22176%22%20cy=%22170%22%20rx=%2213%22%20ry=%226%22%20fill=%22url(%23s)%22/%3E%3Cellipse%20cx=%22300%22%20cy=%2278%22%20rx=%228%22%20ry=%224%22%20fill=%22url(%23s)%22/%3E%3Cg%20fill=%22url(%23g)%22%3E%3Cg%20transform=%22translate(18%20118)%20scale(1.0)%22%3E%3Cpath%20d=%22M0%200%20C-2%20-9%20-5%20-16%20-9%20-22%20C-3%20-16%201%20-9%203%200%20Z%22/%3E%3Cpath%20d=%22M3%200%20C3%20-11%205%20-19%209%20-27%20C7%20-18%206%20-9%206%200%20Z%22/%3E%3Cpath%20d=%22M6%200%20C8%20-7%2012%20-12%2017%20-15%20C13%20-10%2010%20-5%209%200%20Z%22/%3E%3C/g%3E%3Cg%20transform=%22translate(96%20104)%20scale(0.9)%22%3E%3Cpath%20d=%22M0%200%20C-2%20-9%20-5%20-16%20-9%20-22%20C-3%20-16%201%20-9%203%200%20Z%22/%3E%3Cpath%20d=%22M3%200%20C3%20-11%205%20-19%209%20-27%20C7%20-18%206%20-9%206%200%20Z%22/%3E%3Cpath%20d=%22M6%200%20C8%20-7%2012%20-12%2017%20-15%20C13%20-10%2010%20-5%209%200%20Z%22/%3E%3C/g%3E%3Cg%20transform=%22translate(240%2062)%20scale(0.8)%22%3E%3Cpath%20d=%22M0%200%20C-2%20-9%20-5%20-16%20-9%20-22%20C-3%20-16%201%20-9%203%200%20Z%22/%3E%3Cpath%20d=%22M3%200%20C3%20-11%205%20-19%209%20-27%20C7%20-18%206%20-9%206%200%20Z%22/%3E%3Cpath%20d=%22M6%200%20C8%20-7%2012%20-12%2017%20-15%20C13%20-10%2010%20-5%209%200%20Z%22/%3E%3C/g%3E%3Cg%20transform=%22translate(286%2050)%20scale(0.7)%22%3E%3Cpath%20d=%22M0%200%20C-2%20-9%20-5%20-16%20-9%20-22%20C-3%20-16%201%20-9%203%200%20Z%22/%3E%3Cpath%20d=%22M3%200%20C3%20-11%205%20-19%209%20-27%20C7%20-18%206%20-9%206%200%20Z%22/%3E%3Cpath%20d=%22M6%200%20C8%20-7%2012%20-12%2017%20-15%20C13%20-10%2010%20-5%209%200%20Z%22/%3E%3C/g%3E%3Cg%20transform=%22translate(268%20108)%20scale(0.9)%22%3E%3Cpath%20d=%22M0%200%20C-2%20-9%20-5%20-16%20-9%20-22%20C-3%20-16%201%20-9%203%200%20Z%22/%3E%3Cpath%20d=%22M3%200%20C3%20-11%205%20-19%209%20-27%20C7%20-18%206%20-9%206%200%20Z%22/%3E%3Cpath%20d=%22M6%200%20C8%20-7%2012%20-12%2017%20-15%20C13%20-10%2010%20-5%209%200%20Z%22/%3E%3C/g%3E%3Cg%20transform=%22translate(196%20160)%20scale(1.0)%22%3E%3Cpath%20d=%22M0%200%20C-2%20-9%20-5%20-16%20-9%20-22%20C-3%20-16%201%20-9%203%200%20Z%22/%3E%3Cpath%20d=%22M3%200%20C3%20-11%205%20-19%209%20-27%20C7%20-18%206%20-9%206%200%20Z%22/%3E%3Cpath%20d=%22M6%200%20C8%20-7%2012%20-12%2017%20-15%20C13%20-10%2010%20-5%209%200%20Z%22/%3E%3C/g%3E%3Cg%20transform=%22translate(160%20194)%20scale(1.1)%22%3E%3Cpath%20d=%22M0%200%20C-2%20-9%20-5%20-16%20-9%20-22%20C-3%20-16%201%20-9%203%200%20Z%22/%3E%3Cpath%20d=%22M3%200%20C3%20-11%205%20-19%209%20-27%20C7%20-18%206%20-9%206%200%20Z%22/%3E%3Cpath%20d=%22M6%200%20C8%20-7%2012%20-12%2017%20-15%20C13%20-10%2010%20-5%209%200%20Z%22/%3E%3C/g%3E%3C/g%3E%3Ccircle%20cx=%22120%22%20cy=%22140%22%20r=%221.6%22%20fill=%22%23ffffff%22%3E%3C/circle%3E%3Ccircle%20cx=%22250%22%20cy=%2284%22%20r=%221.6%22%20fill=%22%23ffffff%22%3E%3C/circle%3E%3Ccircle%20cx=%2260%22%20cy=%22186%22%20r=%221.6%22%20fill=%22%23ffffff%22%3E%3C/circle%3E%3C/g%3E%3C/svg%3E"); }
+}
+@media print {
+  .theme-decoration { display: none !important; }
+}
+
+/* ---- パスワードを自動で作る・コピーする（APP-022） ---- */
+.password-tools { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 6px 0 0; }
+.copy-result { font-size: 0.85rem; }
+
+/* ---- 記録: ログインの失敗の行（APP-025） ---- */
+.table tbody tr.log-failure td { background: var(--tag-danger-bg); color: var(--tag-danger-text); }
+
+/* ---- スマートフォンの 1 問ずつの入力（APP-019・K-040） ---- */
+.wizard-nav { position: sticky; bottom: 64px; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 8px 12px; margin: 8px 0; z-index: 4; }
+.wizard-progress { margin: 0 0 6px; font-weight: 700; }
+.wizard-message { margin: 0 0 6px; }
+.wizard-buttons { display: flex; gap: 8px; }
+.wizard-buttons button { flex: 1; }
+.wizard-buttons button[hidden] { display: none; }
+.wizard-mode-switch { text-align: right; margin: 4px 0; }
+.wizard-mode-switch .link-button { color: var(--primary); text-decoration: underline; }
+form.wizard-active fieldset.block { display: none; }
+form.wizard-active fieldset.block.wizard-current-block { display: block; }
+form.wizard-active fieldset.block.wizard-current-block > *:not(legend):not(.wizard-current) { display: none; }
+form.wizard-active fieldset.block .field.wizard-current { border-top: none; }
+form.wizard-active .sticky-actions button[value="submit"] { display: none; }
+
+/* ---- 画面確認の差し戻し（2 回目） ---- */
+/* テーマの色見本: どのテーマでも見えるよう、白い台紙に載せる（ダークの見本がダークの背景に溶けないように） */
+/* テーマの色見本: 台紙は使わず、どのテーマの画面でも見える中間の灰色の枠で囲む。色は文字でも出す */
+.theme-swatch { flex: none; border: 1px solid #8b949e; border-radius: 5px; gap: 1px; background: #8b949e; }
+.theme-choice-text { display: flex; flex-direction: column; line-height: 1.35; }
+.theme-color-names { font-size: 0.8rem; color: var(--muted); font-weight: 400; }
+/* 提出状況の棒: 名前の幅を揃えて、棒の始まりを揃える（提　　出／確認完了） */
+.progress-label .progress-name { display: inline-block; width: 4.5em; text-align: justify; text-align-last: justify; flex: none; }
+/* 横並びの見出し: 札は項目名の上に小さく、項目名は折り返さない。氏名・案件も折り返さない */
+.table.compare thead th { vertical-align: bottom; white-space: nowrap; padding: 6px 10px 8px; border-bottom: 2px solid var(--line); }
+.table.compare .compare-head-badges { display: block; min-height: 20px; }
+.table.compare .compare-head-badges .badge { font-size: 0.7rem; padding: 0 5px; }
+.table.compare .compare-head-label { display: block; font-weight: 700; }
+.table.compare tbody td { white-space: nowrap; }   /* 選択式の値は短いので折り返さない（表は横にスクロールする） */
+.table.compare tbody td { padding: 8px 10px; }
+
+/* ---- 自分の色（G-16 §4.6） ---- */
+.theme-swatch-custom span { background: repeating-linear-gradient(45deg, #d0d7de 0 3px, #f6f8fa 3px 6px); }
+.custom-color-inputs { display: flex; flex-wrap: wrap; gap: 16px; margin: 8px 0; }
+.custom-color-inputs label { display: flex; align-items: center; gap: 8px; font-weight: 600; margin: 0; }
+.custom-color-inputs input[type=color] { width: 56px; height: 36px; padding: 2px; border: 1px solid #8b949e; border-radius: 6px; background: transparent; }
+.custom-color-preview { padding: 14px; border: 1px solid #8b949e; border-radius: var(--radius); }
+.custom-color-preview-card { padding: 12px; border-radius: var(--radius); border: 1px solid rgba(127, 127, 127, .35); }
+.custom-color-preview-card p { margin: 6px 0; }
+.custom-color-preview-button { display: inline-block; padding: 6px 14px; border-radius: var(--radius); font-weight: 700; }
+
+/* ---- システムの状態（便利機能 F・H） ---- */
+.system-status { border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 14px; margin: 0 0 16px; background: var(--panel-bg); }
+.system-status h2 { margin-top: 0; }
+.system-status h3 { font-size: 1rem; margin: 12px 0 6px; }
+.maintenance-form input[type=datetime-local] { width: auto; }
+.maintenance-form input[type=text] { flex: 1 1 240px; width: auto; }
+.maintenance-notice { font-weight: 700; }
+
+/* ---- 更新のお知らせ・よくある質問・画面ごとの使い方（便利機能 A・J・I） ---- */
+.update-notices { border-left: 4px solid var(--primary); }
+.update-notice { padding: 6px 0; border-bottom: 1px solid var(--line); }
+.update-notice:last-child { border-bottom: none; }
+.update-notice summary { color: var(--text); }
+.update-notice-body { margin: 6px 0 0 4px; }
+.faq-item { padding: 8px 0; border-bottom: 1px solid var(--line); }
+.faq-item summary { color: var(--text); font-weight: 700; }
+.faq-answer { margin: 8px 0 4px 1em; }
+.faq-form { margin-top: 16px; }
+/* よくある質問のチャット（G-25 §2.1・§2.2） */
+.visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.faq-chat { margin: 12px 0 20px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); }
+.faq-chat-log { display: flex; flex-direction: column; gap: 8px; padding: 12px; max-height: 60vh; overflow-y: auto; overscroll-behavior: contain; }
+.chat-bubble { max-width: 85%; padding: 8px 12px; border-radius: 14px; line-height: 1.6; overflow-wrap: anywhere; }
+.chat-bot { align-self: flex-start; background: var(--panel-bg); color: var(--text); border: 1px solid var(--line); border-bottom-left-radius: 4px; }
+.chat-user { align-self: flex-end; background: var(--primary); color: var(--primary-text); border-bottom-right-radius: 4px; white-space: pre-wrap; }
+.chat-bubble p { margin: 0 0 4px; }
+.chat-question { font-weight: 700; }
+.chat-answer { white-space: pre-wrap; }
+.chat-more-title { margin-top: 8px !important; color: var(--muted); }
+.chat-choices { align-self: flex-start; display: flex; flex-wrap: wrap; gap: 6px; max-width: 95%; }
+.chat-choices button { border-radius: 999px; text-align: left; }
+.chat-choices button.chosen { outline: 2px solid var(--primary); }
+.chat-choice { display: inline-block; padding: 4px 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--button-bg); color: var(--text); text-decoration: none; font-size: .9rem; line-height: 1.5; }
+.chat-choice:hover { border-color: var(--primary); }
+.chat-choice.chosen { outline: 2px solid var(--primary); }
+.chat-choice-recommended { border-color: var(--primary); font-weight: 700; }
+.chat-choices-done .chat-choice { pointer-events: none; opacity: .7; }
+.faq-category-title { font-size: 1rem; margin: 18px 0 4px; padding-bottom: 2px; border-bottom: 2px solid var(--line); }
+.faq-standard-import { margin: 4px 0 12px; }
+.faq-log-summary { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.chat-care { border-color: var(--primary); border-width: 2px; }
+.chat-emergency { border-color: var(--danger); background: var(--err-bg); color: var(--text); font-weight: 700; }
+.faq-ask { max-width: 95%; }
+.faq-ask[hidden] { display: none; }
+.faq-ask .form { margin-top: 6px; }
+.faq-chat-input { display: flex; gap: 8px; padding: 10px 12px; border-top: 1px solid var(--line); }
+.faq-chat-input input { flex: 1 1 auto; min-width: 0; }
+.faq-chat-input button { flex: 0 0 auto; }
+.screen-help { margin: 0 0 12px; padding: 6px 12px; border: 1px dashed var(--line); border-radius: var(--radius); background: var(--card); font-size: 0.9rem; }
+.screen-help summary { font-weight: 700; }
+.screen-help-body { margin: 6px 0 2px; color: var(--text); }
+.support-staff-extra { margin-top: 12px; }
+.reply-templates { margin-top: 16px; }
+
+/* ---- 見分けやすい色の形の印（cud）。色が見分けにくくても、札の頭の印・枠の線・模様で状態が分かるように ---- */
+:root[data-theme="cud"] .tag, :root[data-theme="cud"] .badge { border-width: 2px; }
+:root[data-theme="cud"] .status-none::before { content: "－ "; }
+:root[data-theme="cud"] .status-draft { border-style: dashed; }
+:root[data-theme="cud"] .status-draft::before { content: "✎ "; }
+:root[data-theme="cud"] .status-submitted::before { content: "● "; }
+:root[data-theme="cud"] .status-confirmed::before { content: "✓ "; }
+:root[data-theme="cud"] .tag-open::before, :root[data-theme="cud"] .support-status-open::before { content: "… "; font-weight: 700; }
+:root[data-theme="cud"] .tag-resolved::before, :root[data-theme="cud"] .support-status-released::before, :root[data-theme="cud"] .support-status-done::before { content: "✓ "; }
+:root[data-theme="cud"] .tag-changed::before, :root[data-theme="cud"] .tag-answered::before { content: "◆ "; }
+:root[data-theme="cud"] .support-status-reviewing::before, :root[data-theme="cud"] .support-status-in_progress::before, :root[data-theme="cud"] .support-status-testing::before, :root[data-theme="cud"] .support-status-release_waiting::before { content: "◆ "; }
+:root[data-theme="cud"] .badge-required::before { content: "＊"; }
+:root[data-theme="cud"] .badge-restricted::before { content: "■ "; }
+:root[data-theme="cud"] .badge-internal { border-style: dotted; }
+:root[data-theme="cud"] .badge-internal::before { content: "◇ "; }
+:root[data-theme="cud"] .flash { border-width: 2px; border-left-width: 6px; }
+:root[data-theme="cud"] .flash-error::before { content: "× "; font-weight: 700; }
+:root[data-theme="cud"] .flash-success::before { content: "✓ "; font-weight: 700; }
+:root[data-theme="cud"] .field-warning { border-style: dashed; }
+:root[data-theme="cud"] .table tbody tr.log-failure td:first-child::before { content: "× "; font-weight: 700; }
+/* 提出状況の棒: 斜線の模様で、地との差を形で分かるように。地は白で、枠を濃く */
+:root[data-theme="cud"] .progress-label progress { border: 1.5px solid #4a4a4a; background: #ffffff; }
+:root[data-theme="cud"] .progress-label progress::-webkit-progress-bar { background: #ffffff; }
+:root[data-theme="cud"] .progress-label progress::-webkit-progress-value { background: repeating-linear-gradient(45deg, #005aff 0 5px, #8db8ff 5px 10px); }
+:root[data-theme="cud"] .progress-label progress::-moz-progress-bar { background: repeating-linear-gradient(45deg, #005aff 0 5px, #8db8ff 5px 10px); }
+:root[data-theme="cud"] .progress-label progress.progress-confirmed::-webkit-progress-value { background: repeating-linear-gradient(-45deg, #00308f 0 3px, #ffffff 3px 5px); }
+:root[data-theme="cud"] .progress-label progress.progress-confirmed::-moz-progress-bar { background: repeating-linear-gradient(-45deg, #00308f 0 3px, #ffffff 3px 5px); }
+/* 押せるところの枠（キーボードで選んだとき）をはっきり */
+:root[data-theme="cud"] :focus-visible { outline: 3px solid #f6aa00; outline-offset: 2px; }
+:root[data-theme="cud"] .card { border-color: #b5b5b5; }
+/* ---- G-26 通勤定期代の精算（K-063） ---- */
+.expense-head-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 8px 16px; }
+.expense-head-grid .label-text { display: block; font-weight: 600; margin-bottom: 4px; }
+.expense-head-grid .choice { display: inline-flex; margin-right: 12px; }
+.expense-input-table input, .expense-input-table select { width: 100%; min-width: 6em; box-sizing: border-box; }
+.expense-input-table td { padding: 2px 4px; }
+.expense-input-table .row-number { color: var(--muted); text-align: right; }
+.expense-input-table .expense-fixed-kind { white-space: nowrap; }
+.expense-input-table .expense-amount, .expense-advance { text-align: right; }
+.expense-list-table .number { text-align: right; white-space: nowrap; }
+.expense-list-table .actions { white-space: nowrap; }
+.expense-totals strong { font-size: 1.2rem; }
+.form-actions { margin-top: 12px; }
+.table-wrap { overflow-x: auto; }
+.expense-form fieldset { min-width: 0; }
+/* 精算書の明細は列が多いので、PC では画面を広く使う（狭い画面では表を横に動かす） */
+.app-main:has(.expense-form), .app-main:has(.expense-list-table) { max-width: 1200px; }
+.expense-list-table td { white-space: nowrap; }
+.expense-input-table { min-width: 960px; }
+.expense-delete-form { margin-top: 32px; padding-top: 12px; border-top: 1px solid var(--line); }
+/* ---- G-27 目標管理（K-064） ---- */
+.app-main:has(.goal-sheet), .app-main:has(.goal-list-table) { max-width: 1100px; }
+.goal-form fieldset { min-width: 0; margin-bottom: 16px; }
+.goal-head-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px 16px; }
+.goal-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 16px; margin: 8px 0; }
+@media (max-width: 700px) { .goal-pair { grid-template-columns: 1fr; } }
+.goal-pair textarea { width: 100%; box-sizing: border-box; }
+.goal-sheet .label-text { display: block; font-weight: 600; margin-bottom: 4px; }
+.goal-grade-line .label-text { display: inline; margin-right: 6px; }
+/* 説明の文の区切り（h_phrases）: まとまりごとに折り返す。スマートフォンで言葉の途中で折り返さない */
+.phrase { display: inline-block; word-break: auto-phrase; }   /* まとまりが 1 行に入らないときも、対応するブラウザー（Chrome・Edge）では文節で折り返す */
+/* 評価の行の「見出し＋選ぶ欄」は、まとめて次の行に送る */
+.goal-grade-item { display: inline-block; white-space: nowrap; margin-right: 10px; }
+.goal-grade-line select { width: auto; margin-right: 16px; }
+.goal-readonly { border: 1px dashed var(--line); border-radius: var(--radius); padding: 6px 10px; min-height: 2.2em; background: var(--bg); }
+.goal-choice-value { display: inline-block; min-width: 3em; font-weight: 600; margin-right: 16px; }
+.goal-competency-table .goal-guide { min-width: 18em; font-size: 0.9rem; }
+.goal-competency-table select { width: auto; }
+/* スマートフォンの幅: コンピテンシー評価の表は、1 項目ずつのカード（大分類 ＞ 中分類・行動指針・本人評価・上長評価）にする。
+   表のままだと大分類・中分類の列が 1 文字の幅になり、1 文字ずつ縦に折り返すため */
+@media (max-width: 720px) {
+  .goal-competency .table-wrap { overflow-x: visible; }
+  .goal-competency-table, .goal-competency-table tbody { display: block; width: 100%; }
+  .goal-competency-table thead { display: none; }
+  .goal-competency-table tr { display: block; padding: 10px 0; border-bottom: 1px solid var(--line, rgba(128, 128, 128, 0.35)); }
+  .goal-competency-table td, .goal-competency-table th { display: block; border: 0; padding: 2px 0; text-align: left; }
+  .goal-competency-table .goal-major, .goal-competency-table .goal-minor { display: inline; font-weight: 600; }
+  .goal-competency-table .goal-major::after { content: " ＞ "; font-weight: 400; }
+  .goal-competency-table .goal-guide { min-width: 0; margin: 4px 0; }
+  .goal-competency-table .goal-score-cell { display: flex; align-items: center; gap: 8px; margin: 4px 0; }
+  .goal-competency-table .goal-score-cell select { flex: 1 1 auto; min-width: 0; max-width: 100%; }
+  .goal-competency-total td { display: inline-block; white-space: nowrap; margin-right: 14px; }
+  .goal-competency-table .goal-score-cell::before, .goal-competency-total td::before { content: attr(data-label) " "; font-weight: 600; flex: 0 0 auto; }
+  .goal-competency-total th { font-weight: 600; }
+}
+.goal-score-table .number, .goal-competency-table .number { text-align: right; }
+.goal-list-table td { white-space: nowrap; }
+.goal-comment { border-top: 1px solid var(--line); padding: 8px 0; }
+.goal-comment-head { margin: 0 0 4px; }
+.goal-reply { margin: 8px 0 0 24px; padding-left: 12px; border-left: 3px solid var(--line); }
+.goal-reply-form { margin: 6px 0 0 24px; }
+.use-backup-code { margin: 4px 0 8px; }
+.goal-meeting-block { border-top: 1px solid var(--line); padding-top: 8px; margin-top: 12px; }
+.goal-meeting-block h3 { margin: 0 0 6px; font-size: 1rem; }
+/* コンピテンシー評価基準: 文の長い欄は広く取って折り返しを減らし、表は横に動かして見る（横スライド） */
+.goal-criteria-table { border-collapse: collapse; font-size: 0.9rem; line-height: 1.6; }
+.goal-criteria-table td { border: 1px solid var(--line); padding: 6px 8px; vertical-align: top; min-width: 5em; }
+.goal-criteria-table td.criteria-short { white-space: nowrap; }
+.goal-criteria-table td.criteria-long { min-width: 20em; max-width: 28em; }
+.goal-criteria-block { margin-bottom: 24px; }
+.app-main:has(.goal-criteria) { max-width: none; }
+.goal-criteria-scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); }
+.goal-criteria-slider { display: flex; align-items: center; gap: 8px; margin: 8px 0; position: sticky; top: 0; z-index: 2; background: var(--card); padding: 6px 0; }
+.goal-criteria-slider input[type=range] { flex: 1; }
+.goal-criteria-slider button { flex: none; }
+
+/* 臨時の調査の集計（G-10 の印刷・G-11 の結果）: 選択肢ごとの割合の横棒。幅は SVG の属性（survey_bar_svg()） */
+.survey-tally { margin-bottom: 16px; break-inside: avoid; page-break-inside: avoid; }
+.survey-tally h2 { font-size: 1.05em; margin: 12px 0 6px; }
+.survey-tally-table .num { text-align: right; white-space: nowrap; width: 5em; }
+.survey-tally-table .survey-bar-cell { width: 40%; }
+.survey-bar { display: block; width: 100%; height: 12px; }
+.survey-bar-track { fill: var(--row-alt-bg); stroke: var(--line); stroke-width: .5; vector-effect: non-scaling-stroke; }
+.survey-bar-fill { fill: var(--primary); }
+.print-page .survey-bar-track { fill: #f0f0f0; stroke: #999; }   /* 印刷の画面は白地のまま */
+.print-page .survey-bar-fill { fill: #1f6feb; }
+.print-table .note { font-size: inherit; }   /* 表の中の補足（「（回答 n 人）」など）を本文と同じ大きさに */
+@media print {
+  .survey-bar-track { fill: #f0f0f0; stroke: #999; }
+  .survey-bar-fill { fill: #1f6feb; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+  /* 1 問が 1 ページに収まるよう、集計の表の行を詰める。表の途中でページを分けない（入らないときは表ごと次のページへ） */
+  .survey-tally-table th, .survey-tally-table td, .survey-cross-table th, .survey-cross-table td { padding: 2px 6px; }
+  .survey-tally-table, .survey-cross-table { break-inside: avoid; page-break-inside: avoid; }
+  .survey-tally .table-input { overflow: visible; }
+}

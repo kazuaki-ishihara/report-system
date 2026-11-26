@@ -1,0 +1,42 @@
+# 公開ディレクトリの設定（さくらのレンタルサーバー / Apache 2.4）
+Options -Indexes
+DirectoryIndex index.php
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    # HTTPS へ転送（さくらは SSL をプロキシで終端するため X-Sakura-Forwarded-For で判定する）
+    RewriteCond %{HTTPS} off
+    RewriteCond %{HTTP:X-Sakura-Forwarded-For} ^$
+    RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
+
+    # 許すのは、システムが送るファイル（.php・.css・.js）だけ。ほかのファイルは、置かれていても 403 にする。
+    #   ・拡張子は小文字だけ許す（大文字の .PHP などは PHP として動かず中身が見えるおそれがあるので、許さない）
+    #   ・置かれているファイル（-f）だけを見る。フォルダー（index.php への切り替え）と無いもの（404）はそのまま
+    #   ・.well-known/ は、証明書の更新などでサーバーが置くものなので除く
+    RewriteCond %{REQUEST_FILENAME} -f
+    RewriteCond %{REQUEST_URI} !/\.well-known/
+    RewriteCond %{REQUEST_FILENAME} !\.(php|css|js)$
+    RewriteRule ^ - [F]
+</IfModule>
+
+# 入り口の補助ファイルは直接開かせない
+<Files "_boot.php">
+    Require all denied
+</Files>
+
+# 画面の入り口でないフォルダーは、置かれていても無いものとして扱う（404）。
+#   app/ : 本番では入り口と同じ場所に置く（app/.htaccess でも拒否する。.htaccess の上げ忘れに備えて二重にする）
+#   docs/ tools/ public/ : リポジトリを丸ごと上げてしまったときの備え
+#   __pycache__ / .git などの隠しフォルダー : 開発の作業フォルダーを写してしまったときの備え
+#   data/ keys/ backups/ logs/ config/ lib/ など : 旧システムや手作業で置かれた DB・設定の備え（画面の入り口には無い名前）
+RedirectMatch 404 /(app|docs|tools|public|__pycache__|node_modules|vendor)(/|$)
+RedirectMatch 404 /(data|keys|backups?|logs?|config|lib|includes?|src|db|database|storage|tmp|private)(/|$)
+RedirectMatch 404 /\.(?!well-known/)
+
+# 上の「許すものだけ」が効かないとき（mod_rewrite が無いなど）に備えて、DB・鍵・バックアップ・ソース・圧縮ファイルなどの
+# 拡張子と、名前が ~ で終わるエディターの控えも拒否する（二重の守り。大文字・小文字を区別しない）。
+# 圧縮ファイルは形式を問わず拒否する（gzip・Brotli・Zstandard・deflate など。事前に圧縮した .css.br・.js.gz なども配信しない。
+# 公開するのはシステムが送る .php・.css・.js だけ）
+<FilesMatch "(?i)\.(sqlite|sqlite3|sqlite-wal|sqlite-shm|sqlite-journal|db|db-journal|db3|key|pem|crt|cer|p12|pfx|ppk|inc|phps|phtml|php[3-8]|old|save|tmp|swo|conf|cfg|toml|xlsx?|docx?|pdf|bak|backup|log|md|sql|json|ini|sh|py|pyc|pyo|txt|csv|tsv|zip|tar|gz|tgz|7z|br|zst|zstd|deflate|zz|bz2|tbz2?|xz|txz|lzma|lz|lz4|rar|z|yml|yaml|xml|dist|example|orig|swp|lock|env)$|~$">
+    Require all denied
+</FilesMatch>

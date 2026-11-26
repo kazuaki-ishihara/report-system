@@ -1,3 +1,5 @@
 # Windows のバッチは CRLF のまま扱う
 *.bat text eol=crlf
 *.sh text eol=lf
+# 差分の一式は、作ったときのバイトのまま入れる（改行を変えると、手順書のハッシュの照合が合わなくなる）
+/tools/deploy/output/** -text

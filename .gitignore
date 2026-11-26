@@ -20,6 +20,7 @@
 /faq_chat_log_*.csv
 /app_log_errors_*.txt
 
-# 反映用の一式（tools/deploy/build_package.py の出力）
-/tools/deploy/output/
+# 反映用の一式（tools/deploy/build_package.py などの出力）。差分の一式（diff_*）だけは、手順書と組で管理者に渡すのでリポジトリに入れる
+/tools/deploy/output/*
+!/tools/deploy/output/diff_*/
 __pycache__/
