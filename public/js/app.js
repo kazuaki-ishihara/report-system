@@ -135,17 +135,6 @@
     applyCustomColorPreview();
   }
 
-  // ---- メンテナンス中（便利機能 F）: 保存などのボタンを止める（入力は残る。終わってから保存できる） ----
-  if (document.body.getAttribute('data-maintenance') === '1') {
-    Array.prototype.forEach.call(document.querySelectorAll('form[method="post"], form[method="POST"]'), function (postForm) {
-      if (/logout\.php/.test(postForm.getAttribute('action') || '')) { return; }
-      Array.prototype.forEach.call(postForm.querySelectorAll('button[type="submit"], button:not([type])'), function (submitButton) {
-        submitButton.disabled = true;
-        submitButton.title = M('メンテナンス中のため、保存などの操作はできません');
-      });
-    });
-  }
-
   // ---- 要望・依頼の返信の定型文（便利機能 B）: 選ぶと返信の欄に足す ----
   Array.prototype.forEach.call(document.querySelectorAll('.support-reply-template-select'), function (templateSelect) {
     templateSelect.addEventListener('change', function () {
@@ -911,7 +900,7 @@
   }
 
   // ---- 下書きの自動保存（入力が変わったときだけ、60 秒ごと） ----
-  if (form && form.getAttribute('data-autosave') === '1' && window.fetch && window.FormData && document.body.getAttribute('data-maintenance') !== '1') {
+  if (form && form.getAttribute('data-autosave') === '1' && window.fetch && window.FormData) {
     var dirty = false;
     var stopped = false;
     var status = form.querySelector('.autosave-status');

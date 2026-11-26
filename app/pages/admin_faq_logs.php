@@ -81,11 +81,11 @@ if (is_post() && post_str('action') === 'faq_csv_preview') {
 
 // ---- 絞り込み ----
 const FAQ_CHAT_LOG_PERIOD_DAYS_LIST = [7, 30, 90, 365];
-$periodDays = (int) ($_GET['days'] ?? 30);
+$periodDays = (int) get_str('days', '30');
 if (!in_array($periodDays, FAQ_CHAT_LOG_PERIOD_DAYS_LIST, true)) {
     $periodDays = 30;
 }
-$resultFilter = is_string($_GET['result'] ?? null) ? (string) $_GET['result'] : '';
+$resultFilter = get_str('result');
 if ($resultFilter !== '' && $resultFilter !== 'unanswered' && !isset(FAQ_CHAT_LOG_RESULT_LABELS[$resultFilter])) {
     $resultFilter = '';
 }
@@ -185,7 +185,7 @@ $listedLogRowList = array_values(array_filter($logRowList, static function (arra
 }));
 // 会話（G-25 §2.14）: 会話ごとの発言の数。?conversation=<番号> で、その会話の発言だけを古い順に出す（見られない理由の記録は、ここでも出さない）
 $conversationCountById = array_count_values(array_filter(array_map('strval', array_column($logRowList, 'conversation_id')), 'strlen'));
-$conversationFilter = is_string($_GET['conversation'] ?? null) && preg_match('/\A[0-9a-f]{16}\z/', (string) $_GET['conversation']) === 1 ? (string) $_GET['conversation'] : '';
+$conversationFilter = preg_match('/\A[0-9a-f]{16}\z/', get_str('conversation')) === 1 ? get_str('conversation') : '';
 if ($conversationFilter !== '') {
     $listedLogRowList = array_reverse(array_values(array_filter($logRowList, static function (array $logRow) use ($conversationFilter): bool {
         return (string) $logRow['conversation_id'] === $conversationFilter;
@@ -193,7 +193,7 @@ if ($conversationFilter !== '') {
 }
 
 // ---- CSV で出す（§2.19）: 記録（?csv=log）と、メンテナンス用（?csv=maintenance。載っている質問・まだ載っていない標準の質問・答えられなかった質問） ----
-$csvKind = is_string($_GET['csv'] ?? null) ? (string) $_GET['csv'] : '';
+$csvKind = get_str('csv');
 if ($csvKind === 'log' || $csvKind === 'maintenance') {
     $csvTitleLines = ['社外秘', '出力者: ' . $user['login_id'] . '  出力日時: ' . date('Y-m-d H:i') . '  期間: 直近 ' . $periodDays . ' 日'];
     if ($csvKind === 'log') {

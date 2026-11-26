@@ -17,7 +17,7 @@ import sys
 import urllib.parse
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from lib_http import Client, check, csrf, login, section, summary  # noqa: E402
+from lib_http import Client, check, csrf, login, next_login_code, section, summary  # noqa: E402
 
 
 def main():
@@ -656,17 +656,34 @@ def main():
     until_text = (datetime.datetime.now() + datetime.timedelta(hours=1)).strftime("%Y-%m-%dT%H:%M")
     status_code, _location, _page_html = post_form(admin_client, "/admin/index.php", {"action": "maintenance_start", "until": until_text, "message": "新しい版に入れ替えています"})
     check("F: 管理者がメンテナンス中にできる", database.execute("SELECT COUNT(*) FROM app_state WHERE name = 'maintenance'").fetchone()[0] == 1, status_code)
-    _status_code, _location, member_home_html = member_client.get("/index.php")
-    check("F: 部下の画面に知らせを出す（一言も）", "メンテナンス中です" in member_home_html and "新しい版に入れ替えています" in member_home_html and 'data-maintenance="1"' in member_home_html)
-    status_code, _location, _page_html = post_form(member_client, "/account.php?tab=theme", {"action": "theme_save", "ui_theme": "dark"})
-    check("F: 部下の保存などの操作は受け付けない（503）", status_code == 503
-          and database.execute("SELECT ui_theme FROM users WHERE login_id = 'ippan_a1'").fetchone()[0] != "dark", status_code)
+    # メンテナンス中は、管理者・補佐のほかの人を追い出し、ログインもさせない（2026-11-26 指示）
+    status_code, location, _page_html = member_client.get("/index.php")
+    check("F: ログインしている部下は、次に画面を開くと追い出される（ログインの画面へ）", status_code in (302, 303) and "/login.php" in (location or ""), (status_code, location))
+    check("F: 追い出したあとは、元のセッションでは開けない", member_client.get("/account.php")[0] in (302, 303))
+    _status_code, _location, login_html = member_client.get("/login.php")
+    check("F: ログインの画面にメンテナンス中の知らせを出す（一言も）", 'id="maintenance-login-notice"' in login_html and "管理者・補佐のほかはログインできません" in login_html
+          and "新しい版に入れ替えています" in login_html)
+    refused_client = Client(arguments.base)
+    _status_code, _location, login_html = refused_client.get("/login.php")
+    refused_client.post("/login.php", {"csrf_token": csrf(login_html), "action": "password", "login_id": "ippan_a2", "password": user_info_by_login_id["ippan_a2"]["password"]})
+    _status_code, _location, code_html = refused_client.get("/login.php?step=2")
+    status_code, location, _page_html = refused_client.post("/login.php", {"csrf_token": csrf(code_html), "action": "code",
+                                                                           "code": next_login_code("ippan_a2", user_info_by_login_id["ippan_a2"]["totp"]), "remember": "0"})
+    check("F: 管理者・補佐でない人は、パスワードと 2 段階認証が合ってもログインできない", "/login.php" in (location or "") and refused_client.get("/index.php")[0] in (302, 303), (status_code, location))
+    check("F: ログインを断ったこと・追い出したことが記録に残る",
+          database.execute("SELECT COUNT(*) FROM access_logs WHERE target = 'login:maintenance'").fetchone()[0] >= 1
+          and database.execute("SELECT COUNT(*) FROM access_logs WHERE target = 'logout:maintenance'").fetchone()[0] >= 1)
     _status_code, _location, admin_home_html = admin_client.get("/index.php")
-    check("F: 管理者の画面は止めない（知らせだけ）", 'data-maintenance="1"' not in admin_home_html and "メンテナンス中です（管理者・補佐の画面）" in admin_home_html)
+    check("F: 管理者の画面は止めない（知らせだけ）", _status_code == 200 and "メンテナンス中です（管理者・補佐の画面）" in admin_home_html)
+    deputy_login_client = login(arguments.base, "hosa01", user_info_by_login_id["hosa01"])
+    check("F: 補佐はメンテナンス中もログインできる", deputy_login_client.get("/index.php")[0] == 200)
     status_code, _location, _page_html = post_form(admin_client, "/admin/index.php", {"action": "maintenance_end"})
     check("F: メンテナンスを終えられる", database.execute("SELECT COUNT(*) FROM app_state WHERE name = 'maintenance'").fetchone()[0] == 0, status_code)
+    _status_code, _location, login_html = Client(arguments.base).get("/login.php")
+    check("F: 終えたあとは、ログインの画面の知らせも消える", 'id="maintenance-login-notice"' not in login_html)
+    member_client = login(arguments.base, "ippan_a1", user_info_by_login_id["ippan_a1"])
     status_code, _location, _page_html = post_form(member_client, "/account.php?tab=theme", {"action": "theme_save", "ui_theme": "dark"})
-    check("F: 終えたあとは部下も保存できる", database.execute("SELECT ui_theme FROM users WHERE login_id = 'ippan_a1'").fetchone()[0] == "dark", status_code)
+    check("F: 終えたあとは部下もログインして保存できる", database.execute("SELECT ui_theme FROM users WHERE login_id = 'ippan_a1'").fetchone()[0] == "dark", status_code)
     database.execute("INSERT INTO app_state (name, value) VALUES ('maintenance', ?) ON CONFLICT(name) DO UPDATE SET value = excluded.value",
                      (json.dumps({"until": "2000-01-01 00:00:00", "message": "", "started_by": 1, "started_at": "2000-01-01 00:00:00"}),))
     status_code, _location, _page_html = post_form(member_client, "/account.php?tab=theme", {"action": "theme_save", "ui_theme": "light"})

@@ -88,7 +88,7 @@ $full = $stage === 'full' && (int) $user['must_change_password'] !== 1;
   <?php elseif ($tab === 'codes'): ?>
     <h2>予備のコード</h2>
     <?php if (is_array($codes)): ?>
-      <p>認証アプリが使えないとき（機種変更など）に、1 つにつき 1 回使えます。<strong>この画面を離れると二度と表示されません。</strong>紙に書くなどして保管してください。</p>
+      <p>認証アプリが使えないとき（機種変更など）に、6 桁のコードの代わりに使えます。どのコードも何度でも使えます。人に教えないでください。漏れたときは作り直してください（前のコードは使えなくなります）。<strong>この画面を離れると二度と表示されません。</strong>紙に書くなどして保管してください。</p>
       <ul class="codes" id="backup-codes">
         <?php foreach ($codes as $c): ?><li><?= h($c) ?></li><?php endforeach; ?>
       </ul>
@@ -101,7 +101,7 @@ $full = $stage === 'full' && (int) $user['must_change_password'] !== 1;
         <a class="button primary" href="<?= h(url($afterNext)) ?>">保管しました</a>
       <?php endif; ?>
     <?php else: ?>
-      <p>残り <?= (int) $remaining ?> 個</p>
+      <p><?= (int) $remaining ?> 個（どのコードも何度でも使えます）</p>
       <form method="post" action="<?= h(url('/account.php?tab=codes')) ?>" class="form" data-confirm="<?= h(msg('予備のコードを作り直します。今のコードは使えなくなります。よろしいですか？')) ?>">
         <?= form_hidden(false) ?>
         <input type="hidden" name="action" value="codes_regen">

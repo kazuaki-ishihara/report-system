@@ -94,14 +94,14 @@ function security_notice_text(array $notice): string
 // ---- 予備のコードの確認 ---------------------------------------------
 
 /**
- * 未使用の予備のコード（暗号文のあるもの）。
+ * 予備のコード（暗号文のあるもの。予備のコードは何度でも使えるので、使ったものも含む）。
  *
  * @return string[]
  */
 function security_readable_backup_codes(int $userId): array
 {
     $codes = [];
-    foreach (db_all('SELECT id, code_enc FROM user_backup_codes WHERE user_id = ? AND used_at IS NULL AND code_enc IS NOT NULL ORDER BY id', [$userId]) as $row) {
+    foreach (db_all('SELECT id, code_enc FROM user_backup_codes WHERE user_id = ? AND code_enc IS NOT NULL ORDER BY id', [$userId]) as $row) {
         $code = dec((string) $row['code_enc'], 'bkcode:' . $userId . ':' . (int) $row['id']);
         if ($code !== null && $code !== '') {
             $codes[] = substr($code, 0, 4) . '-' . substr($code, 4);
@@ -110,11 +110,11 @@ function security_readable_backup_codes(int $userId): array
     return $codes;
 }
 
-/** 予備のコードの中に、確認できない古い形のものがあるか（作り直しを促す） */
+/** 予備のコードの中に、確認できない古い形のもの（暗号文の無いもの。前の版で使って暗号文を消したものを含む）があるか（作り直しを促す） */
 function security_has_unreadable_backup_codes(int $userId): bool
 {
     return security_is_supported()
-        && db_val('SELECT 1 FROM user_backup_codes WHERE user_id = ? AND used_at IS NULL AND code_enc IS NULL', [$userId]) !== null;
+        && db_val('SELECT 1 FROM user_backup_codes WHERE user_id = ? AND code_enc IS NULL', [$userId]) !== null;
 }
 
 // ---- 復旧コード -----------------------------------------------------

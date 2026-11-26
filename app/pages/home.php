@@ -105,7 +105,7 @@ $faqDistressCounts = $faqNoticeLevels ? faq_chat_log_unhandled_distress_counts($
 $unknownLoginCount = can_manage_system($user) ? auth_unknown_login_unchecked_count() : 0;
 // 予備のコードが残っていない（システム管理者・補佐が初期化した、または使い切った）。本人に作り直しを促す（G-16 §6.2・G-14）
 $hasNoBackupCode = $user['totp_enabled_at'] !== null
-    && (int) db_val('SELECT COUNT(*) FROM user_backup_codes WHERE user_id = ? AND used_at IS NULL', [(int) $user['id']]) === 0;
+    && (int) db_val('SELECT COUNT(*) FROM user_backup_codes WHERE user_id = ?', [(int) $user['id']]) === 0;
 
 // あなたの役割と権限（本人だけ。§4.4）
 $roleDutyList = role_summary_duty_list($uid);

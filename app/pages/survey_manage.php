@@ -15,7 +15,7 @@ $depts = final_departments($user);
 $canManageAllDepartments = survey_can_manage_all_departments($user);
 survey_close_expired();
 
-$state = (string) ($_GET['state'] ?? 'all');
+$state = get_str('state', 'all');
 $scopeConditionList = [];
 if ($depts) {
     $scopeConditionList[] = 'q.department_id IN (' . implode(',', array_map('intval', array_keys($depts))) . ')';

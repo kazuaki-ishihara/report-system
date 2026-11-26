@@ -232,7 +232,7 @@ def main():
     # ---- 予備のコードの初期化（管理者・補佐。本人がコードをメール・チャットに貼った、などのとき） ----
     section("G-14", "予備のコードの初期化（管理者・補佐。本人がコードをメール・チャットに貼った、などのとき）")
     def unused_backup_code_count(login_id):
-        return database.execute("SELECT COUNT(*) FROM user_backup_codes WHERE user_id = ? AND used_at IS NULL", (user_id_of(login_id),)).fetchone()[0]
+        return database.execute("SELECT COUNT(*) FROM user_backup_codes WHERE user_id = ?", (user_id_of(login_id),)).fetchone()[0]   # 予備のコードは何度でも使えるので、すべて数える
 
     def try_backup_code_login(login_id):
         """予備のコードでログインを試す。ログインできれば True。"""
@@ -247,7 +247,7 @@ def main():
 
     _status_code, _location, user_edit_html = deputy_client.get("/admin/user_edit.php?id=%d" % user_id_of("ippan_b1"))
     check("ユーザーの編集に、予備のコードの残りと「予備のコードを初期化」が出る",
-          "残り 1 個" in user_edit_html and 'value="reset_backup_codes"' in user_edit_html)
+          "<span>1 個</span>" in user_edit_html and 'value="reset_backup_codes"' in user_edit_html)
     totp_before_row = database.execute("SELECT totp_secret_enc, totp_enabled_at FROM users WHERE id = ?", (user_id_of("ippan_b1"),)).fetchone()
     status_code, location, _page_html = post_form(deputy_client, "/admin/user_edit.php?id=%d" % user_id_of("ippan_b1"), {"action": "reset_backup_codes"})
     totp_after_row = database.execute("SELECT totp_secret_enc, totp_enabled_at FROM users WHERE id = ?", (user_id_of("ippan_b1"),)).fetchone()

@@ -303,5 +303,5 @@ render('admin_user_edit', [
     'isOperatorDeputy' => $isOperatorDeputy,
     'adminDeputyCount' => admin_deputy_count($target === null ? null : (int) $target['id']),
     'lastLogin'   => $target === null ? null : db_val("SELECT MAX(created_at) FROM access_logs WHERE user_id = ? AND action = 'auth' AND target = 'login:ok'", [(int) $target['id']]),
-    'backupCodeRemaining' => $target === null ? 0 : (int) db_val('SELECT COUNT(*) FROM user_backup_codes WHERE user_id = ? AND used_at IS NULL', [(int) $target['id']]),
+    'backupCodeRemaining' => $target === null ? 0 : (int) db_val('SELECT COUNT(*) FROM user_backup_codes WHERE user_id = ?', [(int) $target['id']]),
 ]);

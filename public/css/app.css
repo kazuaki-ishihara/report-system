@@ -224,6 +224,10 @@ fieldset.sub { border: 1px solid var(--line); border-radius: var(--radius); padd
 fieldset.sub legend { font-weight: 700; padding: 0 6px; }
 .edit-panel { border: 2px solid var(--primary); border-radius: var(--radius); padding: 12px 16px; margin: 12px 0 20px; background: var(--panel-bg); }
 .table-filter { max-width: 320px; margin: 4px 0 8px; }
+/* 課の一覧の課員（押すと開く） */
+.department-member-details summary { cursor: pointer; white-space: nowrap; }
+.department-member-names { margin: 4px 0; padding-left: 18px; }
+.department-member-names li { margin: 2px 0; }
 /* 選ぶ欄の札と候補の一覧（select.tag-picker を app.js が置き換える） */
 .tag-picker-box { position: relative; max-width: 560px; display: flex; flex-direction: column; gap: 6px; }
 .tag-picker-chosen { min-height: 28px; display: flex; align-items: center; }

@@ -301,6 +301,18 @@ function org_csv_plan(string $csvText, int $operatorUserId): array
         }
     }
 
+    // CSV に載っていない有効な人（この人たちは変わらない。行を消しても課から外れないことに気づけるよう、変わる内容と一緒に出す。2026-11-26 指示）
+    $plan['notInCsvList'] = [];
+    foreach (db_all(
+        'SELECT u.login_id, u.display_name, d.name AS department_name FROM users u LEFT JOIN departments d ON d.id = u.department_id
+          WHERE u.is_active = 1 AND u.login_id IS NOT NULL ORDER BY d.sort_order, d.id, u.display_name'
+    ) as $notListedRow) {
+        if (!isset($seenLoginIdSet[(string) $notListedRow['login_id']])) {
+            $plan['notInCsvList'][] = ['loginId' => (string) $notListedRow['login_id'], 'displayName' => (string) $notListedRow['display_name'],
+                'departmentName' => (string) ($notListedRow['department_name'] ?? '')];
+        }
+    }
+
     // 課長は課に 1 人まで（CSV にない人の今の課長も数える）
     foreach ($departmentIdByName as $departmentName => $departmentId) {
         $finalUserIdSet = array_fill_keys($finalUserIdListByDepartmentId[$departmentId] ?? [], true);

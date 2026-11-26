@@ -33,7 +33,7 @@ if (isset($_GET['id']) || isset($_POST['sheet_id'])) {
     if (!in_array($fiscalYear, goal_creatable_years(), true)) {
         error_page(404);
     }
-    $requestedKind = (string) ($_POST['kind'] ?? ($_GET['kind'] ?? goal_default_kind($user)));
+    $requestedKind = isset($_POST['kind']) ? post_str('kind') : get_str('kind', goal_default_kind($user));
     $kindCode = in_array($requestedKind, goal_selectable_kinds($user), true) ? $requestedKind : goal_default_kind($user);   // 役職で選べない様式は使わない
     $sheet = ['id' => null, 'user_id' => $userId, 'fiscal_year' => $fiscalYear, 'kind' => $kindCode, 'created_at' => '', 'updated_at' => '',
               'data' => goal_new_sheet_data($user, $kindCode), 'unreadable' => false];

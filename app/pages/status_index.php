@@ -13,7 +13,7 @@ $depts = status_departments($user);   // 管理者は全課（中身は出さな
 if (!$depts) {
     error_page(403);
 }
-$period = (string) ($_GET['period'] ?? report_target_period($user));
+$period = get_str('period', report_target_period($user));
 if (!is_valid_period($period)) {
     error_page(400);
 }
@@ -109,7 +109,7 @@ if (is_post()) {
     rk_done('/status/index.php?period=' . rawurlencode($period) . '&dept=' . $deptId);
 }
 
-$filter = (string) ($_GET['filter'] ?? 'all');
+$filter = get_str('filter', 'all');
 if (!in_array($filter, ['all', 'unchecked', 'not_submitted', 'open_comments', 'warning'], true)) {
     $filter = 'all';
 }

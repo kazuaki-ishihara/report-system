@@ -11,18 +11,18 @@ declare(strict_types=1);
 $user = page_start();
 $reviewableDepartmentById = reviewable_departments($user);
 // 探す範囲: department（見られる課）か mine（自分の報告）。確認者でない人は自分の報告だけ
-$searchScope = (string) ($_GET['scope'] ?? '');
+$searchScope = get_str('scope');
 if (!$reviewableDepartmentById || $searchScope !== 'department') {
     $searchScope = $reviewableDepartmentById && $searchScope === '' ? 'department' : 'mine';
 }
 $isOwnReportsOnly = $searchScope === 'mine';
 
 $defaultPeriodTo = report_target_period($user);
-$periodFrom = (string) ($_GET['from'] ?? period_shift($defaultPeriodTo, -2));
-$periodTo = (string) ($_GET['to'] ?? $defaultPeriodTo);
-$selectedDepartmentText = (string) ($_GET['dept'] ?? '');
-$choiceTargetText = (string) ($_GET['choice'] ?? '');   // "<項目 ID>:<選択肢のコード>" または空
-$keywordText = trim((string) ($_GET['q'] ?? ''));
+$periodFrom = get_str('from', period_shift($defaultPeriodTo, -2));
+$periodTo = get_str('to', $defaultPeriodTo);
+$selectedDepartmentText = get_str('dept');
+$choiceTargetText = get_str('choice');   // "<項目 ID>:<選択肢のコード>" または空
+$keywordText = trim(get_str('q'));
 $isSearchRequested = isset($_GET['search']);
 
 $errorTextList = [];

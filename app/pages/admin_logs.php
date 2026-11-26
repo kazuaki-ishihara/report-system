@@ -21,11 +21,11 @@ if (is_post()) {
     rk_done('/admin/logs.php?kind=auth_unknown');
 }
 
-$from = (string) ($_GET['from'] ?? date('Y-m-d', strtotime('-7 days')));
-$to = (string) ($_GET['to'] ?? date('Y-m-d'));
-$kind = (string) ($_GET['kind'] ?? '');
-$who = trim((string) ($_GET['who'] ?? ''));
-$target = trim((string) ($_GET['target'] ?? ''));
+$from = get_str('from', date('Y-m-d', strtotime('-7 days')));
+$to = get_str('to', date('Y-m-d'));
+$kind = get_str('kind');
+$who = trim(get_str('who'));
+$target = trim(get_str('target'));
 foreach ([$from, $to] as $d) {
     if (DateTime::createFromFormat('!Y-m-d', $d) === false) {
         error_page(400);

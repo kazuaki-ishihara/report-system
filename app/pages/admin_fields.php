@@ -20,7 +20,7 @@ if (!can_manage_system($user) && !$manageable) {
     error_page(403);
 }
 
-$deptParam = (string) ($_GET['dept'] ?? '');
+$deptParam = get_str('dept');
 if ($deptParam === '' ) {
     $deptParam = $manageable ? (string) array_key_first($manageable) : 'common';
 }

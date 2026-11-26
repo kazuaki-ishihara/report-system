@@ -82,7 +82,7 @@ $selfUrl = $target === null ? '/admin/user_edit.php' : '/admin/user_edit.php?id=
     <h2>状態</h2>
     <ul class="list">
       <li><span>2 段階認証</span><span><?= $target['totp_enabled_at'] !== null ? '設定済み（' . h(display_datetime($target['totp_enabled_at'])) . '）' : '未設定' ?></span></li>
-      <li><span>予備のコード</span><span><?= $target['totp_enabled_at'] === null ? '—' : '残り ' . (int) $backupCodeRemaining . ' 個' ?></span></li>
+      <li><span>予備のコード</span><span><?= $target['totp_enabled_at'] === null ? '—' : (int) $backupCodeRemaining . ' 個' ?></span></li>
       <li><span>ロック</span><span><?= ($target['locked_until'] !== null && $target['locked_until'] > now()) ? 'ロック中（' . h(display_datetime((string) $target['locked_until'])) . ' まで）' : 'なし' ?></span></li>
       <li><span>最終ログイン</span><span><?= h($lastLogin === null ? '—' : display_datetime((string) $lastLogin)) ?></span></li>
       <li><span>パスワードの変更</span><span><?= (int) $target['must_change_password'] === 1 ? '仮のパスワード（未変更）' : h($target['password_changed_at'] === null ? '—' : display_datetime((string) $target['password_changed_at'])) ?></span></li>

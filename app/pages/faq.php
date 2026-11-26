@@ -57,8 +57,8 @@ $searchQueryText = is_string($_GET['q'] ?? null) && preg_match('//u', $_GET['q']
 if (str_len($searchQueryText) > FAQ_SEARCH_QUERY_MAX_LENGTH) {
     $searchQueryText = implode('', array_slice(preg_split('//u', $searchQueryText, -1, PREG_SPLIT_NO_EMPTY) ?: [], 0, FAQ_SEARCH_QUERY_MAX_LENGTH));
 }
-$selectedCategory = is_string($_GET['category'] ?? null) && faq_is_category($_GET['category']) ? (string) $_GET['category'] : null;
-$linkedScreenCode = is_string($_GET['screen'] ?? null) && isset(SUPPORT_REQUEST_SCREEN_LABELS[$_GET['screen']]) ? (string) $_GET['screen'] : '';
+$selectedCategory = isset($_GET['category']) && faq_is_category(get_str('category')) ? get_str('category') : null;
+$linkedScreenCode = isset(SUPPORT_REQUEST_SCREEN_LABELS[get_str('screen')]) ? get_str('screen') : '';
 $sourcePathText = support_request_clean_source_path(is_string($_GET['from'] ?? null) ? $_GET['from'] : '');
 $askedQuestionText = $searchQueryText;
 $askErrorTextList = [];
