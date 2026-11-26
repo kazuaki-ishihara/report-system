@@ -83,15 +83,34 @@ DB・暗号の鍵・アカウントはそのまま残る。上げてある版の
 ■ Web から見える範囲
 見えるのは、上の画面の入り口（.php）と css/・js/ だけ。
 
+許すものだけを書く形にしている（.htaccess の mod_rewrite）:
+  - 置かれているファイルのうち、拡張子が .php・.css・.js（小文字）のものだけを送る。
+    それ以外のファイルは、置かれていても 403（拒否）にする。大文字の .PHP なども 403。
+  - フォルダー（index.php への切り替え）と、無いもの（404）はそのまま。
+  - .well-known/ はサーバーが置くもの（証明書の更新など）なので除く。
+
 見えないもの（.htaccess で拒否する）:
+  - 上の 3 つの拡張子のほかのファイルすべて（DB・鍵・控え・圧縮ファイル・事務の文書・拡張子のないファイルなど）
   - app/ の中すべて（app/.htaccess と ~/www/report-system/.htaccess の二重）
   - 置かれていても 404 にするフォルダー:
       app  docs  tools  public  __pycache__  node_modules  vendor
       data  keys  backup(s)  log(s)  config  lib  include(s)  src  db  database  storage  tmp  private
   - 名前が「.」で始まるファイル・フォルダー（.git など）
-  - 拡張子: sqlite sqlite3 db key bak backup log md sql json ini sh py pyc pyo txt csv tsv
-            zip tar gz tgz 7z yml yaml xml dist example orig swp lock env
   - _boot.php
+
+二重の守り（mod_rewrite が効かないときも拒否する拡張子。大文字・小文字を区別しない）:
+  sqlite sqlite3 sqlite-wal sqlite-shm sqlite-journal db db-journal db3 key pem crt cer p12 pfx ppk
+  inc phps phtml php3〜php8 old save tmp swo conf cfg toml xls xlsx doc docx pdf
+  bak backup log md sql json ini sh py pyc pyo txt csv tsv yml yaml xml dist example orig swp lock env
+  圧縮ファイル（形式を問わない）: zip tar gz tgz 7z br zst zstd deflate zz bz2 tbz tbz2 xz txz lzma lz lz4 rar z
+  （事前に圧縮した .css.br・.js.gz なども配信しない）、名前が ~ で終わるもの（エディターの控え）
+
+反映のあとに確かめること（.htaccess を変えたとき。手元の検証は .htaccess を読まないため、サーバーで確かめる）:
+  1. ログインの画面・ホーム・css/app.css・js/app.js が開く。フォルダーだけの URL（/report-system/）でログインの画面になる。
+  2. health.php が開く（200）。
+  3. 試しのファイルを ~/www/report-system/ に置いて開き、どれも 403 になることを確かめてから消す:
+       check.txt  check.css.br  check.PHP  check  check.php~  check.xlsx
+     （中身は空でよい。確かめたら必ず消す）
 
 ■ 本番に置かないもの
   - docs/、tools/（設計書と開発の道具）

@@ -343,6 +343,25 @@ org_schedules_run_due();
 db()->exec('DROP TRIGGER tr_verify_fail');
 $check('G-14', '反映の途中で誤りが起きた予約は、失敗として残り、何も変わらない', db_val("SELECT status FROM org_schedules ORDER BY id DESC LIMIT 1") === 'failed' && (int) db_val('SELECT department_id FROM users WHERE id = 2') === 1);
 
+// ---- サイトの印（session_site_stamp）: DB を読めないときは、印を変えずに誤りにする（ログアウトさせない） ----
+// DB の接続は 1 つのプロセスで 1 回だけ作るので、壊れた DB を指す別のプロセスで試す
+$brokenDatabasePath = $work . '/broken.sqlite';
+file_put_contents($brokenDatabasePath, str_repeat('this is not a database', 100));
+$siteStampScriptPath = $work . '/site_stamp_check.php';
+file_put_contents($siteStampScriptPath, '<?php putenv("MR_VERIFY_DB"); require ' . var_export(APP_DIR . '/bootstrap.php', true) . ';'
+    . ' $GLOBALS["APP_CONFIG"]["db_path"] = ' . var_export($brokenDatabasePath, true) . ';'
+    . ' $GLOBALS["APP_CONFIG"]["key_dir"] = ' . var_export($work . '/keys/new', true) . ';'
+    . ' try { session_site_stamp(); echo "NO_ERROR"; } catch (Throwable $e) { echo "THROWN:" . get_class($e); }');
+$siteStampOutput = (string) shell_exec('"' . PHP_BINARY . '" ' . escapeshellarg($siteStampScriptPath) . ' 2>&1');
+$check('共通', 'DB を読めないときは、サイトの印を空の鍵で作らずに誤りにする（DB の一時の失敗でログアウトさせない）', strpos($siteStampOutput, 'THROWN:PDOException') !== false, $siteStampOutput);
+$validStampScriptPath = $work . '/site_stamp_valid.php';
+file_put_contents($validStampScriptPath, '<?php putenv("MR_VERIFY_DB"); require ' . var_export(APP_DIR . '/bootstrap.php', true) . ';'
+    . ' $GLOBALS["APP_CONFIG"]["db_path"] = ' . var_export($work . '/libs.sqlite', true) . ';'
+    . ' $GLOBALS["APP_CONFIG"]["key_dir"] = ' . var_export($work . '/keys/none', true) . ';'
+    . ' try { echo strlen(session_site_stamp()) === 64 ? "STAMP" : "BAD"; } catch (Throwable $e) { echo "THROWN:" . get_class($e); }');
+$validStampOutput = (string) shell_exec('"' . PHP_BINARY . '" ' . escapeshellarg($validStampScriptPath) . ' 2>&1');
+$check('共通', '鍵を作る前（初期設定）でも、サイトの印を作れる（ログインの画面を開ける）', strpos($validStampOutput, 'STAMP') !== false, $validStampOutput);
+
 // ---- 送信の番号が同時に来たとき（写しで試す） ----
 $check('共通', '検索・権限の関数のあとも DB は正しい', db()->query('PRAGMA integrity_check')->fetchColumn() === 'ok');
 
