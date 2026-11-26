@@ -77,7 +77,8 @@ function faq_csv_maintenance_rows(array $unansweredGroupList, array $feedbackCou
             (string) ($feedbackCountByFaqId[$faqId]['solved'] ?? 0), (string) ($feedbackCountByFaqId[$faqId]['unsolved'] ?? 0),
         ];
     }
-    $existingQuestionSet = array_fill_keys(array_column($faqEntryRowList, 'question'), true);
+    // 前の文のまま載っている標準の質問（標準の取り込みで今の文になる）は、「まだ載っていない」に出さない
+    $existingQuestionSet = array_fill_keys(array_merge(array_column($faqEntryRowList, 'question'), array_column(faq_standard_renamable_rows($faqEntryRowList), 'question')), true);
     foreach (FAQ_STANDARD_ENTRIES as [$standardCategory, $standardQuestion, $standardAnswer]) {
         if (!isset($existingQuestionSet[$standardQuestion])) {
             $csvRowList[] = [FAQ_CSV_KIND_STANDARD, '', FAQ_CATEGORY_LABELS[$standardCategory] ?? FAQ_CATEGORY_LABELS[''], $standardQuestion, $standardAnswer, '', '', '', '', ''];

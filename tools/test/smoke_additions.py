@@ -242,7 +242,7 @@ def main():
     check("管理者が直した答えは変えない", db.execute("SELECT answer FROM faq_entries WHERE id = ?", (edited[0],)).fetchone()[0] == "管理者が直した答え")
     s, _, fb = admin.get("/faq.php")
     check("取り込んだあとは、取り込みのボタンが出ない", 'value="import_standard"' not in fb, s)
-    check("取り込みを記録に残す（足した数・新しくした数）", db.execute("SELECT COUNT(*) FROM access_logs WHERE target = 'faq:import_standard;added=0;updated=1'").fetchone()[0] == 1)
+    check("取り込みを記録に残す（足した数・新しくした数）", db.execute("SELECT COUNT(*) FROM access_logs WHERE target = 'faq:import_standard;added=0;updated=1;renamed=0'").fetchone()[0] == 1)
 
     return summary()
 

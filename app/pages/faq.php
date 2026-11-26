@@ -235,7 +235,15 @@ if (is_post() && !in_array(post_str('action'), ['ask', 'chat_feedback', 'chat_cl
     // ---- 標準のよくある質問を取り込む（まだ載っていない質問の文を足し、管理者が直していない答えは新しくする。§2.4） ----
     if ($action === 'import_standard') {
         $updatedAnswerCount = 0;
-        $addedCount = tx(function () use ($userId, &$updatedAnswerCount): int {
+        $renamedQuestionCount = 0;
+        $addedCount = tx(function () use ($userId, &$updatedAnswerCount, &$renamedQuestionCount): int {
+            // 質問の文を変えた標準の質問: 前の文のまま載っている行を今の文に書き換える（二重に足さない）。
+            // 管理者が直していない行（作った日時と直した日時が同じ）は、日時を同じにしたまま（このあと答えも新しくなる）
+            foreach (faq_standard_renamable_rows(db_all('SELECT id, question FROM faq_entries')) as $renamableRow) {
+                db_exec('UPDATE faq_entries SET question = ?, created_at = CASE WHEN created_at = updated_at THEN ? ELSE created_at END, updated_at = ? WHERE id = ?',
+                    [$renamableRow['question'], now(), now(), $renamableRow['id']]);
+                $renamedQuestionCount++;
+            }
             foreach (faq_standard_updatable_rows(db_all('SELECT id, category, question, answer, created_at, updated_at FROM faq_entries')) as $updatableRow) {
                 // 作った日時と直した日時を同じにしておく（次の版でも、管理者が直していない答えとして新しくできる）
                 db_exec('UPDATE faq_entries SET category = ?, answer = ?, created_at = ?, updated_at = ? WHERE id = ?',
@@ -259,9 +267,10 @@ if (is_post() && !in_array(post_str('action'), ['ask', 'chat_feedback', 'chat_cl
             }
             return $insertedCount;
         });
-        audit_log('admin', 'faq:import_standard;added=' . $addedCount . ';updated=' . $updatedAnswerCount);
-        if ($addedCount > 0 || $updatedAnswerCount > 0) {
-            flash('success', msg('標準のよくある質問を {count} 件取り込み、{updated} 件の答えを新しくしました（管理者が直した答えは変えていません）', ['count' => $addedCount, 'updated' => $updatedAnswerCount]));
+        audit_log('admin', 'faq:import_standard;added=' . $addedCount . ';updated=' . $updatedAnswerCount . ';renamed=' . $renamedQuestionCount);
+        if ($addedCount > 0 || $updatedAnswerCount > 0 || $renamedQuestionCount > 0) {
+            flash('success', msg('標準のよくある質問を {count} 件取り込み、{updated} 件の答えを新しくし、{renamed} 件の質問の文を今の文にしました（管理者が直した答えは変えていません）',
+                ['count' => $addedCount, 'updated' => $updatedAnswerCount, 'renamed' => $renamedQuestionCount]));
         } else {
             flash('success', msg('取り込む質問はありませんでした（標準のよくある質問は、すべて載っています）'));
         }
@@ -346,10 +355,13 @@ $chatAnswer = !is_post() && ($searchQueryText !== '' || $selectedCategory !== nu
     : ['result' => '', 'ignored' => false, 'distress_level' => '', 'matches' => [], 'log_id' => 0];
 // 分野と文の両方があるときは、分野で答えた（文は探さない）
 $chatResultCode = $selectedCategory !== null ? '' : $chatAnswer['result'];
-$existingQuestionSet = array_fill_keys(array_column($allFaqList, 'question'), true);
+// 質問の文を変えた標準の質問（前の文のまま載っている行）は、「まだ載っていない」に数えず、文の直しに数える
+$standardRenamableRowList = $canEdit ? faq_standard_renamable_rows($allFaqList) : [];
+$existingQuestionSet = array_fill_keys(array_merge(array_column($allFaqList, 'question'), array_column($standardRenamableRowList, 'question')), true);
 $standardMissingCount = count(array_filter(FAQ_STANDARD_ENTRIES, static function (array $standardEntry) use ($existingQuestionSet): bool {
     return !isset($existingQuestionSet[$standardEntry[1]]);
 }));
+$standardRenamableCount = count($standardRenamableRowList);
 // 標準の答えが新しくなった行（管理者が直していないもの）の数（取り込みで新しくする）
 $standardUpdatableCount = $canEdit ? count(faq_standard_updatable_rows(db_all('SELECT id, category, question, answer, created_at, updated_at FROM faq_entries'))) : 0;
 render('faq', [
@@ -376,6 +388,7 @@ render('faq', [
     'sourcePathText'    => $sourcePathText,
     'canEdit'           => $canEdit,
     'standardMissingCount' => $standardMissingCount,
+    'standardRenamableCount' => $standardRenamableCount,
     'standardUpdatableCount' => $standardUpdatableCount,
     'editedFaqId'       => $editedFaqId,
     'sourceRequestId'   => $sourceRequestId,
