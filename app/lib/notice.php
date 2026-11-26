@@ -1009,8 +1009,19 @@ function faq_mentions_death(string $queryText): bool
 /** システム管理者・補佐にだけ見せる分野（管理の手順。ほかの人には、チャット・分野・すべての質問のどこにも出さない） */
 const FAQ_STAFF_ONLY_CATEGORIES = ['admin'];
 
+/** 課長・項目管理者（と、システム管理者・補佐）にだけ見せる分野（課の管理・項目。一般の利用者には出さない。2026-11-26 指示） */
+const FAQ_DEPARTMENT_MANAGER_ONLY_CATEGORIES = ['department'];
+
+/** 課長か、どこかの課の項目管理者か（分野「課の管理・項目（課長）」を見せる人） */
+function faq_is_department_manager(array $user): bool
+{
+    return db_val('SELECT 1 FROM department_reviewers WHERE user_id = ? AND is_final = 1 LIMIT 1', [(int) $user['id']]) !== null
+        || db_val('SELECT 1 FROM department_admins WHERE user_id = ? LIMIT 1', [(int) $user['id']]) !== null;
+}
+
 /**
- * その人に見せてよいよくある質問だけにする（管理者・補佐でなければ、管理者・補佐だけの分野を除く）。
+ * その人に見せてよいよくある質問だけにする（管理者・補佐でなければ、管理者・補佐だけの分野を除く。
+ * 課長・項目管理者でもなければ、分野「課の管理・項目（課長）」も除く）。
  *
  * @param array<int, array<string, int|float|string|null>> $faqList
  * @return array<int, array<string, int|float|string|null>>
@@ -1020,8 +1031,9 @@ function faq_visible_entries(array $faqList, array $user): array
     if (can_manage_system($user)) {
         return $faqList;
     }
-    return array_values(array_filter($faqList, static function (array $faqRow): bool {
-        return !in_array((string) ($faqRow['category'] ?? ''), FAQ_STAFF_ONLY_CATEGORIES, true);
+    $hiddenCategoryList = faq_is_department_manager($user) ? FAQ_STAFF_ONLY_CATEGORIES : array_merge(FAQ_STAFF_ONLY_CATEGORIES, FAQ_DEPARTMENT_MANAGER_ONLY_CATEGORIES);
+    return array_values(array_filter($faqList, static function (array $faqRow) use ($hiddenCategoryList): bool {
+        return !in_array((string) ($faqRow['category'] ?? ''), $hiddenCategoryList, true);
     }));
 }
 

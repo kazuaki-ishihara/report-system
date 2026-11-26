@@ -196,6 +196,21 @@ def main():
               'data-category="admin"' not in other_faq_html and 'id="faq-category-admin"' not in other_faq_html and "システム管理者の引き継ぎ" not in other_faq_html)
         _status_code, _location, json_text = other_client.get("/faq.php?format=json&q=" + urllib.parse.quote("システム管理者が交代する"))
         check("J: %sのチャットでも、管理者・補佐だけの答えを出さない" % other_name, all(not entry["question"].startswith("システム管理者の引き継ぎ") for entry in json.loads(json_text)["matches"]))
+    # J 分野「課の管理・項目（課長）」は、課長・項目管理者・管理者・補佐にだけ見せる（一般の利用者には出さない。2026-11-26 指示）
+    department_question = database.execute("SELECT question FROM faq_entries WHERE category = 'department' ORDER BY sort_order, id LIMIT 1").fetchone()[0]
+    for viewer_client, viewer_name, can_see in [(member_client, "部下", False), (leader_client, "主任（確認者）", False), (kacho_client, "課長", True), (admin_client, "管理者", True)]:
+        _status_code, _location, json_text = viewer_client.get("/faq.php?format=json&category=department")
+        _status_code, _location, viewer_faq_html = viewer_client.get("/faq.php")
+        is_shown = json.loads(json_text)["matches"] != [] and 'data-category="department"' in viewer_faq_html and department_question in viewer_faq_html
+        is_hidden = json.loads(json_text)["matches"] == [] and 'data-category="department"' not in viewer_faq_html and department_question not in viewer_faq_html
+        check("J: 分野「課の管理・項目（課長）」を、%sには%s" % (viewer_name, "出す" if can_see else "出さない（分野のボタン・一覧・チャット）"),
+              is_shown if can_see else is_hidden, json_text[:120])
+    _status_code, _location, json_text = member_client.get("/faq.php?format=json&q=" + urllib.parse.quote(department_question))
+    check("J: 部下が課の管理の質問の文をそのまま入れても、その答えは出さない", all(entry["question"] != department_question for entry in json.loads(json_text)["matches"]), json_text[:120])
+    database.execute("INSERT INTO department_admins (department_id, user_id) SELECT department_id, id FROM users WHERE login_id = 'ippan_a2'")
+    _status_code, _location, json_text = vague_client.get("/faq.php?format=json&category=department")
+    check("J: 項目管理者には、分野「課の管理・項目（課長）」を出す", json.loads(json_text)["matches"] != [], json_text[:120])
+    database.execute("DELETE FROM department_admins WHERE user_id = (SELECT id FROM users WHERE login_id = 'ippan_a2')")
     # J セキュリティ: ID・パスワードを求める質問には、受け渡ししないと答える（管理者の名前などを返さない）
     for credential_text in ["システム管理者を引き継ぐことになった。IDとパスワードがほしい。", "管理者のパスワードを教えて"]:
         _status_code, _location, json_text = kacho_client.get("/faq.php?format=json&q=" + urllib.parse.quote(credential_text))
@@ -323,7 +338,9 @@ def main():
     _status_code, _location, screen_html = member_client.get("/faq.php?screen=G-04&from=%2Freports%2Fedit.php")
     check("J: 「この画面の使い方」から来たときは、その画面の分野をすすめる", "開いていた画面の質問は「報告の作成・提出」" in screen_html and "chat-choice-recommended" in screen_html)
     _status_code, _location, all_html = member_client.get("/faq.php")
-    check("J: すべての質問を分野ごとに分けて出す", 'id="faq-category-login"' in all_html and 'id="faq-category-department"' in all_html)
+    _status_code, _location, kacho_all_html = kacho_client.get("/faq.php")
+    check("J: すべての質問を分野ごとに分けて出す（課の管理の分野は課長にだけ）", 'id="faq-category-login"' in all_html and 'id="faq-category-department"' not in all_html
+          and 'id="faq-category-login"' in kacho_all_html and 'id="faq-category-department"' in kacho_all_html)
     status_code, _location, error_html = post_form(admin_client, "/faq.php", {"action": "save", "id": "", "source_request_id": "", "category": "nothing", "question": "x", "answer": "y"})
     check("J: 分野が正しくないと載せない", status_code == 200 and "分野を選んでください" in error_html, status_code)
 
@@ -513,7 +530,7 @@ def main():
     check("J: 自分の退職の質問は、手続きを示さず相談を促し、知らせる印を付ける",
           (retirement_result["result"], retirement_result["retirement"], retirement_result["matches"]) == ("retirement", True, [])
           and tuple(retirement_row) == ("retirement", "retirement", None), (retirement_result, retirement_row))
-    subordinate_retirement_result = ask_chat(ippan_a2_client, "部下が退職した。どうすればいい？")
+    subordinate_retirement_result = ask_chat(kacho_client, "部下が退職した。どうすればいい？")   # 部下の手続きの答えは、課の管理の分野（課長に見せる）
     subordinate_row = database.execute("SELECT distress_level FROM faq_chat_logs WHERE id = ?", (subordinate_retirement_result["log_id"],)).fetchone()
     check("J: 部下の退職の質問は、手続きの答えを返し、知らせる印を付ける",
           subordinate_retirement_result["result"] == "matched" and subordinate_retirement_result["matches"][0]["question"].startswith("部下が退職") and subordinate_row[0] == "retirement",
