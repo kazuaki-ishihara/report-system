@@ -126,7 +126,7 @@ def main():
     entry_count_before = one("SELECT COUNT(*) FROM faq_entries")
     status_code, _location, preview_html = upload(build_csv(edited_rows))
     check("取り込むと、足す・直す・消すの数を出す（まだ変えない）",
-          status_code == 200 and "足す 3" in preview_html and "直す 1" in preview_html and "消す 1" in preview_html and 'value="faq_csv_apply"' in preview_html
+          status_code == 200 and "足す 3</span>" in preview_html and "直す 1</span>" in preview_html and "消す 1</span>" in preview_html and 'value="faq_csv_apply"' in preview_html
           and one("SELECT COUNT(*) FROM faq_entries") == entry_count_before and one("SELECT answer FROM faq_entries WHERE id = ?", edited_faq_id) != edited_entry[4],
           status_code)
     check("答えが空の行（答えられなかった質問の残り）は飛ばすと出す", "答えが空で飛ばす %d" % (len(unanswered_rows) - 1) in preview_html)
@@ -142,7 +142,16 @@ def main():
           one("SELECT created_at = updated_at FROM faq_entries WHERE question = ?", left_out_question) == 1)
     check("書いて足した質問は、作った日時と直した日時を変える（標準の取り込みで上書きしない）",
           one("SELECT created_at <> updated_at FROM faq_entries WHERE question = 'CSV で書き足した質問'") == 1)
-    check("反映が記録に残る", one("SELECT COUNT(*) FROM access_logs WHERE target = 'faq:csv_import;added=3;updated=1;deleted=1'") == 1)
+    check("反映が記録に残る", one("SELECT COUNT(*) FROM access_logs WHERE target = 'faq:csv_import;added=3;updated=1;deleted=1'") == 1,
+          database.execute("SELECT target FROM access_logs WHERE target LIKE 'faq:csv%'").fetchall())
+    # 改行の形（CRLF）が違うだけの答えは、変えたことにしない（標準の答えのファイルが CRLF で取り出されたときなど）
+    crlf_faq_id = int(entry_rows[2][1])
+    database.execute("UPDATE faq_entries SET answer = replace(answer, char(10), char(13) || char(10)) || ' ' WHERE id = ?", (crlf_faq_id,))
+    crlf_rows = [list(csv_row) for csv_row in entry_rows[2:]]
+    for csv_row in crlf_rows:
+        csv_row[6] = one("SELECT updated_at FROM faq_entries WHERE id = ?", int(csv_row[1]))
+    status_code, _location, preview_html = upload(build_csv(crlf_rows))
+    check("改行の形（CRLF）と前後の空白が違うだけの答えは、直すにしない", "直す 0</span>" in preview_html and "変わらない %d</span>" % len(crlf_rows) in preview_html, status_code)
     status_code, _location, _page_html = apply_plan(preview_html)
     check("同じ計画で 2 回は反映しない", one("SELECT COUNT(*) FROM faq_entries") == entry_count_before + 2)
 

@@ -145,7 +145,7 @@ function faq_csv_plan(string $csvText): array
         $faqIdText = trim($cells['番号']);
         $categoryLabel = trim($cells['分野']);
         $questionText = trim($cells['質問']);
-        $answerText = trim(str_replace(["\r\n", "\r"], "\n", $cells['答え']));
+        $answerText = faq_csv_normalize_answer($cells['答え']);
         $deleteMark = trim($cells['消す']);
         $isDelete = $deleteMark !== '';
         $rowErrorList = [];
@@ -170,7 +170,9 @@ function faq_csv_plan(string $csvText): array
                 continue;
             }
             $seenFaqIdSet[$faqId] = true;
-            $isChanged = $categoryCode !== (string) $currentRow['category'] || $questionText !== (string) $currentRow['question'] || $answerText !== (string) $currentRow['answer'];
+            // 改行の形（CRLF・LF）と前後の空白の違いは、変えたことにしない（CSV に出して読み直すとそろうため）
+            $isChanged = $categoryCode !== (string) $currentRow['category'] || $questionText !== trim((string) $currentRow['question'])
+                || $answerText !== faq_csv_normalize_answer((string) $currentRow['answer']);
             if (($isDelete || $isChanged) && trim($cells['直した日時']) !== (string) $currentRow['updated_at']) {
                 $rowErrorList[] = msg('{line} 行目: 番号 {id} の質問は、CSV を出したあとに画面で直されています。もう一度 CSV を出して直してください', ['line' => $lineNumber, 'id' => $faqId]);
             }
@@ -221,6 +223,12 @@ function faq_csv_plan(string $csvText): array
         $plan['errorTextList'][] = msg('よくある質問は {max} 件までです（取り込むと {count} 件になります）', ['max' => FAQ_MAX_COUNT, 'count' => $remainingCount + count($plan['addList'])]);
     }
     return $plan;
+}
+
+/** 答えをそろえた形（改行を LF にし、前後の空白を除く。画面で保存するときと同じ） */
+function faq_csv_normalize_answer(string $answerText): string
+{
+    return trim(str_replace(["\r\n", "\r"], "\n", $answerText));
 }
 
 /** 質問の文を比べるための形（前後の空白と、全角・半角の違いをそろえる） */
