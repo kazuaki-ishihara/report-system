@@ -72,12 +72,18 @@
       <input type="hidden" name="action" value="final_save">
       <input type="hidden" name="dept_id" value="<?= (int) $edit['id'] ?>">
       <label for="final_user_id">課長</label>
+      <input type="search" class="select-filter" data-filter-select="#final_user_id" placeholder="名前・ID・課・役職で絞り込む" aria-label="課長の候補を絞り込む" hidden>
       <select id="final_user_id" name="final_user_id">
         <option value="">（課長なし）</option>
-        <?php foreach ($candidates as $candidateRow): ?>
+        <?php foreach ($candidateGroups as $groupLabel => $groupRows): if (empty($groupRows)) { continue; } ?>
+        <optgroup label="<?= h($groupLabel) ?>">
+          <?php foreach ($groupRows as $candidateRow): ?>
           <option value="<?= (int) $candidateRow['id'] ?>" <?= (int) $candidateRow['is_final'] === 1 ? 'selected' : '' ?>><?= h($candidateRow['display_name']) ?>（<?= h((string) $candidateRow['login_id']) ?>・<?= h((string) ($candidateRow['dept_name'] ?? '課なし')) ?>・<?= h((string) $candidateRow['role_title']) ?>）</option>
+          <?php endforeach; ?>
+        </optgroup>
         <?php endforeach; ?>
       </select>
+      <p class="select-filter-count note" hidden></p>
       <button type="submit" class="primary">課長を保存</button>
     </form>
     </section>

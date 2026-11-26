@@ -277,7 +277,7 @@ if ($tab === 'departments') {
         }
         // 課長の候補（有効な人。この課の人を上に）
         $vars['candidates'] = db_all(
-            'SELECT u.id, u.login_id, u.display_name, u.role_title, d.name AS dept_name, COALESCE(r.is_final, 0) AS is_final
+            'SELECT u.id, u.login_id, u.display_name, u.role_title, u.department_id, d.name AS dept_name, COALESCE(r.is_final, 0) AS is_final
                FROM users u
                LEFT JOIN departments d ON d.id = u.department_id
                LEFT JOIN department_reviewers r ON r.user_id = u.id AND r.department_id = ?
@@ -288,6 +288,17 @@ if ($tab === 'departments') {
         $vars['candidates'] = array_values(array_filter($vars['candidates'], function (array $candidateRow): bool {
             return specialist_title_of((int) $candidateRow['id']) === '';   // 専門職は課長にしない（K-074）
         }));
+        // 選ぶ欄では、この課の人・ほかの課の課長と部長（役職）・ほかの人に分けて出す（人が多いときに探しやすくする）
+        $vars['candidateGroups'] = ['この課の人' => [], 'ほかの課の課長・部長' => [], 'ほかの人' => []];
+        foreach ($vars['candidates'] as $candidateRow) {
+            if ((int) $candidateRow['department_id'] === $editId) {
+                $vars['candidateGroups']['この課の人'][] = $candidateRow;
+            } elseif (role_title_fits_final((string) $candidateRow['role_title'])) {
+                $vars['candidateGroups']['ほかの課の課長・部長'][] = $candidateRow;
+            } else {
+                $vars['candidateGroups']['ほかの人'][] = $candidateRow;
+            }
+        }
         // 役職が課長・部長でない人を課長に選んだときの確かめ（final_save から戻る。K-069）
         $vars['finalCheckCandidate'] = null;
         if (isset($_GET['final_check'])) {
