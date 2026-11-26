@@ -475,46 +475,146 @@
     });
   });
 
-  // ---- 選ぶ欄の絞り込み（input.select-filter の data-filter-select で選ぶ欄を指定。候補の文字に含むものだけ残す） ----
-  //   ・option を隠すだけでは効かないブラウザーがあるので、合わない option は外し、まとまり（optgroup）ごと元の順に入れ直す
-  //   ・値が空の option（「なし」）と、今選んでいる option は、いつも残す
-  //   ・絞り込みの欄の直後の .select-filter-count に、残った人数を出す
-  document.querySelectorAll('input.select-filter').forEach(function (selectFilterInput) {
-    var filteredSelect = document.querySelector(selectFilterInput.getAttribute('data-filter-select'));
-    if (!filteredSelect) { return; }
-    var countNote = filteredSelect.parentNode.querySelector('.select-filter-count');
-    var originalChildList = Array.prototype.slice.call(filteredSelect.children).map(function (childNode) {
-      return { node: childNode, optionList: childNode.tagName === 'OPTGROUP' ? Array.prototype.slice.call(childNode.children) : null };
-    });
-    selectFilterInput.hidden = false;
-    selectFilterInput.addEventListener('input', function () {
-      var filterText = selectFilterInput.value.trim().toLowerCase();
-      var selectedValue = filteredSelect.value;
-      var matchedCount = 0;
-      var optionMatches = function (candidateOption) {
-        if (candidateOption.value === '' || candidateOption.value === selectedValue) { return true; }
-        var isMatched = filterText === '' || candidateOption.textContent.toLowerCase().indexOf(filterText) !== -1;
-        if (isMatched) { matchedCount++; }
-        return isMatched;
-      };
-      while (filteredSelect.firstChild) { filteredSelect.removeChild(filteredSelect.firstChild); }
-      originalChildList.forEach(function (originalChild) {
-        if (originalChild.optionList === null) {
-          if (optionMatches(originalChild.node)) { filteredSelect.appendChild(originalChild.node); }
-          return;
-        }
-        while (originalChild.node.firstChild) { originalChild.node.removeChild(originalChild.node.firstChild); }
-        originalChild.optionList.forEach(function (groupOption) {
-          if (optionMatches(groupOption)) { originalChild.node.appendChild(groupOption); }
-        });
-        if (originalChild.node.children.length > 0) { filteredSelect.appendChild(originalChild.node); }
+  // ---- 選ぶ欄を札と候補の一覧にする（select.tag-picker。人が多いときに探しやすくする） ----
+  //   ・select はそのまま残して隠し、送る値は select が持つ（JavaScript が動かないときは、ふつうの選ぶ欄のまま）
+  //   ・選んでいる人を札で出す。札の × で「なし」（値が空の option）に戻す
+  //   ・探す欄を押すか文字を入れると、合う候補を optgroup のまとまりごとに一覧で出す。押すか Enter で選ぶ
+  //   ・↑↓ で候補を移り、Esc で一覧を閉じる。一覧は多くても TAG_PICKER_MAX_ITEMS 件まで出す
+  var TAG_PICKER_MAX_ITEMS = 50;
+  document.querySelectorAll('select.tag-picker').forEach(function (pickerSelect, pickerIndex) {
+    var pickerRoot = document.createElement('div');
+    pickerRoot.className = 'tag-picker-box';
+    var chipArea = document.createElement('div');
+    chipArea.className = 'tag-picker-chosen';
+    var searchInput = document.createElement('input');
+    searchInput.type = 'search';
+    searchInput.className = 'tag-picker-search';
+    searchInput.id = (pickerSelect.id || 'tag-picker-' + pickerIndex) + '-search';
+    searchInput.placeholder = pickerSelect.getAttribute('data-search-placeholder') || '';
+    searchInput.setAttribute('autocomplete', 'off');
+    searchInput.setAttribute('role', 'combobox');
+    searchInput.setAttribute('aria-expanded', 'false');
+    var resultList = document.createElement('ul');
+    resultList.className = 'tag-picker-list';
+    resultList.id = 'tag-picker-list-' + pickerIndex;
+    resultList.setAttribute('role', 'listbox');
+    resultList.hidden = true;
+    searchInput.setAttribute('aria-controls', resultList.id);
+    pickerRoot.appendChild(chipArea);
+    pickerRoot.appendChild(searchInput);
+    pickerRoot.appendChild(resultList);
+    pickerSelect.parentNode.insertBefore(pickerRoot, pickerSelect);
+    pickerSelect.hidden = true;
+    var pickerLabel = pickerSelect.id ? document.querySelector('label[for="' + pickerSelect.id + '"]') : null;
+    if (pickerLabel) { pickerLabel.htmlFor = searchInput.id; }
+    var activeIndex = -1;
+
+    var closeList = function () {
+      resultList.hidden = true;
+      searchInput.setAttribute('aria-expanded', 'false');
+      activeIndex = -1;
+    };
+    var renderChip = function () {
+      chipArea.textContent = '';
+      var chosenOption = pickerSelect.options[pickerSelect.selectedIndex];
+      if (!chosenOption || chosenOption.value === '') {
+        var emptyText = document.createElement('span');
+        emptyText.className = 'muted';
+        emptyText.textContent = chosenOption ? chosenOption.textContent : '';
+        chipArea.appendChild(emptyText);
+        return;
+      }
+      var chosenChip = document.createElement('span');
+      chosenChip.className = 'tag tag-picker-chip';
+      chosenChip.appendChild(document.createTextNode(chosenOption.textContent));
+      var clearButton = document.createElement('button');
+      clearButton.type = 'button';
+      clearButton.className = 'tag-picker-clear';
+      clearButton.textContent = '×';
+      clearButton.setAttribute('aria-label', M('選んでいる人を外す'));
+      clearButton.addEventListener('click', function () { choose(''); searchInput.focus(); });
+      chosenChip.appendChild(clearButton);
+      chipArea.appendChild(chosenChip);
+    };
+    var choose = function (optionValue) {
+      pickerSelect.value = optionValue;
+      pickerSelect.dispatchEvent(new Event('change', { bubbles: true }));
+      searchInput.value = '';
+      closeList();
+      renderChip();
+    };
+    var itemList = function () { return Array.prototype.slice.call(resultList.querySelectorAll('li[role="option"]')); };
+    var markActive = function (nextIndex) {
+      var items = itemList();
+      if (items.length === 0) { return; }
+      activeIndex = (nextIndex + items.length) % items.length;
+      items.forEach(function (item, itemIndex) {
+        item.classList.toggle('active', itemIndex === activeIndex);
+        item.setAttribute('aria-selected', itemIndex === activeIndex ? 'true' : 'false');
       });
-      filteredSelect.value = selectedValue;
-      if (countNote) {
-        countNote.hidden = filterText === '';
-        countNote.textContent = matchedCount === 0 ? M('合う人がいません。') : M('合う人: {count} 人', { count: matchedCount });
+      items[activeIndex].scrollIntoView({ block: 'nearest' });
+    };
+    var renderList = function () {
+      var searchText = searchInput.value.trim().toLowerCase();
+      resultList.textContent = '';
+      activeIndex = -1;
+      var shownCount = 0;
+      var matchedCount = 0;
+      var lastGroupLabel = null;
+      Array.prototype.forEach.call(pickerSelect.querySelectorAll('option'), function (candidateOption) {
+        if (candidateOption.value === '' || candidateOption.value === pickerSelect.value) { return; }
+        if (searchText !== '' && candidateOption.textContent.toLowerCase().indexOf(searchText) === -1) { return; }
+        matchedCount++;
+        if (shownCount >= TAG_PICKER_MAX_ITEMS) { return; }
+        var groupLabel = candidateOption.parentNode.tagName === 'OPTGROUP' ? candidateOption.parentNode.label : '';
+        if (groupLabel !== '' && groupLabel !== lastGroupLabel) {
+          var groupHeading = document.createElement('li');
+          groupHeading.className = 'tag-picker-group';
+          groupHeading.setAttribute('role', 'presentation');
+          groupHeading.textContent = groupLabel;
+          resultList.appendChild(groupHeading);
+        }
+        lastGroupLabel = groupLabel;
+        var candidateItem = document.createElement('li');
+        candidateItem.setAttribute('role', 'option');
+        candidateItem.setAttribute('data-value', candidateOption.value);
+        candidateItem.textContent = candidateOption.textContent;
+        // mousedown で選ぶ（click だと、先に探す欄の blur で一覧が閉じてしまう）
+        candidateItem.addEventListener('mousedown', function (mouseEvent) { mouseEvent.preventDefault(); choose(candidateOption.value); });
+        resultList.appendChild(candidateItem);
+        shownCount++;
+      });
+      if (matchedCount === 0 || matchedCount > shownCount) {
+        var footNote = document.createElement('li');
+        footNote.className = 'tag-picker-note';
+        footNote.setAttribute('role', 'presentation');
+        footNote.textContent = matchedCount === 0 ? M('合う人がいません。') : M('ほかに {count} 人います。もう少し絞り込んでください。', { count: matchedCount - shownCount });
+        resultList.appendChild(footNote);
+      }
+      resultList.hidden = false;
+      searchInput.setAttribute('aria-expanded', 'true');
+      if (searchText !== '' && shownCount > 0) { markActive(0); }
+    };
+    searchInput.addEventListener('input', renderList);
+    searchInput.addEventListener('focus', renderList);
+    searchInput.addEventListener('blur', closeList);
+    searchInput.addEventListener('keydown', function (keyEvent) {
+      if (keyEvent.key === 'ArrowDown' || keyEvent.key === 'ArrowUp') {
+        keyEvent.preventDefault();
+        if (resultList.hidden) { renderList(); }
+        markActive(activeIndex + (keyEvent.key === 'ArrowDown' ? 1 : -1));
+      } else if (keyEvent.key === 'Enter') {
+        // 一覧を開いている間の Enter は、送信ではなく候補を選ぶ
+        if (!resultList.hidden) {
+          keyEvent.preventDefault();
+          var activeItem = itemList()[activeIndex];
+          if (activeItem) { choose(activeItem.getAttribute('data-value')); }
+        }
+      } else if (keyEvent.key === 'Escape') {
+        closeList();
       }
     });
+    renderChip();
   });
 
   // ---- コメントの定型文を本文に入れる（G-05。G-19 で課長が登録した文） ----

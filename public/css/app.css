@@ -224,6 +224,19 @@ fieldset.sub { border: 1px solid var(--line); border-radius: var(--radius); padd
 fieldset.sub legend { font-weight: 700; padding: 0 6px; }
 .edit-panel { border: 2px solid var(--primary); border-radius: var(--radius); padding: 12px 16px; margin: 12px 0 20px; background: var(--panel-bg); }
 .table-filter { max-width: 320px; margin: 4px 0 8px; }
+/* 選ぶ欄の札と候補の一覧（select.tag-picker を app.js が置き換える） */
+.tag-picker-box { position: relative; max-width: 560px; display: flex; flex-direction: column; gap: 6px; }
+.tag-picker-chosen { min-height: 28px; display: flex; align-items: center; }
+.tag-picker-search { width: 100%; padding: 10px 12px; font-size: 16px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--input-bg); color: var(--text); }
+.tag-picker-chip { font-size: 0.95rem; padding: 3px 4px 3px 10px; background: var(--tag-info-bg); color: var(--tag-info-text); border-color: var(--tag-info-line); display: inline-flex; align-items: center; gap: 4px; }
+.tag-picker-clear { min-height: 0; border: 0; background: transparent; color: inherit; font-size: 1rem; line-height: 1; padding: 4px 8px; cursor: pointer; border-radius: 10px; }
+.tag-picker-clear:hover, .tag-picker-clear:focus-visible { background: var(--tag-info-line); color: var(--primary-text); }
+.tag-picker-list { position: absolute; top: 100%; left: 0; right: 0; z-index: 20; margin: 2px 0 0; padding: 4px 0; list-style: none; max-height: 320px; overflow-y: auto;
+  background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: 0 4px 12px var(--shadow); }
+.tag-picker-list li[role="option"] { padding: 6px 12px 6px 20px; cursor: pointer; }
+.tag-picker-list li[role="option"]:hover, .tag-picker-list li[role="option"].active { background: var(--row-hover-bg); }
+.tag-picker-group { padding: 6px 12px 2px; font-size: 0.8rem; font-weight: 600; color: var(--muted); }
+.tag-picker-note { padding: 6px 12px; font-size: 0.85rem; color: var(--muted); }
 .show-when-values { margin: 6px 0; }
 @media (max-width: 720px) {
   .card.wide .table { display: block; overflow-x: auto; white-space: nowrap; }
