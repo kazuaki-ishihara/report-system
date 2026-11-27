@@ -748,7 +748,7 @@ form.wizard-active .sticky-actions button[value="submit"] { display: none; }
 .update-notice { padding: 6px 0; border-bottom: 1px solid var(--line); }
 .update-notice:last-child { border-bottom: none; }
 .update-notice summary { color: var(--text); }
-.update-notice-body { margin: 6px 0 0 4px; }
+.update-notice-body { margin: 6px 0 0 4px; white-space: pre-wrap; overflow-wrap: anywhere; }   /* 改行と行の頭の字下げを、書いたとおりに出す（G-24 §2） */
 .faq-item { padding: 8px 0; border-bottom: 1px solid var(--line); }
 .faq-item summary { color: var(--text); font-weight: 700; }
 .faq-answer { margin: 8px 0 4px 1em; }

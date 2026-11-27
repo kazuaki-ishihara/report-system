@@ -12,7 +12,7 @@ const SECURITY_NOTICE_DAYS = 30;
 const RECOVERY_CODE_MINUTES = 30;
 const SECURITY_REASON_MAX_LENGTH = 100;
 /** 「心当たりがない」を押せる知らせ（総入れ替えは全員に出すので対象にしない） */
-const SECURITY_REPORTABLE_KINDS = ['codes_view', 'recovery_issue', 'recovery_used', 'reinit'];
+const SECURITY_REPORTABLE_KINDS = ['codes_view', 'recovery_issue', 'recovery_used', 'reinit', 'codes_issue'];
 
 /** 操作した人の役割（知らせに残す。操作の時点の役割） */
 function security_actor_role(array $actor): string
@@ -84,11 +84,36 @@ function security_notice_text(array $notice): string
             return msg('{date} に、{name} さん（{role}）が、あなたの復旧コードを発行しました。理由: {reason}。', $values);
         case 'recovery_used':
             return msg('{date} に、復旧コードが使われました。発行した人: {name} さん（{role}）。理由: {reason}。', $values);
+        case 'codes_issue':
+            return msg('{date} に、{name} さん（{role}）が、あなたの予備のコードを発行しました。理由: {reason}。ログインのときは、6 桁のコードの欄に予備のコードを入れます。', $values);
         case 'reinit':
             return msg('{date} に、{name} さん（{role}）が、あなたのアカウントを再初期化しました。理由: {reason}。同じパスワードをほかのサービスで使っているときは、そちらも変えてください。', $values);
         default:
             return msg('{date} に、{name} さん（{role}）が、全員のログインの情報を総入れ替えしました。理由: {reason}。', $values);
     }
+}
+
+// ---- 予備のコードの発行（補佐（開発担当）。2026-11-26） ----
+
+/** 知らせの表が codes_issue を受け付ける形か（migrate.php の前は false） */
+function security_supports_codes_issue(): bool
+{
+    return security_is_supported()
+        && strpos((string) db_val("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'security_notices'"), "'codes_issue'") !== false;
+}
+
+/**
+ * 2 段階認証が未設定の人に、予備のコードを発行する（tx() の中で呼ぶ）。
+ * 予備のコードを作って返す。
+ * 今のログインは切る（session_version を上げる）。
+ *
+ * @return string[] 予備のコード（表示用。この場でだけ見せる）
+ */
+function security_issue_backup_codes(int $userId): array
+{
+    db_exec('UPDATE users SET totp_secret_enc = ?, totp_enabled_at = ?, totp_last_step = NULL, session_version = session_version + 1, updated_at = ? WHERE id = ?',
+        [enc(base32_encode(random_bytes(20)), 'totp:' . $userId), now(), now(), $userId]);
+    return auth_regenerate_backup_codes($userId);
 }
 
 // ---- 予備のコードの確認 ---------------------------------------------

@@ -105,7 +105,7 @@ $editUrl = url('/reports/edit.php?period=' . rawurlencode($period));
   <?php foreach ($activeNoticeList as $noticeRow): ?>
     <details class="update-notice">
       <summary><span class="note"><?= h(display_date((string) $noticeRow['show_from'])) ?></span> <?= h((string) $noticeRow['title']) ?></summary>
-      <?php if ((string) $noticeRow['body'] !== ''): ?><div class="update-notice-body"><?= h_lines((string) $noticeRow['body']) ?></div><?php endif; ?>
+      <?php if ((string) $noticeRow['body'] !== ''): ?><div class="update-notice-body"><?= h((string) $noticeRow['body']) ?></div><?php endif; ?>
     </details>
   <?php endforeach; ?>
 </section>

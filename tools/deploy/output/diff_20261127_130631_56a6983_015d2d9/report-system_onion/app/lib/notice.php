@@ -8,6 +8,8 @@ declare(strict_types=1);
 
 const NOTICE_TITLE_MAX_LENGTH = 60;
 const NOTICE_BODY_MAX_LENGTH = 1000;
+/** 反映のときにコマンド（app/bin/post_notice.php）で出すお知らせの最後に付ける署名（人が書いたお知らせと見分けるため） */
+const NOTICE_AI_SIGNATURE = '以上、システム管理補佐（AI）より';
 const FAQ_QUESTION_MAX_LENGTH = 200;
 const FAQ_ANSWER_MAX_LENGTH = 2000;
 const FAQ_MAX_COUNT = 500;   // よくある質問の上限（2026-11-20 に 200 件から引き上げ。標準の質問が増えたため）
@@ -21,6 +23,56 @@ function notices_active(int $limit = 5): array
 {
     $todayText = date('Y-m-d');
     return db_all('SELECT * FROM update_notices WHERE show_from <= ? AND show_until >= ? ORDER BY show_from DESC, id DESC LIMIT ?', [$todayText, $todayText, $limit]);
+}
+
+/**
+ * 反映のときに出すお知らせのファイル（app/bin/post_notice.php）を読む。
+ * 「題名: 」「出す日数: 」の行、「---」の行、本文の順。本文の最後に署名（NOTICE_AI_SIGNATURE）を付ける。
+ *
+ * @return array{title: string, body: string, days: int, errors: list<string>}
+ */
+function notice_parse_file(string $fileText): array
+{
+    $fileText = str_replace(["\r\n", "\r"], "\n", preg_replace('/\A\xEF\xBB\xBF/', '', $fileText) ?? $fileText);
+    $lineList = explode("\n", $fileText);
+    $separatorIndex = array_search('---', array_map('trim', $lineList), true);
+    $errorTextList = [];
+    if ($separatorIndex === false) {
+        return ['title' => '', 'body' => '', 'days' => 0, 'errors' => ['「---」の行がありません（上に題名、下に本文を書きます）']];
+    }
+    $noticeTitle = '';
+    $showDays = (int) cfg('notice_default_days');
+    foreach (array_slice($lineList, 0, (int) $separatorIndex) as $headerLine) {
+        if (preg_match('/\A\s*(題名|出す日数)\s*[:：]\s*(.*?)\s*\z/u', $headerLine, $headerMatch) !== 1) {
+            if (trim($headerLine) !== '') {
+                $errorTextList[] = '読めない行があります: ' . $headerLine;
+            }
+            continue;
+        }
+        if ($headerMatch[1] === '題名') {
+            $noticeTitle = $headerMatch[2];
+        } elseif (preg_match('/\A[0-9]{1,3}\z/', $headerMatch[2]) === 1 && (int) $headerMatch[2] >= 1 && (int) $headerMatch[2] <= 365) {
+            $showDays = (int) $headerMatch[2];
+        } else {
+            $errorTextList[] = '出す日数は 1〜365 の数にしてください: ' . $headerMatch[2];
+        }
+    }
+    $bodyText = trim(implode("\n", array_slice($lineList, (int) $separatorIndex + 1)));
+    if (substr($bodyText, -strlen(NOTICE_AI_SIGNATURE)) !== NOTICE_AI_SIGNATURE) {
+        $bodyText = ($bodyText === '' ? '' : $bodyText . "\n\n") . NOTICE_AI_SIGNATURE;
+    }
+    if ($noticeTitle === '') {
+        $errorTextList[] = '題名がありません（「題名: 」の行）';
+    } elseif (str_len($noticeTitle) > NOTICE_TITLE_MAX_LENGTH) {
+        $errorTextList[] = '題名は ' . NOTICE_TITLE_MAX_LENGTH . ' 文字以内にしてください（今は ' . str_len($noticeTitle) . ' 文字）';
+    }
+    if (str_len($bodyText) > NOTICE_BODY_MAX_LENGTH) {
+        $errorTextList[] = '本文は署名を含めて ' . NOTICE_BODY_MAX_LENGTH . ' 文字以内にしてください（今は ' . str_len($bodyText) . ' 文字）';
+    }
+    if (has_control_chars($noticeTitle, false) || has_control_chars($bodyText, true)) {
+        $errorTextList[] = '使えない文字が含まれています';
+    }
+    return ['title' => $noticeTitle, 'body' => $bodyText, 'days' => $showDays, 'errors' => $errorTextList];
 }
 
 /** 更新のお知らせの状態（表示の期間と今日から） */
@@ -1570,6 +1622,11 @@ const FAQ_SEARCH_MIN_RATIO = 0.25;
 const FAQ_SEARCH_SYNONYMS = [
     // 文言の見直し（2026-11-26）: よくある質問の文は「部下」を「一般職」、「管理者」を「システム管理者」に変えた。入れた人は前の言い方でも探せるように
     '部下' => '一般職', '班' => 'ライン',
+    // 検証環境のチャットの記録から（2026-11-26）: スマホを持っていない（2 段階認証のコードを受け取れない）
+    'スマホ持っていない' => 'スマートフォンを持っていない コードを受け取れない', 'スマホを持っていない' => 'スマートフォンを持っていない コードを受け取れない', 'スマホがない' => 'スマートフォンを持っていない コードを受け取れない', 'スマホ無い' => 'スマートフォンを持っていない コードを受け取れない', 'スマートフォンがない' => 'スマートフォンを持っていない コードを受け取れない', 'スマートフォンを持っていない' => 'スマートフォンを持っていない コードを受け取れない', 'ガラケーしか' => 'スマートフォンを持っていない コードを受け取れない', '携帯を持っていない' => 'スマートフォンを持っていない コードを受け取れない',
+    // 検証環境のチャットの記録から（2026-11-26）: 報告の取り下げ・提出を忘れた
+    '報告の取り下げ' => '提出を取り消したい', '提出の取り下げ' => '提出を取り消したい', '提出を取り下げ' => '提出を取り消したい',
+    '提出忘れ' => '締め日を過ぎても報告を出せるか', '提出を忘れ' => '締め日を過ぎても報告を出せるか', '提出し忘れ' => '締め日を過ぎても報告を出せるか', '出し忘れ' => '締め日を過ぎても報告を出せるか', '提出失念' => '締め日を過ぎても報告を出せるか', '提出を失念' => '締め日を過ぎても報告を出せるか',
     // アカウント・臨時の調査・性能（2026-11-18。チャットの記録の確かめ）
     // 通勤定期代の精算（G-26）・目標管理（G-27）（2026-11-20）
     '交通費' => '通勤定期代の精算 通勤実費 業務交通費', '経費精算' => '通勤実費・業務交通費を精算したい', '定期代' => '通勤定期代の精算',

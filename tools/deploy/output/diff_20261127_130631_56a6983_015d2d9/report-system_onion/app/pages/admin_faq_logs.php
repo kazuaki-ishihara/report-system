@@ -23,10 +23,13 @@ $faqCsvPlan = null;
 $faqCsvErrorTextList = [];
 if (is_post() && post_str('action') === 'faq_csv_preview') {
     $uploadedFile = $_FILES['faq_csv'] ?? null;
-    if (!is_array($uploadedFile) || ($uploadedFile['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK || !is_uploaded_file((string) $uploadedFile['tmp_name'])) {
-        $faqCsvErrorTextList[] = msg('CSV のファイルを選んでください');
-    } elseif ((int) $uploadedFile['size'] > FAQ_CSV_MAX_BYTES) {
+    $uploadErrorCode = is_array($uploadedFile) ? (int) ($uploadedFile['error'] ?? UPLOAD_ERR_NO_FILE) : UPLOAD_ERR_NO_FILE;
+    // サーバーの受け取りの上限（upload_max_filesize）で断られたときも「大きすぎる」と知らせる（「選んでください」と出さない）
+    if (in_array($uploadErrorCode, [UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE], true)
+        || ($uploadErrorCode === UPLOAD_ERR_OK && (int) $uploadedFile['size'] > FAQ_CSV_MAX_BYTES)) {
         $faqCsvErrorTextList[] = msg('ファイルが大きすぎます（2 MB まで）');
+    } elseif ($uploadErrorCode !== UPLOAD_ERR_OK || !is_uploaded_file((string) $uploadedFile['tmp_name'])) {
+        $faqCsvErrorTextList[] = msg('CSV のファイルを選んでください');
     } else {
         $uploadedCsvText = (string) file_get_contents((string) $uploadedFile['tmp_name']);
         if (preg_match('//u', $uploadedCsvText) !== 1) {   // UTF-8 として正しいか

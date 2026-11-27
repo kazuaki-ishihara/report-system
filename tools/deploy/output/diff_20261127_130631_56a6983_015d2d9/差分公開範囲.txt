@@ -1,15 +1,16 @@
-月次報告システム 差分公開範囲（20261126_161959）
+月次報告システム 差分公開範囲（20261127_130631）
 
 対象のサイト: ~/www/report-system_onion/
 今サーバーにある版: 56a6983（2026-11-20 17:17 作業再開ポイントを更新（2026-11-20 の終わりの状態））
-上げる版:           f3000fe（2026-11-26 16:15 自動検証に「標準のよくある質問の文言」を足した（見直す前の言い方・置き換えの行き過ぎが戻っていないか、質問の文の対応表の行き先が標準にあるか））
+上げる版:           015d2d9（2026-11-27 12:46 未検証の分岐を 0 にした（11-26 以降に足した機能の分岐に確かめを足す）。よくある質問の CSV で 2 MB を超えるファイルを「大きすぎます」と知らせる。検証の経過と結果を見る道具（verify_view.py。verify_all.py が経過.json を書く））
 
-■ 上げるもの（追加 15 ・変更 69 ファイル）
+■ 上げるもの（追加 16 ・変更 69 ファイル）
   同じフォルダーの「report-system_onion」フォルダーの中身を、サーバーの ~/www/report-system_onion/ に上書きで上げる。
   [変更] .htaccess
   [追加] admin/security.php
   [追加] app/bin/import_tomato.php
   [変更] app/bin/migrate.php
+  [追加] app/bin/post_notice.php
   [追加] app/bin/rotate_key.php
   [変更] app/bootstrap.php
   [追加] app/lib/account_security.php
