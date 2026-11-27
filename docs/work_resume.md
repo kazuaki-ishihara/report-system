@@ -2,7 +2,7 @@
 
 | 項目 | 内容 |
 |---|---|
-| 最終更新 | 2026-11-26 |
+| 最終更新 | 2026-11-27 |
 | ブランチ | `dev_ono_check`（`main` の `9ffe3e5` から派生。PHP 7.4 で動く書き方）と `dev_ono_check8_3`（`dev_ono_check` の `f583992` から派生。PHP 8.3 が前提） |
 | 内容 | 月次報告システムの見直し版（設計書・実装・検証） |
 
@@ -57,7 +57,7 @@ C:\ReportSystem\
 | `app/pages/`・`app/views/` | 画面ごとの処理とテンプレート |
 | `public/` | 公開側の入り口（本番では公開ディレクトリ。`app/` は公開ディレクトリの外に置く） |
 | `app/bin/` | `migrate.php`（テーブルと鍵の作成）、`seed_template.php`（初期の様式）、`create_user.php`（利用者の作成）、`migrate_legacy.php`（既存データの移行）、`backup.php`（DB のバックアップ。定期実行に登録）、`run_schedules.php`（予約した組織の改訂の反映。定期実行に登録）、`post_notice.php`（反映のときに更新のお知らせを出す。本文の最後に「以上、システム管理補佐（AI）より」。G-24 §3） |
-| `tools/lib/` | 何度も使う道具（Python 3 標準ライブラリ、3.8 互換）: `msg_catalog.py`（文言の一覧）、`project_ledger.py`（案件台帳。使い方は `docs/project_ledger.md`）、`mdview.py`（Markdown をブラウザーで読む。`python3 tools/lib/mdview.py docs` で docs/ を一覧から読める。Linux・Windows 共通）、`md_check.py`（MD の文書と実装の食い違いを機械で探す。`python tools/lib/md_check.py`。文書を直したら流す）、`faq_check.php`（よくある質問の答え方を確かめる。自動入力検証は `tools/test/faq_input_check.php`（`--all` ですべての判定を出す。入力は `faq_input_cases.tsv` で、システムに寄る・グレーゾーン・明確にアウトの 3 つ。自動検証でも流す）。派生入力検証は `tools/test/faq_derived_check.php`（`他端末検証/` の記録の質問から表記ゆれ・言い回しの派生を作り、元と同じ判定かを確かめる。表記の食い違いは NG、言い回しは参考（`--all`）。今の判定を期待にした `derived_cases.tsv` を `tools/test/output/faq_derived/` に書く。G-25 §3）。`self` 標準の質問が自分を見つけられるか／`ask "質問" [ID]` 1 つの判定／`logs [番号]` この端末のチャットの記録を今の作りで判定し直す／`csv <ファイル>` ほかの端末から受け取った記録を判定し直す／`sync` この端末の DB に標準の質問の追加・答えの変更を写す。聞いた人に見える範囲で判定し、要配慮・緊急の文は伏せて出す。ローカル専用）、組み合わせ入力検証は `tools/test/faq_combo_check.php`（部品 `faq_combo_cases.txt` の前置き・たとえ・中心の言葉・語尾のすべての組み合わせで、想定の結果になるかを確かめる。自動検証でも流す。G-25 §3）、`ui_watch.py`（画面の自動操作をブラウザーを表示して見学する。§6.1）、`manual_capture.py`（操作マニュアルの画面を撮る。自分用の DB・サーバーで画面を操作し、押す場所に赤い枠と番号を付けた画像を `docs/manual/images/` に書く。`--only m04` で一部だけ、`--check` でマニュアルが使う画像がそろっているかだけ確かめる（自動検証の工程にも入れた）。画面を変えたら撮り直す）、`php_version_check.py`（PHP のバージョンを調べる。この端末の PHP と php.net の系列ごとの最新版・サポートの状態を比べ、要更新・ダウンロードをすすめるを出す。`--prod-web`・`--prod-cli` で本番の版も判定。`--download 系列` で取ってきて適用する（Windows: 公式の zip を SHA-256 で確かめて `<リポジトリの親>/php-<版>-<x64|x86>/` に展開し、利用者の環境変数 PATH・`PHP_BIN`（x86 は `PHP_BIN_X86`）を変える。`--restore` で戻す。Linux: apt で入れて update-alternatives で切り替える。`--no-apply` で取ってくるだけ）。Windows・Linux 共通）、`tools/test/php_compat_check.py`（新しい PHP で動くかを調べる。構文・コンパイルのときの非推奨・8.4/8.5 の非推奨の書き方・`--verify` で自動検証をその PHP で流す）、`clean_outputs.py`（古い検証記録・見学の画像・画面一覧・派生入力検証の出力と、古いローカル検証環境の一式（x64・x86 それぞれ最新を残す）を消す。`--yes` を付けたときだけ消す。`--keep` で残す回数） |
+| `tools/lib/` | 何度も使う道具（Python 3 標準ライブラリ、3.8 互換）: `msg_catalog.py`（文言の一覧）、`project_ledger.py`（案件台帳。使い方は `docs/project_ledger.md`）、`mdview.py`（Markdown をブラウザーで読む。`python3 tools/lib/mdview.py docs` で docs/ を一覧から読める。Linux・Windows 共通）、`md_check.py`（MD の文書と実装の食い違いを機械で探す。`python tools/lib/md_check.py`。文書を直したら流す）、`faq_check.php`（よくある質問の答え方を確かめる。自動入力検証は `tools/test/faq_input_check.php`（`--all` ですべての判定を出す。入力は `faq_input_cases.tsv` で、システムに寄る・グレーゾーン・明確にアウトの 3 つ。自動検証でも流す）。派生入力検証は `tools/test/faq_derived_check.php`（`他端末検証/` の記録の質問から表記ゆれ・言い回しの派生を作り、元と同じ判定かを確かめる。表記の食い違いは NG、言い回しは参考（`--all`）。今の判定を期待にした `derived_cases.tsv` を `tools/test/output/faq_derived/` に書く。G-25 §3）。`self` 標準の質問が自分を見つけられるか／`ask "質問" [ID]` 1 つの判定／`logs [番号]` この端末のチャットの記録を今の作りで判定し直す／`csv <ファイル>` ほかの端末から受け取った記録を判定し直す／`sync` この端末の DB に標準の質問の追加・答えの変更を写す。聞いた人に見える範囲で判定し、要配慮・緊急の文は伏せて出す。ローカル専用）、組み合わせ入力検証は `tools/test/faq_combo_check.php`（部品 `faq_combo_cases.txt` の前置き・たとえ・中心の言葉・語尾のすべての組み合わせで、想定の結果になるかを確かめる。自動検証でも流す。G-25 §3）、`ui_watch.py`（画面の自動操作をブラウザーを表示して見学する。§6.1）、`manual_capture.py`（操作マニュアルの画面を撮る。自分用の DB・サーバーで画面を操作し、押す場所に赤い枠と番号を付けた画像を `docs/manual/images/` に書く。`--only m04` で一部だけ、`--check` でマニュアルが使う画像がそろっているかだけ確かめる（自動検証の工程にも入れた）。画面を変えたら撮り直す）、`php_version_check.py`（PHP のバージョンを調べる。この端末の PHP と php.net の系列ごとの最新版・サポートの状態を比べ、要更新・ダウンロードをすすめるを出す。`--prod-web`・`--prod-cli` で本番の版も判定。`--download 系列` で取ってきて適用する（Windows: 公式の zip を SHA-256 で確かめて `<リポジトリの親>/php-<版>-<x64|x86>/` に展開し、利用者の環境変数 PATH・`PHP_BIN`（x86 は `PHP_BIN_X86`）を変える。`--restore` で戻す。Linux: apt で入れて update-alternatives で切り替える。`--no-apply` で取ってくるだけ）。Windows・Linux 共通）、`tools/test/php_compat_check.py`（新しい PHP で動くかを調べる。構文・コンパイルのときの非推奨・8.4/8.5 の非推奨の書き方・`--verify` で自動検証をその PHP で流す）、`verify_view.py`（自動検証の経過と結果を見る。`verify_all.py` が工程の始まりと終わりに書く `経過.json` を読み、流している途中の進み・今の工程・残りの時間の見込み（前に同じ流し方で最後まで流れた回から）・OK と NG の数を出す。分岐の数え直しが写しで流している検証も出す。`--watch`・`--list`・`--run`・`--root`・`--ng`）、`clean_outputs.py`（古い検証記録・見学の画像・画面一覧・派生入力検証の出力と、古いローカル検証環境の一式（x64・x86 それぞれ最新を残す）を消す。`--yes` を付けたときだけ消す。`--keep` で残す回数） |
 | `tools/deploy/` | 本番への反映: `build_package.py`（コミット済みの内容から反映用の一式 `tools/deploy/output/<日時>_<コミット>/` を作る。DB・鍵・ローカルの設定は入らない）、`build_diff_package.py`（公開済みのサイトに差分だけを上げる一式。`--notice <ファイル>` で、反映のあとに出す更新のお知らせ「お知らせ.txt」と手順を入れる）、`check_prod.py`（本番を外から確かめる。画面を見るだけ）、`build_local_kit.py`（ほかの人に渡すローカル検証環境の一式 `tools/deploy/output/local_<日時>_<コミット>/report-system-local(.zip)` を作る。Windows 用の PHP を同梱し、受け取った人は `1_起動.bat` だけで動かせる。初回の起動でテスト用の利用者・標準のよくある質問・暗号の鍵を作る。`3_記録を書き出す.bat` で、よくある質問のチャットの記録だけを CSV（`faq_chat_log_<日時>.csv`。質問は復号済み。報告の中身・鍵は入らない）に書き出し、受け取った人に送り返してもらう（道具は `tools/test/export_faq_chat_log.php`。この端末でも使える）。DB・鍵・この端末の設定は入らない。`--worktree` でコミット前の変更も入れる。`--no-php` で PHP を入れない） |
 | `tools/2fa/` | 開発用の利用者の 2 段階認証のコードを出すバッチ（`.bat`）とシェルスクリプト（`.sh`）、Python なしで動く PowerShell 版（`dev_code.ps1`。`-Watch` で 1 秒ごと、`-Watch -Interval 30` で 30 秒ごとに更新。全員を 30 秒ごとに出す `all_ps.bat` はダブルクリックで使える）。ローカルのテストデータ専用 |
 | `tools/test/` | 検証の道具（Python 3 標準ライブラリ）。`screen_gallery.py` は画面の目視確認の道具（全画面の画像と一覧のページ）。`check_static_security.php` はコードを読むだけの安全の点検（SQL に値をつないでいない・画面に出す値を `h()` で書き出す・属性の引用符・危険な関数・外への転送。PHP の字句解析で読む。安全と確かめて仕分けた箇所は `static_security_exceptions.tsv` に理由つきで書き、どこにも当たらない行は NG。`verify_all.py` の工程「静的な安全点検」） |
@@ -103,6 +103,7 @@ python tools\test\verify_all.py          # 自動検証（構文・PHP 8.3 の�
 python tools\test\verify_all.py --ui     # 画面の自動操作検証も行う（Edge / Chrome をプログラムから操作）
 python tools\test\verify_all.py --only G-25,G-16   # その画面の確かめを含む工程だけ流す（工程の名前 auth なども使える）
 python tools\test\verify_all.py --list   # 工程と、工程ごとの画面の番号を出す（流さない）
+python tools\lib\verify_view.py         # 検証の経過と結果を見る（流している途中なら、進み・残りの時間の見込み・今の工程。--watch で 5 秒ごと、--list で過去の一覧、--root ..\dev8_3 で別の作業ツリー）
 ```
 
 - 結果は `tools/test/output/検証記録/<日時>/結果.md`（工程ごと・画面ごとの数）と `検証項目一覧.md`（画面ごとの確かめの一覧）、一覧は `tools/test/output/検証記録/一覧.csv`（リポジトリ外）。すべての工程を `--ui` 付きで流して成功したときは、`docs/verification_items.md`（検証項目一覧）も書き直す。
@@ -119,7 +120,7 @@ python tools\test\verify_all.py --list   # 工程と、工程ごとの画面の�
 - 起動済みのブラウザーにつなぐときは `--browser-port <番号>`（`--remote-debugging-port` で起動したもの）。
 
 - 検証は自分用の DB（`app/data/verify.sqlite`）を使い、2 段階認証を飛ばさない設定で動く（環境変数 `MR_VERIFY_DB`。`app/config/config.php`）。画面を見ている `dev.sqlite`（テーマ・ログイン）と `config.local.php` には触れないので、`dev_skip_2fa` を切り替える必要はなく、検証の途中でもローカルの画面を見られる。
-- 直近の結果（2026-11-18）: すべて成功（OK 1910 / NG 0・未実施 1（LibreOffice が無い）。画面の自動操作を含む。検証用の DB で実行。Edge は道具が起動）。
+- 直近の結果（2026-11-27）: すべて成功（OK 4343 / NG 0・未実施 1（LibreOffice が無い）。画面の自動操作を含む。検証用の DB で実行。Edge は道具が起動）。未検証の分岐は 0（`branch_coverage.py`。dev 4,241 分岐・dev8_3 4,179 分岐）。
 
 ### 6.1 画面の自動操作を見学する（ブラウザーを表示する）
 
@@ -147,6 +148,13 @@ python tools\lib\ui_watch.py --keep-open      # 終わったあともブラウ�
 | 移行 | 本番では移行後に `legacy_reports`・`legacy_comments`（平文）を確認して削除する |
 
 ## 8. 次の作業
+
+> **2026-11-27 の区切り（ここから再開）**
+> - **検証の残りは済んだ**: 全工程（画面の自動操作を含む）が両方のブランチで NG 0（dev OK 4430・dev8_3 OK 4343。未実施は LibreOffice の 1 件だけ）。未検証の分岐は両方とも 0。11-26 午後のあとに足した機能の分岐（34）に確かめを足した（表の作り直しの成功・失敗、よくある質問の CSV、兼務と組織の CSV、課員のいない課、メンテナンス中の JSON の追い出し、古い DB での予備のコードの発行、候補の欄のキー操作と 50 人の上限、post_notice.php の引数）。例外に足したのは、メンテナンス中の保存の 503（前で必ずログアウトさせる二重の守り）の 1 件だけ。
+> - **直した不具合**: よくある質問の CSV の取り込みで、2 MB を超えるファイルが「選んでください」になっていた（サーバーの受け取りの上限で断られたときも「大きすぎます」にした。G-25 §2.19）。課の編集のタブの確かめが「課員」の節を足す前の 3 つのままだった（確かめの側を直した）。
+> - **足したもの**: 反映のときの更新のお知らせ（`app/bin/post_notice.php`・`build_diff_package.py --notice`。本文の最後に「以上、システム管理補佐（AI）より」。G-24 §3・仮設定 K-078）、お知らせの本文の字下げをホームで書いたとおりに出す、検証の経過と結果を見る道具（`tools/lib/verify_view.py`。`verify_all.py` が `経過.json` を書く）。
+> - **push していない**（両方のブランチ）。push は指示を待つ。
+> - **次にすること**: (1) onion の一式を作り直す（`--notice` で `C:\ReportSystem\onion更新のお知らせ_下書き_20261127.txt` を入れ、手順書に「お知らせを出す」を足す。リハーサルも流し直す）。反映は権限をもらえ次第。(2) 開発環境（dev.sqlite）に `migrate.php` と標準のよくある質問の取り込み。(3) LibreOffice・PHP 7.4・Apache の確かめは環境が無く未実施のまま。
 
 > **2026-11-26 夕方の区切り（ここから再開）**
 > - **残っている検証（次に流す）**: 最後に全工程（画面の自動操作を除く）を流したのは dev 14:21・dev8_3 14:45（どちらも NG 0）。そのあとの直し（よくある質問の文言の見直し・ずれた答えの直し・予備のコードの発行）は、関わる工程だけ流した（便利機能・あとから足した機能・よくある質問の CSV・入力検証・組み合わせ検証・文言・予備のコードの確認・コマンド・補佐・予備のコードの発行・チャットの画面。dev・dev8_3 とも NG 0）。残り:

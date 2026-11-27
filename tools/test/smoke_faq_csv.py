@@ -198,6 +198,15 @@ def main():
     check("UTF-8 でないファイルは読まない", "CSV は UTF-8 で保存してください" in preview_html and unchanged())
     status_code, _location, preview_html = upload("種類,質問\n".encode("utf-8"))
     check("見出しの行が無い CSV は読まない", "見出しの行" in preview_html and unchanged())
+    _status_code, _location, page_html = admin_client.get(LOG_PATH)
+    status_code, _location, preview_html = admin_client.post(LOG_PATH, {"csrf_token": csrf(page_html), "action": "faq_csv_preview"})
+    check("ファイルを選ばずに送ると「選んでください」と知らせる", "CSV のファイルを選んでください" in preview_html and unchanged())
+    max_bytes = 2 * 1024 * 1024
+    status_code, _location, preview_html = upload(b"a" * max_bytes)
+    check("ちょうど 2 MB のファイルは読む（大きすぎるとしない）", "大きすぎます" not in preview_html and "見出しの行" in preview_html and unchanged())
+    status_code, _location, preview_html = upload(b"a" * (max_bytes + 1))
+    check("2 MB を 1 バイトでも超えると「大きすぎます」と知らせる（サーバーの受け取りの上限で断られたときも）", "ファイルが大きすぎます（2 MB まで）" in preview_html
+          and "CSV のファイルを選んでください" not in preview_html and unchanged())
     status_code, _location, _page_html = upload(build_csv(current_entry_rows), client=kacho_client)
     check("管理者・補佐でない人は取り込めない（403）", status_code == 403 and unchanged(), status_code)
 

@@ -27,8 +27,6 @@ app/lib/report.php	if (!isset($projectIdByReportProjectId[$reportProjectId])) {	
 app/lib/report.php	if ($p !== null) {	案件をまとめ読みの網から漏れた分だけ個別に読むとき
 app/lib/request_key.php	} catch (PDOException $e) {	例外の捕捉（正常系では起きない。異常系は別の確かめで扱う）
 app/lib/role.php	if ($departmentRow === null) {	確認者の課が消えていたときの守り
-app/lib/schema.php	if ($rowCountAfter !== $rowCountBefore || $foreignKeyProblemList) {	表を作り直したときだけ通る検証（作り直しが起きない環境では通らない）
-app/lib/schema.php	} catch (Throwable $rebuildError) {	例外の捕捉（正常系では起きない。異常系は別の確かめで扱う）
 app/lib/session.php	if (session_status() === PHP_SESSION_ACTIVE) {	セッションが開いているときだけ閉じる守り
 app/lib/session.php	if ($base !== '' && strpos($next, $base) === 0) {	base_path があるときの next の切り出し（検証は base_path なしで動く）
 app/lib/user_theme.php	if (user_theme_contrast_ratio($colors['accent'], user_theme_text_on($colors['accent'])) < 4.5) {	自分の色の強調色のコントラスト不足の警告（読みやすさの境目は別の確かめ済み）
@@ -82,3 +80,4 @@ app/bin/rotate_key.php	if (dec($newBlob, $aad) !== $plainText) {	暗号化し直
 app/bin/rotate_key.php	if ($unreadable) {	復号できない値の守り（その前の確かめで復号できない値があれば止めているので、確かめとトランザクションの間に壊れた値が書かれたときだけ通る。メンテナンス中で書き込みは止めている）
 app/bin/rotate_key.php	if ($leftCount > 0) {	新しい鍵になっていない値の守り（入れ替えはトランザクションの中で対象の列のすべての値を書き換えるので、途中で古い鍵の値が足されたときだけ通る）
 app/bin/rotate_key.php	if ($unreadableCountByColumn || $verifiedCount < $rotatedCount || crypto_version() !== $newVersion) {	入れ替えのあとの読み直しが合わないときの守り（書き込んだ直後に同じ鍵で読み直すので、DB か鍵のファイルが書き込みのあとに壊れたときだけ通る）
+app/lib/session.php	if (maintenance_blocks($user)) {	メンテナンス中に止める人は、この前（ログインの確かめのすぐあと）で必ずログアウトさせるので、保存の操作を 503 で断るここには届かない二重の守り（追い出しは smoke_conveniences.py の F で確かめる）

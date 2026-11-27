@@ -288,8 +288,9 @@ def main():
         shot("org_department_edit")
         check("課の編集の欄が、課の一覧より上に出る",
               b.eval("document.querySelector('.edit-panel').compareDocumentPosition(document.querySelector('.edit-panel ~ table.table')) & 4") == 4)
-        check("課の編集は節（基本・課長・引き継ぎ）のタブに分かれ、最初は「基本」だけを出す（K-042）",
-              b.eval("document.querySelectorAll('.section-tabs button').length") == 3 and b.visible("#dept-basic") and not b.visible("#dept-final"))
+        check("課の編集は節（基本・課長・課員・引き継ぎ）のタブに分かれ、最初は「基本」だけを出す（K-042）",
+              b.eval("Array.prototype.map.call(document.querySelectorAll('.section-tabs button'), function (tabButton) { return tabButton.textContent; }).join(',')") == "基本,課長,課員,引き継ぎ"
+              and b.visible("#dept-basic") and not b.visible("#dept-final") and not b.visible("#dept-members"))
         b.eval("Array.prototype.filter.call(document.querySelectorAll('.section-tabs button'), function (tabButton) { return tabButton.textContent === '課長'; })[0].click()")
         time.sleep(0.2)
         check("「課長」のタブを押すと、課長の節が出る", b.visible("#dept-final") and not b.visible("#dept-basic"))

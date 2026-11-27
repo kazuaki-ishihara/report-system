@@ -150,6 +150,10 @@ def main():
         section("G-24", "コマンド: post_notice.php（反映のときに更新のお知らせを出す）")
         notice_db = os.path.join(work, "notice.sqlite")
         command("migrate.php", notice_db)
+        code, out = command("post_notice.php", notice_db)
+        check("--file が無ければ使い方を出して書き込まない", code == 1 and "使い方" in out and query(notice_db, "SELECT COUNT(*) FROM update_notices") == [(0,)], out[-200:])
+        code, out = command("post_notice.php", notice_db, "--file=" + os.path.join(work, "no_such_notice.txt"))
+        check("無いファイルなら使い方を出して書き込まない", code == 1 and "使い方" in out and query(notice_db, "SELECT COUNT(*) FROM update_notices") == [(0,)], out[-200:])
 
         def post_notice(file_text, *arguments):
             notice_path = os.path.join(work, "notice.txt")

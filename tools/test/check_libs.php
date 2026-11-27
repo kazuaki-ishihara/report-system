@@ -362,6 +362,57 @@ file_put_contents($validStampScriptPath, '<?php putenv("MR_VERIFY_DB"); require 
 $validStampOutput = (string) shell_exec('"' . PHP_BINARY . '" ' . escapeshellarg($validStampScriptPath) . ' 2>&1');
 $check('共通', '鍵を作る前（初期設定）でも、サイトの印を作れる（ログインの画面を開ける）', strpos($validStampOutput, 'STAMP') !== false, $validStampOutput);
 
+// ---- よくある質問の CSV（G-25 §2.19）: 誤りの行・上限・記録の CSV に入れない記録 ----
+require_once APP_DIR . '/lib/faq_csv.php';
+$faqCsvText = function (array $rowList): string {
+    $lineList = [implode(',', FAQ_CSV_COLUMNS)];
+    foreach ($rowList as $cellList) {
+        $lineList[] = implode(',', array_map(function (string $cellText): string { return '"' . str_replace('"', '""', $cellText) . '"'; }, $cellList));
+    }
+    return implode("\r\n", $lineList) . "\r\n";
+};
+$loginLabel = FAQ_CATEGORY_LABELS['login'];
+$entryRow = function (int $faqId, string $question, string $answer, string $deleteMark = '') use ($loginLabel, $now): array {
+    return [FAQ_CSV_KIND_ENTRY, (string) $faqId, $loginLabel, $question, $answer, $deleteMark, $now, '', '', ''];
+};
+$newRow = function (string $question, string $answer, string $deleteMark = '') use ($loginLabel): array {
+    return ['', '', $loginLabel, $question, $answer, $deleteMark, '', '', '', ''];
+};
+db_exec('DELETE FROM faq_entries');
+db_exec('INSERT INTO faq_entries (id, category, question, answer, sort_order, created_at, updated_at) VALUES (1, ?, ?, ?, 1, ?, ?), (2, ?, ?, ?, 2, ?, ?)',
+    ['login', '質問一', '答え一', $now, $now, 'login', '質問二', '答え二', $now, $now]);
+$faqPlan = faq_csv_plan($faqCsvText([$entryRow(1, '質問一', '答え一'), $entryRow(2, '質問二', '答え二')]) . "\r\n\r\n");
+$check('G-25', 'CSV: 空の行は読み飛ばす（誤りにしない）', $faqPlan['errorTextList'] === [] && $faqPlan['unchangedCount'] === 2, $faqPlan['errorTextList']);
+$faqPlan = faq_csv_plan($faqCsvText([$entryRow(1, '質問一', '答え一'), ['a', 'b', 'c']]));
+$check('G-25', 'CSV: 列の数が違う行は誤り', $contains($faqPlan['errorTextList'], '3 行目: 列の数が違います'), $faqPlan['errorTextList']);
+$faqPlan = faq_csv_plan($faqCsvText([$entryRow(1, '質問一', '答え一'), $entryRow(1, '質問一', '答え一')]));
+$check('G-25', 'CSV: 同じ番号が 2 回出ていれば誤り', $contains($faqPlan['errorTextList'], '番号 1 が 2 回出ています'), $faqPlan['errorTextList']);
+$faqPlan = faq_csv_plan($faqCsvText([$newRow('新しい質問', '新しい答え', '1')]));
+$check('G-25', 'CSV: 番号の無い行に「消す」を付けると誤り（足しもしない）', $contains($faqPlan['errorTextList'], '番号の無い行は消せません') && $faqPlan['addList'] === [], $faqPlan['errorTextList']);
+$faqPlan = faq_csv_plan($faqCsvText([$newRow('', '答えだけ')]));
+$check('G-25', 'CSV: 質問が空で答えのある行は、質問が要る誤り（同じ質問の確かめは空の質問を数えない）',
+    $contains($faqPlan['errorTextList'], '2 行目: 質問を入れてください') && count($faqPlan['errorTextList']) === 1 && $faqPlan['addList'] === [], $faqPlan['errorTextList']);
+$faqPlan = faq_csv_plan($faqCsvText([$entryRow(1, '質問一', '答え一'), $newRow('質問二', '別の答え')]));
+$check('G-25', 'CSV: CSV に無い（残る）質問と同じ質問を足す行は誤り（画面は誤りがあれば取り込まない）', $faqPlan['errorTextList'] === ['3 行目: 同じ質問（番号 2）がもう載っています'], $faqPlan['errorTextList']);
+$faqPlan = faq_csv_plan($faqCsvText([$entryRow(1, '質問一', '答え一'), $newRow('質問三', '答え三')]));
+$check('G-25', 'CSV: CSV に無い質問と違う質問なら足せる', $faqPlan['errorTextList'] === [] && count($faqPlan['addList']) === 1, $faqPlan['errorTextList']);
+tx(function () use ($now): void {
+    for ($faqNumber = 3; $faqNumber <= FAQ_MAX_COUNT; $faqNumber++) {
+        db_exec('INSERT INTO faq_entries (id, category, question, answer, sort_order, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)', [$faqNumber, 'login', '上限の質問' . $faqNumber, '答え', $faqNumber, $now, $now]);
+    }
+});
+$faqPlan = faq_csv_plan($faqCsvText([$newRow('上限を超える質問', '答え')]));
+$check('G-25', 'CSV: 取り込むと上限（' . FAQ_MAX_COUNT . ' 件）を超えるときは誤り', $contains($faqPlan['errorTextList'], 'よくある質問は ' . FAQ_MAX_COUNT . ' 件までです（取り込むと ' . (FAQ_MAX_COUNT + 1) . ' 件になります）'), $faqPlan['errorTextList']);
+$faqPlan = faq_csv_plan($faqCsvText([$entryRow(1, '質問一', '答え一', '1'), $newRow('上限ちょうどの質問', '答え')]));
+$check('G-25', 'CSV: 1 件消して 1 件足すなら、上限ちょうどで取り込める', $faqPlan['errorTextList'] === [] && count($faqPlan['deleteList']) === 1 && count($faqPlan['addList']) === 1, $faqPlan['errorTextList']);
+db_exec('DELETE FROM faq_entries');
+$faqLogRow = function (?string $distressLevel, string $questionText): array {
+    return ['distress_level' => $distressLevel, 'category' => null, 'asked_at' => '2026-11-01 10:00:00', 'role' => 'member', 'screen_code' => 'G-03', 'question_text' => $questionText,
+        'result' => 'answered', 'is_ignored' => 0, 'shown_faq_ids' => '1', 'feedback' => '', 'feedback_faq_id' => null, 'conversation_id' => 'c1'];
+};
+$faqLogCsvRows = faq_csv_log_rows([$faqLogRow('concern', '知らせる質問'), $faqLogRow(null, 'ふつうの質問')]);
+$check('G-25', '記録の CSV: 知らせる質問（心の不調など）の記録は入れず、ふつうの記録は入れる', count($faqLogCsvRows) === 1 && $faqLogCsvRows[0][3] === 'ふつうの質問', $faqLogCsvRows);
+
 // ---- 送信の番号が同時に来たとき（写しで試す） ----
 $check('共通', '検索・権限の関数のあとも DB は正しい', db()->query('PRAGMA integrity_check')->fetchColumn() === 'ok');
 

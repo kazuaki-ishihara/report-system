@@ -455,6 +455,21 @@ def main():
         db.backup(target)
         target.execute("PRAGMA foreign_keys = OFF")
         target.execute("PRAGMA legacy_alter_table = ON")
+        # 知らせの表を、種類に codes_issue が無い前の形にする（知らせを 1 件残す）
+        notice_ddl = target.execute("SELECT sql FROM sqlite_master WHERE name = 'security_notices'").fetchone()[0]
+        any_user_id = target.execute("SELECT MIN(id) FROM users").fetchone()[0]
+        target.execute("DROP TABLE security_notices")
+        target.execute(notice_ddl.replace(", 'codes_issue'", ""))
+        target.execute("INSERT INTO security_notices (user_id, kind, actor_id, actor_name, actor_role, reason, created_at) VALUES (?, 'codes_view', ?, '検証', 'システム管理者', '検証', '2026-11-01 00:00:00')", (any_user_id, any_user_id))
+        target.commit()
+        # 作り直しで外部キーが合わないときは元に戻す: 無い利用者への知らせがある写し（調査の表は今の形なので、知らせの表だけが作り直しの対象）
+        fail_notice = os.path.join(work, "fail_notice.sqlite")
+        broken = sqlite3.connect(fail_notice)
+        target.backup(broken)
+        broken.execute("PRAGMA foreign_keys = OFF")
+        broken.execute("INSERT INTO security_notices (user_id, kind, actor_id, actor_name, actor_role, reason, created_at) VALUES (999999, 'codes_view', ?, '検証', 'システム管理者', '検証', '2026-11-01 00:00:00')", (any_user_id,))
+        broken.commit()
+        broken.close()
         ddl = target.execute("SELECT sql FROM sqlite_master WHERE name = 'adhoc_requests'").fetchone()[0]
         columns = ", ".join(r[1] for r in target.execute("PRAGMA table_info(adhoc_requests)"))
         target.execute("DELETE FROM adhoc_requests WHERE department_id IS NULL")
@@ -474,6 +489,16 @@ def main():
         not_null = [r[3] for r in target.execute("PRAGMA table_info(adhoc_requests)") if r[1] == "department_id"]
         target.close()
         check("準備: 課が必須だった形の表", not_null == [1], not_null)
+        # 作り直しで外部キーが合わないときは元に戻す: 無い利用者が作った調査がある写し
+        fail_survey = os.path.join(work, "fail_survey.sqlite")
+        source = sqlite3.connect(old)
+        broken = sqlite3.connect(fail_survey)
+        source.backup(broken)
+        source.close()
+        broken.execute("PRAGMA foreign_keys = OFF")
+        broken.execute("INSERT INTO adhoc_requests (department_id, title, created_by, created_at, updated_at) VALUES (?, '壊れた調査', 999999, 'x', 'x')", (seed["dept_a"],))
+        broken.commit()
+        broken.close()
 
         def command(name, *arguments):
             done = subprocess.run([a.php, os.path.join("app", "bin", name)] + list(arguments), cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=120)
@@ -484,7 +509,26 @@ def main():
         check("migrate.php が表を作り直し、中身（調査・質問・回答）が残る", code == 0 and [r[3] for r in after.execute("PRAGMA table_info(adhoc_requests)") if r[1] == "department_id"] == [0]
               and [after.execute("SELECT COUNT(*) FROM " + t).fetchone()[0] for t in ("adhoc_requests", "adhoc_request_fields", "adhoc_responses")] == counts, out[-300:])
         check("作り直しても外部キーの食い違いがない", after.execute("PRAGMA foreign_key_check").fetchall() == [])
+        check("migrate.php が知らせの表を作り直し（種類に codes_issue を足す）、知らせが残る",
+              "'codes_issue'" in after.execute("SELECT sql FROM sqlite_master WHERE name = 'security_notices'").fetchone()[0]
+              and after.execute("SELECT COUNT(*) FROM security_notices WHERE reason = '検証'").fetchone()[0] == 1 and "codes_issue を足した" in out, out[-300:])
         after.close()
+        code, out = command("migrate.php", "--db=" + old)
+        check("2 回目の migrate.php は表を作り直さない", code == 0 and "作り直" not in out and "codes_issue を足した" not in out, out[-300:])
+        for label, broken_path, table_sql, count_sql, expected_old in (
+                ("知らせの表", fail_notice, "SELECT sql FROM sqlite_master WHERE name = 'security_notices'", "SELECT COUNT(*) FROM security_notices", "codes_issue"),
+                ("調査の表", fail_survey, "SELECT sql FROM sqlite_master WHERE name = 'adhoc_requests'", "SELECT COUNT(*) FROM adhoc_requests", "department_id INTEGER NOT NULL")):
+            before = sqlite3.connect(broken_path)
+            sql_before, count_before = before.execute(table_sql).fetchone()[0], before.execute(count_sql).fetchone()[0]
+            before.close()
+            code, out = command("migrate.php", "--db=" + broken_path)
+            after = sqlite3.connect(broken_path)
+            sql_after, count_after = after.execute(table_sql).fetchone()[0], after.execute(count_sql).fetchone()[0]
+            leftover = after.execute("SELECT COUNT(*) FROM sqlite_master WHERE name LIKE '%_rebuild'").fetchone()[0]
+            after.close()
+            still_old = (expected_old not in sql_after) if expected_old == "codes_issue" else (expected_old in sql_after)
+            check("migrate.php: %sの作り直しで外部キーが合わなければ失敗にし、表を元のまま残す" % label,
+                  code != 0 and "外部キーが合いません" in out and sql_after == sql_before and still_old and count_after == count_before and leftover == 0, (code, out[-300:]))
         runner = os.path.join(work, "chat.php")
         with open(runner, "w", encoding="utf-8") as handle:
             handle.write("<?php require %r; $GLOBALS['APP_CONFIG']['db_path'] = %r; faq_chat_log_ensure_table(); echo 'done';" % (os.path.join(ROOT, "app", "bootstrap.php").replace(os.sep, "/"), old.replace(os.sep, "/")))

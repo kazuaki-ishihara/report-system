@@ -113,8 +113,8 @@ def main():
     status_code, _location, kacho_menu_html = client_of("kacho_a").get("/index.php")
     check("課長のメニューに「課の管理」", "/admin/department.php" in kacho_menu_html)
     status_code, _location, org_edit_html = admin_client.get(org_edit_path_a)
-    check("管理者の課の編集は「基本・課長・引き継ぎ」（締め日・管理の仕方・確認者・ラインはない）",
-          'data-tab-title="課長"' in org_edit_html and 'data-tab-title="ライン"' not in org_edit_html
+    check("管理者の課の編集は「基本・課長・課員・引き継ぎ」（締め日・管理の仕方・確認者・ラインはない）",
+          re.findall(r'data-tab-title="([^"]*)"', org_edit_html) == ["基本", "課長", "課員", "引き継ぎ"]
           and 'name="review_scope"' not in org_edit_html and 'name="close_day"' not in org_edit_html)
     final_select_html = re.search(r'<select id="final_user_id".*?</select>', org_edit_html, re.S).group(0)
     def candidate_group_of(login_id):

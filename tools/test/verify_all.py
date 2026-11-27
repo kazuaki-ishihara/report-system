@@ -114,9 +114,32 @@ class Runner:
     def __init__(self, out_dir):
         self.out = out_dir
         self.steps = []
+        # 経過（経過.json）: 流している工程と終わった工程。検証の途中でも tools/lib/verify_view.py で見られるように、工程の始まりと終わりで書く
+        self.progress = {"pid": os.getpid(), "started_at": time.time(), "options": {}, "current": None, "done": [], "finished": None}
+
+    def save_progress(self):
+        progress_path = os.path.join(self.out, "経過.json")
+        # Windows では、閲覧の道具が読んでいる一瞬は置き換えられない（PermissionError）ので、少し待って書き直す
+        for _attempt in range(40):
+            try:
+                with open(progress_path + ".tmp", "w", encoding="utf-8") as progress_file:
+                    json.dump(self.progress, progress_file, ensure_ascii=False)
+                os.replace(progress_path + ".tmp", progress_path)
+                return
+            except OSError:
+                time.sleep(0.05)
+        # 2 秒たっても書けなければあきらめる（経過を書けなくても、検証は止めない）
+
+    def record_done(self, step):
+        self.progress["current"] = None
+        self.progress["done"].append({"name": step["name"], "ok": step["ok"], "passed": step["passed"], "failed": step["failed"],
+                                      "seconds": step["seconds"], "ng": step["ng"][:10], "not_done": step.get("not_done", [])})
+        self.save_progress()
 
     def run(self, name, cmd, env=None, timeout=900, default_screen="共通"):
         t0 = time.time()
+        self.progress["current"] = {"name": name, "started_at": t0}
+        self.save_progress()
         log_path = os.path.join(self.out, re.sub(r"[^\w\-]+", "_", name) + ".log")
         e = dict(os.environ, PYTHONIOENCODING="utf-8")
         if env:
@@ -140,6 +163,7 @@ class Runner:
         step["screen_counts"] = count_by_screen(out, default_screen)
         step["items"] = check_items(out, default_screen)
         self.steps.append(step)
+        self.record_done(step)
         say("%s  %s（OK %d / NG %d、%.1f 秒）" % ("成功" if step["ok"] else "失敗", name, ok_n, len(ng_lines), step["seconds"]))
         for line in ng_lines[:10]:
             say("    " + line)
@@ -151,6 +175,7 @@ class Runner:
         self.steps.append({"name": name, "ok": ok, "code": 0 if ok else 1, "passed": passed, "failed": len(ng),
                            "ng": ng[:30], "seconds": seconds, "log": "", "tail": "",
                            "screen_counts": {default_screen: [passed, len(ng)]}, "items": [(default_screen, name, ok)]})
+        self.record_done(self.steps[-1])
         say("%s  %s（OK %d / NG %d）" % ("成功" if ok else "失敗", name, passed, len(ng)))
         for line in ng[:10]:
             say("    " + line)
@@ -423,6 +448,8 @@ def main():
     out = os.path.join(rec_root, stamp)
     os.makedirs(out, exist_ok=True)
     r = Runner(out)
+    r.progress["options"] = {"ui": a.ui, "only": a.only, "skip": a.skip}
+    r.save_progress()
     # 強制終了（止める操作でプロセスごと止められた）ときも分かるように、先に「途中で止まった」と書いておく（最後まで流れたら書き直す）
     with open(os.path.join(out, "結果.md"), "w", encoding="utf-8") as f:
         f.write("".join(line + chr(10) for line in ["# 自動検証の結果 %s" % stamp, "", "| 判定 | 中断（最後まで流れなかった。強制終了など） |", "|---|---|"]))
@@ -551,6 +578,8 @@ def main():
             lines += ["- " + x for x in s["ng"]] or ["```", s["tail"], "```"]
     with open(os.path.join(out, "結果.md"), "w", encoding="utf-8") as f:
         f.write("\n".join(lines) + "\n")
+    r.progress.update({"current": None, "finished": {"verdict": verdict, "passed": passed, "failed": failed, "reason": interrupted_reason, "at": time.time()}})
+    r.save_progress()
     write_items_list(os.path.join(out, "検証項目一覧.md"), r.steps, stamp, is_complete)
     if is_complete and ok:
         write_items_list(os.path.join(ROOT, "docs", "verification_items.md"), r.steps, stamp, True)
