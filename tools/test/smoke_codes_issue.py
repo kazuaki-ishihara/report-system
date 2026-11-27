@@ -78,6 +78,26 @@ def main():
     status_code, location, page_html = send(lead_client, "hosa01")
     check("補佐（開発担当）にすると、欄が出て使える（確かめの作りの確かめ）",
           'value="codes_issue"' in page_html and status_code in (302, 303) and target_state()[1] == 8 and target_state()[2] == state_before[2] + 1, (status_code, target_state()))
+
+    # migrate.php を流す前の DB（知らせの表の種類に codes_issue が無い）では、発行を断る（知らせを残せないので見せない）
+    notice_table_sql = database.execute("SELECT sql FROM sqlite_master WHERE name = 'security_notices'").fetchone()[0]
+    database.execute("PRAGMA foreign_keys = OFF")
+    database.execute("ALTER TABLE security_notices RENAME TO security_notices_keep")
+    database.execute(notice_table_sql.replace(", 'codes_issue'", ""))
+    try:
+        database.execute("UPDATE users SET totp_secret_enc = NULL, totp_enabled_at = NULL, totp_last_step = NULL WHERE id = ?", (uid(TARGET),))   # 発行できる状態（2 段階認証が未設定）にする
+        state_before_old_table = target_state()
+        edit_path = "/admin/user_edit.php?id=%d" % uid(TARGET)
+        _status_code, _location, page_html = lead_client.get(edit_path)
+        status_code, _location, error_html = lead_client.post(edit_path, {"csrf_token": csrf(page_html), "request_key": os.urandom(16).hex(), "action": "codes_issue",
+                                                                          "reason": "確かめ", "operator_password": users["hosa01"]["password"]})
+        check("migrate.php を流す前の DB では、発行を断り（400）、そのことを知らせる（予備のコードを作らない）",
+              status_code == 400 and "migrate.php を流したあとで使えます" in (error_html or "") and target_state() == state_before_old_table, (status_code, target_state()))
+    finally:
+        database.execute("DROP TABLE security_notices")
+        database.execute("ALTER TABLE security_notices_keep RENAME TO security_notices")
+        database.execute("PRAGMA foreign_keys = ON")
+    check("（確かめのあと）知らせの表を元の形に戻した", "'codes_issue'" in database.execute("SELECT sql FROM sqlite_master WHERE name = 'security_notices'").fetchone()[0])
     return summary()
 
 

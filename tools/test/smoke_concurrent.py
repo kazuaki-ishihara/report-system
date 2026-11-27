@@ -70,6 +70,10 @@ def main():
           and '<optgroup label="B課">' in candidate_html)
     check("この課の人・もう確認者の人は、兼務の候補に出ない",
           all('value="%d"' % user_id_of(login_id) not in candidate_html for login_id in ("ippan_a1", "dairi_a", "kacho_a")))
+    database.execute("UPDATE users SET specialist_title = '技師' WHERE id = ?", (user_id_of("ippan_b1"),))
+    status_code, _location, _page_html = post_with(kacho_a_client, manage_path_a, {"action": "concurrent_add", "concurrent_user_id": str(user_id_of("ippan_b1"))})
+    check("専門職の人は兼務の確認者に足せない（400）", status_code == 400 and reviewer_row("ippan_b1", department_a_id) is None, status_code)
+    database.execute("UPDATE users SET specialist_title = '' WHERE id = ?", (user_id_of("ippan_b1"),))
     status_code, _location, page_html = post_with(kacho_a_client, manage_path_a, {"action": "concurrent_add", "concurrent_user_id": ""})
     check("選ばずに足すと、選ぶよう知らせる", status_code == 200 and "兼務させる人を選んでください" in page_html, status_code)
     status_code, _location, _page_html = post_with(kacho_a_client, manage_path_a, {"action": "concurrent_add", "concurrent_user_id": str(user_id_of("ippan_b1"))})
@@ -102,6 +106,15 @@ def main():
     check("もう確認者の人を足そうとすると、そう知らせる", status_code == 200 and "もうこの課の確認者です" in page_html, status_code)
     status_code, _location, _page_html = post_with(kacho_a_client, manage_path_a, {"action": "concurrent_add", "concurrent_user_id": str(user_id_of("ippan_a1"))})
     check("この課の人は兼務として足せない（400）", status_code == 400 and reviewer_row("ippan_a1", department_a_id) is None, status_code)
+    # 兼務の候補が 1 人もいない課: A課の人・A課の確認者のほかを、一時的に無効にする（あとで戻す）
+    other_active_user_ids = [row[0] for row in database.execute(
+        "SELECT id FROM users WHERE is_active = 1 AND login_id IS NOT NULL AND department_id IS NOT ? AND id NOT IN (SELECT user_id FROM department_reviewers WHERE department_id = ?)",
+        (department_a_id, department_a_id))]
+    database.executemany("UPDATE users SET is_active = 0 WHERE id = ?", [(user_id,) for user_id in other_active_user_ids])
+    _status_code, _location, no_candidate_html = kacho_a_client.get(manage_path_a)
+    database.executemany("UPDATE users SET is_active = 1 WHERE id = ?", [(user_id,) for user_id in other_active_user_ids])
+    check("兼務の候補がいない課では、足せる人がいないと知らせ、選ぶ欄を出さない",
+          bool(other_active_user_ids) and "兼務の確認者に足せる人はいません。" in no_candidate_html and 'id="concurrent_user_id"' not in no_candidate_html, len(other_active_user_ids))
     check("ほかの課の課長は、この課の「課の管理」を開けない（403）", client_of("kacho_b").get(manage_path_a)[0] == 403)
 
     # ================================================================
@@ -130,6 +143,11 @@ def main():
         _status_code, _location, bulk_html = admin_client.get("/admin/org.php?tab=bulk")
         return admin_client.post_file("/admin/org.php?tab=bulk", {"csrf_token": csrf(bulk_html), "action": "bulk_preview"}, "org_csv", "org.csv", csv_bytes)
 
+    def preview_messages(preview_html):
+        # 確かめの画面の誤り・知らせの文（NG のときに出す）
+        main_text = re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", preview_html.split("<main", 1)[-1]))
+        return [main_text[max(0, found.start() - 80):found.start() + 160] for found in re.finditer(r"行目|変わる人|変わる内容|反映する", main_text)][:6]
+
     def apply_plan(preview_html):
         plan_token = preview_html.split('name="plan_token" value="')[1].split('"')[0] if 'name="plan_token"' in preview_html else ""
         return admin_client.post("/admin/org.php?tab=bulk", {"csrf_token": csrf(preview_html), "request_key": os.urandom(16).hex(), "action": "bulk_apply", "plan_token": plan_token})
@@ -155,6 +173,7 @@ def main():
     check("兼務の課長も「課長は課に 1 人」に数える（B課の課長がいるまま兼務の課長を足すと誤り）",
           "B課 の課長が 2 人以上になります" in preview_html and 'value="bulk_apply"' not in preview_html, status_code)
     status_code, _location, preview_html = upload(build_csv(row_list, header_index, {"kacho_b": {"役割": ""}, "kacho_a": {"兼務": "B課:課長"}}))
+    check("役職が課長の人に課長を兼務させるときは知らせない", "（課長・部長ではありません）" not in preview_html and 'value="bulk_apply"' in preview_html, preview_messages(preview_html))
     status_code, _location, _page_html = apply_plan(preview_html)
     check("B課の課長を外し、A課の課長に B課の課長を兼務させられる", status_code == 303 and final_user_ids(department_b_id) == [user_id_of("kacho_a")]
           and final_user_ids(department_a_id) == [user_id_of("kacho_a")], (status_code, final_user_ids(department_b_id)))
@@ -169,6 +188,18 @@ def main():
                                     ("B課:課長; B課:確認者", "兼務に同じ課が 2 回あります")]:
         status_code, _location, preview_html = upload(build_csv(row_list, header_index, {"kacho_a": {"兼務": bad_text}}))
         check("兼務の誤り（%s）を知らせ、反映のボタンを出さない" % bad_text, expected_text in preview_html and 'value="bulk_apply"' not in preview_html, status_code)
+    status_code, _location, preview_html = upload(build_csv(row_list, header_index, {"kacho_a": {"兼務": "B課:確認者:" + "ら" * 41}}))
+    check("兼務の担当のラインの名前が 41 文字なら誤り", "ラインの名前は 40 文字以内にしてください" in preview_html and 'value="bulk_apply"' not in preview_html, status_code)
+    status_code, _location, preview_html = upload(build_csv(row_list, header_index, {"ippan_a1": {"兼務": "B課:確認者:" + "ら" * 40 + ";"}}))
+    check("兼務の担当のラインの名前が 40 文字なら読む（最後の「;」のあとの空の兼務は飛ばす）",
+          "ラインの名前は 40 文字以内" not in preview_html and "兼務は「課の名前" not in preview_html and 'value="bulk_apply"' in preview_html, preview_messages(preview_html))
+    database.execute("UPDATE users SET specialist_title = '技師' WHERE id = ?", (user_id_of("ippan_a2"),))
+    status_code, _location, preview_html = upload(build_csv(row_list, header_index, {"ippan_a2": {"兼務": "B課:確認者"}}))
+    database.execute("UPDATE users SET specialist_title = '' WHERE id = ?", (user_id_of("ippan_a2"),))
+    check("専門職の人に兼務を付けると誤り", "専門職の人は、課長・確認者・項目管理者にできません" in preview_html and 'value="bulk_apply"' not in preview_html, status_code)
+    status_code, _location, preview_html = upload(build_csv(row_list, header_index, {"kacho_a": {"兼務": ""}, "ippan_a1": {"兼務": "B課:課長"}}))
+    check("役職が課長・部長でない人に課長を兼務させるときは知らせる（止めはしない）",
+          "A一般1 さんの役職は「一般」です（課長・部長ではありません）" in preview_html and 'value="bulk_apply"' in preview_html, preview_messages(preview_html))
     status_code, _location, preview_html = upload(build_csv(row_list, header_index, {"kacho_a": {"兼務": "B課：課長"}}))
     check("全角の「：」「；」でも読む", "B課 の課長が" not in preview_html and "兼務は「課の名前" not in preview_html and "変わる人はいません" in preview_html, status_code)
     # CSV に載っていない人を知らせる（行を消しても変わらないことに気づけるように。2026-11-26 指示）
@@ -223,6 +254,25 @@ def main():
     status_code, _location, preview_html = upload(build_csv(row_list, header_index, {}))
     check("出した CSV をそのまま取り込むと、変わる人はいない（誤りも出ない）", "変わる人はいません" in preview_html and "flash-error" not in preview_html, status_code)
     database.execute("UPDATE users SET department_id = ?, role_title = '課長' WHERE id = ?", (department_b_id, user_id_of("kacho_b")))
+
+    # ================================================================
+    section("G-14", "課員のいない課の表示")
+    database.execute("INSERT INTO departments (name, sort_order, is_active, created_at, updated_at) VALUES ('課員のいない課', 999, 1, '2026-11-27 00:00:00', '2026-11-27 00:00:00')")
+    empty_department_id = database.execute("SELECT id FROM departments WHERE name = '課員のいない課'").fetchone()[0]
+    try:
+        _status_code, _location, department_list_html = admin_client.get("/admin/org.php?tab=departments")
+        empty_row_html = next((row_html for row_html in re.findall(r"<tr>.*?</tr>", department_list_html, re.S) if "<td>課員のいない課</td>" in row_html), "")
+        check("課の一覧で、課員も兼務もいない課は「0 人」と出す（開く欄は出さない）",
+              "0 人" in empty_row_html and "department-member-details" not in empty_row_html, empty_row_html[:300])
+        _status_code, _location, empty_edit_html = admin_client.get("/admin/org.php?tab=departments&edit=%d" % empty_department_id)
+        empty_final_select_html = re.search(r'<select id="final_user_id".*?</select>', empty_edit_html, re.S).group(0)
+        check("課の編集の「課員」の節で、課員がいなければ「この課に所属している人はいません。」と出す",
+              "この課に所属している人はいません。" in empty_edit_html and 'id="department-member-list"' not in empty_edit_html)
+        check("課長の候補で、空のまとまり（この課の人）は出さず、ほかのまとまりは出す",
+              '<optgroup label="この課の人">' not in empty_final_select_html and '<optgroup label="ほかの課の課長・部長">' in empty_final_select_html,
+              re.findall(r'<optgroup label="([^"]*)">', empty_final_select_html))
+    finally:
+        database.execute("DELETE FROM departments WHERE id = ?", (empty_department_id,))
 
     return summary()
 

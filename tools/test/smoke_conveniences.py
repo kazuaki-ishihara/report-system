@@ -691,6 +691,7 @@ def main():
 
     # ---------------- F メンテナンス中 ----------------
     section("G-21", "F メンテナンス中")
+    json_member_client = login(arguments.base, "ippan_a2", user_info_by_login_id["ippan_a2"])   # チャットなどの JSON の要求で追い出されるのを見る
     until_text = (datetime.datetime.now() + datetime.timedelta(hours=1)).strftime("%Y-%m-%dT%H:%M")
     status_code, _location, _page_html = post_form(admin_client, "/admin/index.php", {"action": "maintenance_start", "until": until_text, "message": "新しい版に入れ替えています"})
     check("F: 管理者がメンテナンス中にできる", database.execute("SELECT COUNT(*) FROM app_state WHERE name = 'maintenance'").fetchone()[0] == 1, status_code)
@@ -698,6 +699,9 @@ def main():
     status_code, location, _page_html = member_client.get("/index.php")
     check("F: ログインしている部下は、次に画面を開くと追い出される（ログインの画面へ）", status_code in (302, 303) and "/login.php" in (location or ""), (status_code, location))
     check("F: 追い出したあとは、元のセッションでは開けない", member_client.get("/account.php")[0] in (302, 303))
+    status_code, _location, json_body = json_member_client.get("/index.php?format=json")
+    check("F: JSON の要求（チャットなど）で来た人は、ログインし直しを JSON（401）で知らせて追い出す",
+          status_code == 401 and json.loads(json_body or "{}").get("reason") == "login" and json_member_client.get("/account.php")[0] in (302, 303), (status_code, (json_body or "")[:100]))
     _status_code, _location, login_html = member_client.get("/login.php")
     check("F: ログインの画面にメンテナンス中の知らせを出す（一言も）", 'id="maintenance-login-notice"' in login_html and "管理者・補佐のほかはログインできません" in login_html
           and "新しい版に入れ替えています" in login_html)

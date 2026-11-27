@@ -325,6 +325,47 @@ def main():
         b.eval("(function (v) { document.querySelector('.tag-picker-list li[data-value=\"' + v + '\"]').dispatchEvent(new MouseEvent('mousedown', { bubbles: true })); })(%s)" % json.dumps(mouse_target))
         time.sleep(0.2)
         check("候補を押すと、その人を選ぶ", b.eval("document.getElementById('final_user_id').value") == mouse_target)
+        key_js = "(function (k) { document.getElementById('final_user_id-search').dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true })); })(%s)"
+        active_js = "Array.prototype.map.call(document.querySelectorAll('.tag-picker-list li.active'), function (li) { return li.getAttribute('data-value'); })"
+        list_hidden_js = "document.querySelector('.tag-picker-list').hidden"
+        check("（準備）候補を選んだあとは一覧が閉じている", b.eval(list_hidden_js) is True)
+        b.eval(key_js % json.dumps("ArrowDown"))
+        time.sleep(0.2)
+        first_values = b.eval(list_values_js)
+        check("一覧が閉じているときに ↓ を押すと、一覧を開いて最初の候補に印を付ける",
+              b.eval(list_hidden_js) is False and len(first_values) >= 2 and b.eval(active_js) == first_values[:1], (b.eval(active_js), first_values[:2]))
+        b.eval(key_js % json.dumps("ArrowUp"))
+        time.sleep(0.2)
+        check("最初の候補で ↑ を押すと、最後の候補に回る", b.eval(active_js) == first_values[-1:], b.eval(active_js))
+        b.eval(key_js % json.dumps("Escape"))
+        time.sleep(0.2)
+        check("Esc で一覧を閉じる（選んでいる人は変わらない）", b.eval(list_hidden_js) is True and b.eval("document.getElementById('final_user_id').value") == mouse_target)
+        b.fill("#final_user_id-search", "だれにも合わない文字")
+        time.sleep(0.2)
+        b.eval(key_js % json.dumps("ArrowDown"))
+        time.sleep(0.2)
+        check("合う人がいないときに ↓ を押しても、印は付かず、誤りも出ない",
+              b.eval(active_js) == [] and "合う人がいません。" in b.eval("document.querySelector('.tag-picker-list').textContent") and not [e for e in b.errors if e.startswith("JS")], [e for e in b.errors if e.startswith("JS")][:3])
+        # 候補が上限（50 人）を超えるとき: 一時的に利用者を足す（あとで消す）
+        writable_users = sqlite3.connect(a.db, timeout=10, isolation_level=None)
+        many_login_ids = ["uiwide%02d" % number for number in range(1, 61)]
+        try:
+            writable_users.executemany(
+                "INSERT INTO users (username, password_hash, role_title, is_admin, created_at, login_id, display_name, department_id, updated_at) VALUES (?, 'x', '一般', 0, '2026-11-27 00:00:00', ?, ?, NULL, '2026-11-27 00:00:00')",
+                [(login_id, login_id, "上限の確かめ" + login_id[-2:]) for login_id in many_login_ids])
+            b.goto(a.base + "/admin/org.php?tab=departments&edit=%d&reload=1#dept-final" % seed_dept)   # 同じ URL（# だけ）だと読み直さないので、足した人が出ない
+            b.fill("#final_user_id-search", "上限の確かめ")
+            time.sleep(0.3)
+            shown_count = len(b.eval(list_values_js))
+            check("候補が 50 人を超えると、50 人まで出して、残りの人数と絞り込みを知らせる",
+                  shown_count == 50 and "ほかに 10 人います。もう少し絞り込んでください。" in b.eval("document.querySelector('.tag-picker-list').textContent"), shown_count)
+            b.fill("#final_user_id-search", "uiwide0")
+            time.sleep(0.3)
+            check("絞り込んで 50 人以下になれば、残りの人数は出さない",
+                  len(b.eval(list_values_js)) == 9 and "ほかに" not in b.eval("document.querySelector('.tag-picker-list').textContent"), len(b.eval(list_values_js)))
+        finally:
+            writable_users.executemany("DELETE FROM users WHERE login_id = ?", [(login_id,) for login_id in many_login_ids])
+            writable_users.close()
         writable = sqlite3.connect(a.db, timeout=10, isolation_level=None)
         admin = lib_http.login(a.base, "admin01", users["admin01"])
         _, _, page_html = admin.get("/requests/index.php")
