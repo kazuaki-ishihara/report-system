@@ -83,11 +83,12 @@ def main():
         _, location, page_html = client.post("/login.php", {"csrf_token": csrf(page_html), "action": "code", "code": code, "remember": "0"})
         return location or "", page_html
 
-    def set_up_second_factor(client):
-        """2 段階認証の設定をして、予備のコードを返す。"""
+    def set_up_second_factor(client, login_id):
+        """2 段階認証の設定をして、予備のコードを返す。
+        設定に使ったコードの区間は、ログインの道具の「使った区間」に残す（残さないと、すぐあとのログインで同じ区間のコードを送り、断られることがある）"""
         _, _, page_html = client.get("/account.php?tab=totp")
         secret = re.search(r'<p class="secret">([A-Z2-7 ]+)</p>', page_html).group(1).replace(" ", "")
-        _, location, _ = client.post("/account.php?tab=totp", {"csrf_token": csrf(page_html), "action": "totp_confirm", "code": totp(secret)})
+        _, location, _ = client.post("/account.php?tab=totp", {"csrf_token": csrf(page_html), "action": "totp_confirm", "code": next_login_code(login_id, secret)})
         _, _, codes_html = client.get("/account.php?tab=codes")
         return secret, location or "", re.findall(r"<li>([a-z0-9]{4}-[a-z0-9]{6})</li>", codes_html)
 
@@ -206,7 +207,7 @@ def main():
           one("SELECT totp_secret_enc FROM users WHERE id = ?", uid("ippan_a2")) is None and one("SELECT COUNT(*) FROM user_backup_codes WHERE user_id = ?", uid("ippan_a2")) == 0
           and "/login.php" in (old_session.get("/index.php")[1] or ""))
     check("設定が済むまで、ほかの画面は使えない", "/account.php?tab=totp" in (client.get("/index.php")[1] or ""))
-    secret, location, _ = set_up_second_factor(client)
+    secret, location, _ = set_up_second_factor(client, "ippan_a2")
     users["ippan_a2"]["totp"] = secret
     clients["ippan_a2"] = client
     check("設定し直すと使え、ホームに復旧コードが使われた知らせ（発行した人）が出る",
@@ -275,7 +276,7 @@ def main():
     database.execute("UPDATE users SET failed_count = 0, locked_until = NULL")
     client, location, _ = password_step("ippan_a1", temp_password)
     check("仮のパスワードで、2 段階認証の初期設定からやり直す（前の認証アプリでは進めない）", "/account.php?tab=totp" in location, location)
-    secret, _, new_codes = set_up_second_factor(client)
+    secret, _, new_codes = set_up_second_factor(client, "ippan_a1")
     check("2 段階認証の秘密の値が新しくなり、予備のコードが新しくできる", secret != users["ippan_a1"]["totp"] and len(new_codes) == 8 and not set(new_codes) & set(own_codes))
     users["ippan_a1"]["totp"] = secret
 
@@ -323,7 +324,7 @@ def main():
     security_html = client_of("admin01").get("/admin/security.php")[2]
     temp_password = re.search(r'<p class="secret">([^<]+)</p>', security_html).group(1)
     client, _, _ = password_step("ippan_a1", temp_password)
-    secret, _, _ = set_up_second_factor(client)
+    secret, _, _ = set_up_second_factor(client, "ippan_a1")
     for old_password, label in ((first_old, "1 回目"), ("second-pass-ippan-a1", "2 回目")):
         _, _, page_html = change_password(client, old_password)
         check("%sの凍結のときのパスワードも使えない" % label, "前に使えなくなったパスワード" in page_html)
@@ -404,7 +405,7 @@ def main():
     check("替える前のパスワードは使えない", "今と同じパスワードは使えません" in page_html or "前に使えなくなった" in page_html)
     _, location, _ = change_password(client, "brand-new-kacho-a", password_of("kacho_a"))
     check("パスワードを変えると、2 段階認証の設定し直しに進む", "/account.php?tab=totp" in (location or "") and "/account.php?tab=totp" in (client.get("/reports/mine.php")[1] or ""), location)
-    secret, _, codes = set_up_second_factor(client)
+    secret, _, codes = set_up_second_factor(client, "kacho_a")
     _, _, home_html = client.get("/index.php")
     clients["kacho_a"] = client
     check("設定し直すと使え、新しい予備のコードができる", len(codes) == 8 and secret != users["kacho_a"]["totp"] and "あなたの役割と権限" in home_html)
@@ -423,7 +424,7 @@ def main():
     admin_client, _, _ = password_step("admin01", password_of("admin01"))
     code_step(admin_client, next_login_code("admin01", users["admin01"]["totp"]))
     change_password(admin_client, "brand-new-admin-01", password_of("admin01"))
-    secret, _, _ = set_up_second_factor(admin_client)
+    secret, _, _ = set_up_second_factor(admin_client, "admin01")
     users["admin01"].update(password="brand-new-admin-01", totp=secret)
     clients["admin01"] = admin_client
     check("総入れ替えのあと、管理者の画面に総入れ替えの欄が出ない", 'id="mass-reset"' not in admin_client.get("/admin/security.php")[2])
@@ -431,7 +432,7 @@ def main():
     recovery = shown("admin01", "dairi_a")[1]
     client, _, _ = password_step("dairi_a", password_of("dairi_a"))
     code_step(client, recovery)
-    secret, _, _ = set_up_second_factor(client)
+    secret, _, _ = set_up_second_factor(client, "dairi_a")
     _, location, _ = change_password(client, "brand-new-dairi-a", password_of("dairi_a"))
     check("復旧コードで設定し直した人には、2 段階認証を 2 回設定させない", "/index.php" in (location or "") and client.get("/reports/mine.php")[0] == 200, location)
 
@@ -607,7 +608,7 @@ def main():
     database.execute("UPDATE users SET failed_count = 0, locked_until = NULL")
     client, location, _ = password_step("hosa01", first_half + second_half)
     check("前半と後半をつなぐと、本人が 2 段階認証の初期設定からやり直せる", "/account.php?tab=totp" in location, location)
-    set_up_second_factor(client)
+    set_up_second_factor(client, "hosa01")
     check("本人のホームに 2 人の名前と役割が出る（パスワードの変更のあと）", "/index.php" in (change_password(client, "brand-new-hosa-01")[1] or "")
           and "%s さん（%s）と %s さん（システム管理者補佐）が、あなたのアカウントを再初期化しました" % (names["admin01"], roles["admin01"], names["ippan_b1"]) in client.get("/index.php")[2])
     lead_post("admin01", "lead_recovery_request")
