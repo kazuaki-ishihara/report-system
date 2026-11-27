@@ -244,6 +244,7 @@ if ($tab === 'totp') {
     if ($settingUp) {
         $b32 = $pendingSecret();
         $vars['secretDisplay'] = trim(chunk_split($b32, 4, ' '));
+        $vars['secretPlain'] = $b32;   // コピーのボタン用（空白なし。認証アプリに貼り付けて使う）
         $vars['totpUri'] = totp_uri($b32, (string) $user['login_id']);
         // PC で開いている人に、スマートフォンで開くアドレスを案内する（ホスト名の形でないものは出さない）
         $requestHostName = (string) ($_SERVER['HTTP_HOST'] ?? '');
