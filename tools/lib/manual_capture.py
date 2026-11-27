@@ -270,6 +270,17 @@ def capture_all(camera, php_path, environment, database_path):
             browser.click('button[value="import_standard"]', navigate=True)
     run_scene(camera, "準備（よくある質問の取り込み）", prepare_faq)
 
+    # ---- 準備: 撮る人の予備のコードを今の形に作り直す（テストデータの古い形のコードだと、ホームに作り直しの帯が出て写り込むため。撮らない） ----
+    def prepare_backup_codes():
+        camera.use_width("pc")
+        for login_id in ("ippan_a1", "ippan_a2", "leader_a", "kacho_a", "admin01"):
+            camera.login(login_id)
+            camera.goto("/account.php?tab=codes")
+            if browser.exists("#current_password_c"):
+                browser.fill("#current_password_c", users[login_id]["password"])
+                browser.click('form input[value="codes_regen"] ~ button[type=submit]', navigate=True)
+    run_scene(camera, "準備（予備のコードを今の形にする）", prepare_backup_codes)
+
     # ---- 2 章 ログイン ----
     def chapter_login():
         camera.use_width("pc")
@@ -283,7 +294,7 @@ def capture_all(camera, php_path, environment, database_path):
         browser.fill("#code", next_login_code("ippan_a1", users["ippan_a1"]["totp"]))
         camera.shoot("m02_02_code", [mark("#code", label=1), mark('input[name="remember"]', label=2, up="label"), mark("form.form button[type=submit]", label=3)])
         browser.click("form.form button[type=submit]", navigate=True)
-        camera.shoot("m02_03_home_after_login", [mark("h2", text="の報告", label="")], scroll="top")
+        camera.shoot("m02_03_home_after_login", [], scroll="top")
         browser.clear_cookies()
         camera.goto("/login.php")
         camera.shoot("m02_09_forgot_link", [mark("a", text="パスワードを忘れた場合", label=1)])
@@ -342,10 +353,10 @@ def capture_all(camera, php_path, environment, database_path):
     # ---- 4 章 報告を作る（部下） ----
     def chapter_report():
         camera.use_width("pc")
-        camera.login("ippan_a1")
+        camera.login("ippan_a2")
         camera.goto("/index.php")
-        camera.shoot("m04_01_home_create", [mark("a", text="今月の報告を作る", label=1)] if browser.eval(
-            "document.body.innerText.indexOf('今月の報告を作る') >= 0") else [mark("a", text="作る", label=1)])
+        camera.shoot("m04_01_home_create", [mark("a", text="今月の報告を作る", label=1)], scroll="top")
+        camera.login("ippan_a1")
         camera.goto("/reports/edit.php?period=" + current_month)
         camera.shoot("m04_02_edit_top", [mark('button[value="unchanged"]', label=1), mark("#copy_target", label=2), mark("button", text="写す", label=3)], scroll="top")
         camera.shoot("m04_03_edit_fields", [mark("#b0_project", label=1), mark("#b0_2", label=2), mark("#b0_3", label=3)])
@@ -395,13 +406,13 @@ def capture_all(camera, php_path, environment, database_path):
     def chapter_review():
         camera.use_width("pc")
         camera.login("leader_a")
-        camera.shoot("m05_01_home_reviewer", [mark("a", text="未チェックを順に見る", label=1), mark("a", text="提出状況", label=2, nth=0)], scroll="top")
+        camera.shoot("m05_01_home_reviewer", [mark("a", text="未チェックを順に見る", label=1), mark("section.reviewer a.button", text="提出状況", label=2)], scroll="top")
         camera.goto("/admin/comment_templates.php")
         browser.fill("#new-template-body", "完了の見込みを教えてください")
         camera.shoot("m05_02_templates", [mark("#new-template-body", label=1), mark('button[value="add"]', label=2)])
         browser.click('button[value="add"]', navigate=True)
         camera.goto("/reports/view.php?id=%d" % sample_report_id)
-        camera.shoot("m05_03_view_top", [mark("h1", label=1), mark("h2", text="チェック", label=2)], scroll="top")
+        camera.shoot("m05_03_view_top", [mark("h1", label=1), mark("h2.section-heading + ul", label=2)], scroll="top")
         browser.eval("document.querySelector('details.comment-form summary').scrollIntoView({block: 'center'})")
         browser.click("details.comment-form summary")
         time.sleep(0.2)
@@ -416,10 +427,7 @@ def capture_all(camera, php_path, environment, database_path):
         camera.shoot("m05_05_resolve", [mark("summary", text="返信・解決", label=1), mark('button[value="resolve"]', label=2)])
         camera.shoot("m05_06_check_button", [mark('button[value="check"]', label=1)])
         browser.click('button[value="check"]', navigate=True)
-        camera.shoot("m05_07_checked", [mark("h2", text="チェック", label=1)], scroll="top")
-        camera.goto("/reports/comments.php")
-        camera.shoot("m07_01_comment_list", [mark("a", text="自分が出したコメント", label=1), mark("a", text="自分の報告へのコメント", label=2),
-                                             mark('select[name="status"]', label=3)], scroll="top")
+        camera.shoot("m05_07_checked", [mark("h2.section-heading + ul", label=1)], scroll="top")
         camera.login("kacho_a")
         camera.goto("/reports/view.php?id=%d" % sample_report_id)
         camera.shoot("m05_08_confirm_button", [mark('button[value="check"]', label=1), mark('button[value="confirm"]', label=2)])
@@ -434,12 +442,6 @@ def capture_all(camera, php_path, environment, database_path):
                                        mark("a", text="横並び・まとめ", label=3), mark('button[value="remind"]', label=4)], scroll="top")
         camera.goto("/status/compare.php?period=" + previous_month)
         camera.shoot("m06_02_compare", [mark('input[name="diff"]', label=1, up="label"), mark("button.open-cell", label=2)], scroll="top")
-        camera.goto("/reports/search.php")
-        browser.fill("#search-keyword", "在庫")
-        camera.shoot("m06_03_search", [mark('input[name="from"]', label=1), mark('input[name="scope"]', label=2, up="fieldset, .field, p, div"),
-                                       mark("#search-keyword", label=3), mark("button.primary", text="探す", label=4)], scroll="top")
-        browser.click("button.primary", navigate=True)
-        camera.shoot("m06_04_search_result", [], scroll="top")
         camera.goto("/export/index.php")
         camera.shoot("m06_05_export", [mark('input[name="type"][value="report"]', label=1, up="label"), mark("#from", label=2),
                                        mark('input[name="content"][value="table"]', label=3, up="fieldset, .field, div"),
@@ -450,7 +452,7 @@ def capture_all(camera, php_path, environment, database_path):
         camera.click_text("button.primary", "出力する", navigate=True)
         camera.shoot("m06_06_print_view", [], scroll="top")
         camera.goto("/surveys/manage.php")
-        camera.shoot("m06_07_survey_manage", [mark("a", text="新しく作る", label=1), mark("a", text="結果", label=2), mark("a", text="設定", label=3)], scroll="top")
+        camera.shoot("m06_07_survey_manage", [mark("a", text="新しく作る", label=1), mark("table a", text="結果", label=2), mark("table a", text="設定", label=3)], scroll="top")
         camera.goto("/surveys/survey_edit.php")
         camera.shoot("m06_08_survey_new", [], scroll="top")
         if sample_survey_row:
@@ -467,6 +469,19 @@ def capture_all(camera, php_path, environment, database_path):
         camera.click_text("a", "この画面について要望・依頼を出す", navigate=True)
         camera.shoot("m07_03_request_new", [mark("#new select", label=1, nth=0), mark("#new input[type=text]", label=2, nth=0), mark("#new textarea", label=3, nth=0),
                                             mark("#new button", text="出す", label=4)])
+    run_scene(camera, "7 章 要望・依頼", chapter_requests)
+
+    # ---- 6.3・7.1・7.3 一般職の検索・コメントの一覧・よくある質問 ----
+    def chapter_member_tools():
+        camera.use_width("pc")
+        camera.login("ippan_a1")
+        camera.goto("/reports/search.php")
+        browser.fill("#search-keyword", "在庫")
+        camera.shoot("m06_03_search", [mark('input[name="from"]', label=1), mark("#search-keyword", label=2), mark("button.primary", text="探す", label=3)], scroll="top")
+        browser.click("button.primary", navigate=True)
+        camera.shoot("m06_04_search_result", [mark(".search-result-list", label=1)])
+        camera.goto("/reports/comments.php")
+        camera.shoot("m07_01_comment_list", [mark('select[name="status"]', label=1)], scroll="top")
         camera.goto("/faq.php")
         camera.shoot("m07_04_faq_top", [mark("#faq_search_query", label=1), mark("#faq-chat a[data-category]", label=2)], scroll="top")
         browser.fill("#faq_search_query", "パスワードを忘れた")
@@ -475,7 +490,7 @@ def capture_all(camera, php_path, environment, database_path):
         camera.shoot("m07_05_faq_answer", [mark("#faq-chat .chat-bot", text="Q.", label=1),
                                            mark("#faq-chat .chat-choices button", text="解決した", label=2),
                                            mark("#faq-chat .chat-choices button", text="解決しない", label=3)])
-    run_scene(camera, "7 章 要望・依頼・よくある質問", chapter_requests)
+    run_scene(camera, "6.3・7.1・7.3 一般職の検索・コメント・よくある質問", chapter_member_tools)
 
     # ---- 8 章 課長の仕事 ----
     def chapter_manager():
@@ -549,7 +564,7 @@ def capture_all(camera, php_path, environment, database_path):
         camera.shoot("m13_01_menu", [mark(".app-menu a", text="通勤定期代の精算", label=1)], scroll="top")
         browser.click(".app-menu summary")
         camera.goto("/expenses/index.php")
-        camera.shoot("m13_02_list_empty", [mark(".flash-info", label=1), mark("a.button", text="新しく作る", label=2)], scroll="top")
+        camera.shoot("m13_02_list_empty", [mark("a.button", text="新しく作る", label=1)], scroll="top")
         camera.goto("/expenses/edit.php")
         browser.fill("#employee_number", "999")
         browser.fill("#office", "大阪")
@@ -563,11 +578,10 @@ def capture_all(camera, php_path, environment, database_path):
         browser.fill('select[name="rows[0][trip]"]', "往復")
         browser.fill('input[name="rows[0][amount]"]', "61830")
         camera.shoot("m13_04_edit_rows", [mark('input[name="rows[0][start_date]"]', label=1), mark('input[name="rows[0][end_date]"]', label=2),
-                                          mark(".expense-fixed-kind", label=3), mark('select[name="rows[0][transport]"]', label=4),
-                                          mark('input[name="rows[0][route]"]', label=5), mark('select[name="rows[0][trip]"]', label=6),
-                                          mark('input[name="rows[0][amount]"]', label=7)])
-        camera.shoot("m13_05_edit_totals", [mark(".expense-subtotal", label=1), mark("#advance_amount", label=2), mark(".expense-total", label=3),
-                                            mark('button[value="save"]', label=4)])
+                                          mark('select[name="rows[0][transport]"]', label=3),
+                                          mark('input[name="rows[0][route]"]', label=4), mark('select[name="rows[0][trip]"]', label=5),
+                                          mark('input[name="rows[0][amount]"]', label=6)])
+        camera.shoot("m13_05_edit_totals", [mark("#advance_amount", label=1), mark('button[value="save"]', label=2)])
         browser.click('button[value="save"]', navigate=True)
         camera.shoot("m13_06_saved", [mark("a.button", text="Excel を受け取る", label=1)], scroll="top")
         camera.goto("/expenses/index.php")
@@ -583,7 +597,7 @@ def capture_all(camera, php_path, environment, database_path):
         camera.goto("/goals/index.php")
         camera.shoot("m14_01_list", [mark("a.button", text="年度のシートを作る", label=1)], scroll="top")
         camera.goto("/goals/edit.php?year=%d" % fiscal_year)
-        camera.shoot("m14_02_new_kind", [mark("p.note", text="様式は役職で決まります", label=1), mark("#department_name", label=2)], scroll="top")
+        camera.shoot("m14_02_new_kind", [mark("fieldset.goal-head", label=1)], scroll="top")
         browser.fill("#goal-theme-1", "障害の件数を減らす")
         browser.fill('textarea[name="goals[0][goal]"]', "担当システムの障害の件数を、前年の半分にする。\n毎月の振り返りで原因を分類し、再発防止策を決めて実行する。")
         browser.fill('textarea[name="goals[0][progress]"]', "上期の障害は 6 件（前年同期 11 件）。")
@@ -594,13 +608,13 @@ def capture_all(camera, php_path, environment, database_path):
         camera.shoot("m14_04_report_owner", [mark('textarea[name="goals[0][mid_report]"]', label=1), mark('textarea[name="goals[0][mid_plan]"]', label=2),
                                              mark('select[name="goals[0][mid_self]"]', label=3)])
         browser.eval("Array.prototype.forEach.call(document.querySelectorAll('select[name^=\"competency_self\"]'), function (scoreSelect) { scoreSelect.value = '4'; }); true")
-        camera.shoot("m14_05_competency_owner", [mark('select[name="competency_self[0]"]', label=1), mark('button[value="save_owner"]', label=2)])
+        camera.shoot("m14_05_competency_owner", [mark('select[name="competency_self[0]"]', label=1)])
         browser.click('button[value="save_owner"]', navigate=True)
         camera.shoot("m14_06_saved_owner", [mark("a.button", text="Excel を受け取る", label=1)], scroll="top")
         sheet_path = browser.eval("location.pathname + location.search")
         camera.login("kacho_a")
         camera.goto("/goals/index.php")
-        camera.shoot("m14_07_boss_list", [mark("#members", label=1), mark(".goal-list-table a", text="A一般1", label=2)])
+        camera.shoot("m14_07_boss_list", [mark("#members + form.filters", label=1), mark(".goal-list-table a", text="A一般1", label=2)])
         camera.goto(sheet_path)
         browser.fill('select[name="goals[0][difficulty]"]', "ストレッチ")
         browser.fill('select[name="goals[0][mid_boss]"]', "A")
