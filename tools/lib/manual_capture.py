@@ -32,6 +32,7 @@ sys.path.insert(0, TEST_TOOL_DIR)
 from verify_all import find_php, free_port, php_server_command, wait_server  # noqa: E402
 
 MANUAL_PATH = os.path.join(REPOSITORY_ROOT, "docs", "operation_manual.md")
+MANUAL_PATH_LIST = [os.path.join(REPOSITORY_ROOT, "docs", manual_name) for manual_name in ("operation_manual.md", "manager_manual.md", "admin_manual.md")]
 IMAGE_DIR = os.path.join(REPOSITORY_ROOT, "docs", "manual", "images")
 MANUAL_DB_PATH = os.path.join(REPOSITORY_ROOT, "app", "data", "manual.sqlite")
 
@@ -624,7 +625,8 @@ def capture_all(camera, php_path, environment, database_path):
 
 
 def referenced_image_names():
-    text = open(MANUAL_PATH, encoding="utf-8").read()
+    # マニュアルは 3 冊（全員・課長と課長代理と主任・システム運用）。画像はどの冊が使っていてもよい
+    text = "\n".join(open(manual_path, encoding="utf-8").read() for manual_path in MANUAL_PATH_LIST if os.path.exists(manual_path))
     return re.findall(r"\]\(manual/images/([A-Za-z0-9_]+)\.png\)", text)
 
 

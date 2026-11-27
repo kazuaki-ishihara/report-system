@@ -61,6 +61,19 @@ $full = $stage === 'full' && (int) $user['must_change_password'] !== 1;
           <a class="button" href="<?= h($totpUri) ?>">認証アプリに登録する</a>
           <p class="note"><?= h_phrases('うまくいかないときは、認証アプリで「セットアップキーを入力」を選び、次の文字を入れます（時間ベース）。') ?></p>
           <p class="secret"><?= h($secretDisplay) ?></p>
+          <p>
+            <input type="hidden" id="totp-secret" value="<?= h($secretPlain) ?>">
+            <button type="button" class="small copy-text" data-copy-from="totp-secret">セットアップキーをコピー</button>
+            <span class="copy-result" aria-live="polite"></span>
+          </p>
+          <div class="note iphone-totp-guide" id="iphone-totp-guide">
+            <p><strong>iPhone の方へ</strong></p>
+            <p><?= h_phrases('iPhone では、「認証アプリに登録する」を押すと、最初から入っている「パスワード」アプリが開きます（Microsoft Authenticator などは開きません）。') ?></p>
+            <ul>
+              <li><?= h_phrases('「パスワード」アプリを使う: そのまま確認コードを追加して保存し、出た 6 桁の数字を下の欄に入れます。') ?></li>
+              <li><?= h_phrases('Microsoft Authenticator などを使う: 「パスワード」アプリは保存せずに閉じ、「セットアップキーをコピー」を押します。認証アプリで「＋」→「その他（Google、Facebook など）」→「またはコードを手動で入力」と進み、アカウント名に「月次報告」、秘密のキーにコピーした文字を貼り付けて追加します。') ?></li>
+            </ul>
+          </div>
         </li>
         <li>認証アプリに表示された 6 桁の数字を入れてください。</li>
       </ol>

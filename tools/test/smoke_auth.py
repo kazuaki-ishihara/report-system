@@ -18,6 +18,10 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+import os
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from lib_http import without_phrase_markup  # noqa: E402  画面の説明の文の区切りの印を外す
 
 RESULTS = []
 CURRENT_SECTION = {"screen": ""}   # 今の確かめの画面の番号（lib_http.section() と同じ書き方。ほかの道具に頼らず単独で動かすため、ここにも持つ）
@@ -146,6 +150,11 @@ def main():
     check("初回の設定の画面に、スマートフォンで認証アプリを入れる案内と、PC 向けの案内（スマートフォンで開くアドレス）が出る",
           'class="setup-guide"' in body and "スマートフォンを用意してください" in body and 'class="setup-pc-hint"' in body and "/login.php</span>" in body)
     check("初回の設定の画面に、使える認証アプリの一覧が出る", "使える認証アプリ" in body and "Google Authenticator" in body and "Microsoft Authenticator" in body)
+    plain_secret = re.search(r'<input type="hidden" id="totp-secret" value="([A-Z2-7]+)">', body)
+    check("「セットアップキーをコピー」は、表示のキーから空白を除いた文字をコピーする（認証アプリに貼り付けるため）",
+          plain_secret is not None and m is not None and plain_secret.group(1) == m.group(1).replace(" ", "") and 'data-copy-from="totp-secret"' in body)
+    check("初回の設定の画面に、iPhone の案内（「パスワード」アプリが開く・Microsoft Authenticator に手で登録する手順）が出る",
+          'id="iphone-totp-guide"' in body and "「パスワード」アプリが開きます" in without_phrase_markup(body) and "またはコードを手動で入力" in without_phrase_markup(body))
     secret = m.group(1) if m else ""
     s, _, body2, _ = c.post("/account.php?tab=totp", {"csrf_token": csrf(body), "action": "totp_confirm", "code": "000000"})
     check("違うコードでは設定できない", "コードが違います" in body2)
