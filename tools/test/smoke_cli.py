@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """コマンド（app/bin/）の確認。使い捨ての DB で動かす（--db）。サーバーは使わない。
 
-migrate.php・create_user.php・seed_template.php・backup.php・run_schedules.php・migrate_legacy.php・import_tomato.php
+migrate.php・create_user.php・seed_template.php・backup.php・run_schedules.php・migrate_legacy.php・import_tomato.php・post_notice.php
 
     python3 tools/test/smoke_cli.py --php <php> --db app/data/verify.sqlite
 """
@@ -146,6 +146,50 @@ def main():
         execute(into_db, "INSERT INTO departments (id, name, created_at, updated_at) VALUES (1, '取り込みの課', 'x', 'x'); UPDATE users SET department_id = 1;")
         code, out = command("import_tomato.php", into_db, "--fill-departments")
         check("--fill-departments で報告に課が入る", code == 0 and query(into_db, "SELECT COUNT(*) FROM report_records WHERE department_id = 1") == [(2,)], out[-300:])
+
+        section("G-24", "コマンド: post_notice.php（反映のときに更新のお知らせを出す）")
+        notice_db = os.path.join(work, "notice.sqlite")
+        command("migrate.php", notice_db)
+
+        def post_notice(file_text, *arguments):
+            notice_path = os.path.join(work, "notice.txt")
+            with open(notice_path, "w", encoding="utf-8", newline="") as notice_file:
+                notice_file.write(file_text)
+            return command("post_notice.php", notice_db, "--file=" + notice_path, *arguments)
+
+        def notice_rows():
+            return query(notice_db, "SELECT title, body, show_from, show_until, created_by, updated_by FROM update_notices ORDER BY id")
+
+        signature = "以上、システム管理補佐（AI）より"
+        today = query(notice_db, "SELECT date('now', 'localtime')")[0][0]
+        code, out = post_notice("題名: 更新しました\n出す日数: 7\n---\n変わったこと\n", "--dry-run")
+        check("--dry-run は書き込まない", code == 0 and "確かめだけ" in out and notice_rows() == [], out[-300:])
+        code, out = post_notice("﻿題名: 更新しました\r\n出す日数: 7\r\n---\r\n変わったこと\r\n")
+        rows = notice_rows()
+        expected_until = query(notice_db, "SELECT date('now', 'localtime', '+7 days')")[0][0]
+        check("お知らせを 1 件出す（BOM・CRLF のファイルも読む。本文の最後に署名・書いた人は空・出す日数のとおり）",
+              code == 0 and rows == [("更新しました", "変わったこと\n\n" + signature, today, expected_until, None, None)], (out[-300:], rows))
+        code, out = post_notice("題名: 更新しました\n出す日数: 7\n---\n変わったこと\n\n" + signature + "\n")
+        check("もう一度流しても二重に出さない（署名を書いてあっても重ねない）", code == 0 and "同じお知らせ" in out and len(notice_rows()) == 1, out[-300:])
+        check("記録に残す", query(notice_db, "SELECT COUNT(*) FROM access_logs WHERE action = 'admin' AND target LIKE 'notice:%:create_cli'") == [(1,)])
+        code, out = post_notice("題名: 日数なし\n---\n")
+        default_days = query(notice_db, "SELECT show_until FROM update_notices WHERE title = '日数なし'")
+        check("本文が空でも署名だけ出す・出す日数を省くと既定の日数",
+              code == 0 and query(notice_db, "SELECT body FROM update_notices WHERE title = '日数なし'") == [(signature,)]
+              and default_days == [(query(notice_db, "SELECT date('now', 'localtime', '+14 days')")[0][0],)], (out[-300:], default_days))
+        filler = 1000 - len("\n\n" + signature)
+        code, out = post_notice("題名: " + "題" * 60 + "\n---\n" + "あ" * filler + "\n")
+        check("題名 60 文字・本文が署名を含めて 1,000 文字ちょうどは出す", code == 0 and query(notice_db, "SELECT length(body) FROM update_notices WHERE title = ?", "題" * 60) == [(1000,)], out[-300:])
+        before_count = len(notice_rows())
+        for label, file_text in (("題名 61 文字", "題名: " + "題" * 61 + "\n---\n本文\n"),
+                                 ("本文が署名を含めて 1,001 文字", "題名: 長い本文\n---\n" + "あ" * (filler + 1) + "\n"),
+                                 ("題名がない", "---\n本文\n"),
+                                 ("「---」の行がない", "題名: 区切りなし\n本文\n"),
+                                 ("出す日数が 0", "題名: 日数 0\n出す日数: 0\n---\n本文\n"),
+                                 ("読めない行がある", "題名: 余計な行\nなにか\n---\n本文\n"),
+                                 ("制御文字がある", "題名: 制御文字\n---\n本\x07文\n")):
+            code, out = post_notice(file_text)
+            check("書き込まない: " + label, code == 1 and len(notice_rows()) == before_count, out[-300:])
     finally:
         for path in set(glob.glob(os.path.join(BACKUP_DIR, "*"))) - backups_before:
             os.remove(path)

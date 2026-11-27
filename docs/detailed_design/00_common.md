@@ -59,6 +59,7 @@ report-system/                       ← リポジトリ
     │   ├── backup.php              DB のバックアップ
     │   ├── expense.php             通勤定期代の精算（G-26）
     │   ├── faq_chat_log.php        よくある質問のチャットの記録（G-25）
+    │   ├── faq_csv.php             よくある質問の記録・メンテナンスの CSV（G-25 §2.19）
     │   ├── faq_standard.php        標準のよくある質問
     │   ├── goal.php                目標管理（G-27）
     │   ├── goal_criteria.php       コンピテンシー評価基準の表（自動生成）
@@ -76,7 +77,8 @@ report-system/                       ← リポジトリ
     │   ├── migrate.php              テーブルの作成・追加と、暗号化の鍵の作成
     │   ├── seed_template.php        初期の様式の登録
     │   ├── create_user.php          利用者の作成（最初の管理者など）
-    │   └── migrate_legacy.php       既存データの移行
+    │   ├── migrate_legacy.php       既存データの移行
+    │   └── post_notice.php          反映のときに更新のお知らせを出す（G-24 §3）
     └── data/  keys/  backups/  logs/   ← リポジトリには入れない（.gitignore）
 
 tools/                               ← 開発・検証の道具（本番には置かない）
