@@ -50,7 +50,7 @@ def main():
     section("G-24", "A 更新のお知らせ")
     check("A: 部下は更新のお知らせの管理を開けない", member_client.get("/admin/notices.php")[0] == 403)
     status_code, _location, _page_html = post_form(admin_client, "/admin/notices.php", {
-        "action": "save", "id": "", "source_request_id": "", "title": "提出状況の札を色分けしました", "body": "提出済みは緑、未作成は灰色です。",
+        "action": "save", "id": "", "source_request_id": "", "title": "提出状況の札を色分けしました", "body": "提出済みは緑、\n    未作成は灰色です。\n　確認完了は青です。",
         "show_from": today.isoformat(), "show_until": (today + datetime.timedelta(days=14)).isoformat()})
     check("A: 管理者が更新のお知らせを書ける", status_code in (302, 303), status_code)
     post_form(admin_client, "/admin/notices.php", {
@@ -59,6 +59,10 @@ def main():
     _status_code, _location, member_home_html = member_client.get("/index.php")
     check("A: 全員のホームに、出す期間のお知らせが出る", "提出状況の札を色分けしました" in member_home_html)
     check("A: 出す期間を過ぎたお知らせは出ない", "終わったお知らせ" not in member_home_html)
+    notice_body_match = re.search(r'<div class="update-notice-body">(.*?)</div>', member_home_html, re.S)
+    check("A: お知らせの本文は、改行と行の頭の字下げ（半角・全角の空白）を書いたとおりに出す（<br> を足さない）",
+          notice_body_match is not None and notice_body_match.group(1).replace("\r\n", "\n") == "提出済みは緑、\n    未作成は灰色です。\n　確認完了は青です。",
+          notice_body_match.group(1) if notice_body_match else None)
     status_code, _location, error_html = post_form(admin_client, "/admin/notices.php", {
         "action": "save", "id": "", "source_request_id": "", "title": "逆の期間", "body": "",
         "show_from": today.isoformat(), "show_until": (today - datetime.timedelta(days=1)).isoformat()})

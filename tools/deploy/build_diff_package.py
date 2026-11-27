@@ -11,6 +11,7 @@
     <site>.zip         ← 上の <site>/ を zip にしたもの
     差分公開範囲.txt   ← 上げるもの・消すもの・触らないもの（サーバーには上げない）
     反映手順.txt       ← 上げる人に渡す手順（サーバーには上げない）
+    お知らせ.txt       ← --notice を付けたときだけ。反映のあとに post_notice.php で全員のホームに出す（www の外に上げる）
 
 入れないもの・確かめることは build_package.py と同じ（docs/・tools/・config.local*.php・DB・鍵は入らない）。
 DB の形（app/lib/schema.php）が変わっていれば、手順に migrate.php の実行を入れる。
@@ -33,6 +34,8 @@ FORBIDDEN_SUFFIXES = (".md", ".py", ".pyc", ".sqlite", ".sqlite3", ".key", ".jso
 FORBIDDEN_NAMES = ("config.local.php", "config.local.example.php")
 # DB の形が変わったかを見るファイル（変わっていれば migrate.php を実行する）
 SCHEMA_PATH_LIST = ("app/lib/schema.php", "app/bin/migrate.php")
+# お知らせの署名（app/lib/notice.php の NOTICE_AI_SIGNATURE と同じ。post_notice.php が本文の最後に付ける）
+NOTICE_AI_SIGNATURE = "以上、システム管理補佐（AI）より"
 
 SCOPE_TEXT = """月次報告システム 差分公開範囲（{stamp}）
 
@@ -94,6 +97,21 @@ STEPS_TEXT = """月次報告システム 差分の反映手順（{stamp}）
   □ https://<サーバー>/{site}/health.php が「ok」
   □ 配ったアカウントでログインでき、これまでの報告・回答が見える
   □ 困ったら: 2 の前に戻すには、1 の控え（app/backups/）と前の版の一式を開発担当に相談する
+{notice_step}"""
+
+NOTICE_STEP_TEXT = """
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+5. 更新のお知らせを出す（SSH。4 で問題がなければ）
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  全員のホームに、この版で変わることのお知らせを出します。文は開発担当が書いたもので、最後に「{signature}」と付きます。
+  □ 同じフォルダーの「お知らせ.txt」を、サーバーの www の外（例: ~/お知らせ.txt）に上げる（~/www/ の中には置かない）
+  cd ~/www/{site}
+  php app/bin/post_notice.php --file=$HOME/お知らせ.txt --dry-run
+  □ 題名・出す期間・本文が出て、「確かめだけです」と出ることを確かめる
+  php app/bin/post_notice.php --file=$HOME/お知らせ.txt
+  □ 「お知らせを出しました」と出る（もう一度流しても「同じお知らせがあります」となり、二重には出ない）
+  □ ホームの「更新のお知らせ」に出ていることを確かめ、~/お知らせ.txt を消す
+  □ 直したいときは、管理の「更新のお知らせ」の画面で直す・消す
 """
 
 
@@ -120,7 +138,16 @@ def main():
     argument_parser.add_argument("--base", required=True, help="サーバーに今ある版のコミット")
     argument_parser.add_argument("--ref", default="HEAD", help="上げる版（既定: HEAD）")
     argument_parser.add_argument("--site", default="report-system", help="サーバーのフォルダー名（~/www/<site>/。既定: report-system）")
+    argument_parser.add_argument("--notice", help="反映のときに出す更新のお知らせの文（app/bin/post_notice.php の形）。一式に「お知らせ.txt」として入れ、手順に 5 を足す")
     arguments = argument_parser.parse_args()
+    notice_text = None
+    if arguments.notice:
+        with open(arguments.notice, encoding="utf-8-sig") as notice_file:
+            notice_text = notice_file.read()
+        if not any(line.strip() == "---" for line in notice_text.splitlines()):
+            sys.exit("お知らせの文に「---」の行がありません（上に「題名: 」、下に本文）: %s" % arguments.notice)
+        if "app/bin/post_notice.php" not in git("ls-tree", "-r", "--name-only", arguments.ref, "--", "app/bin/post_notice.php"):
+            sys.exit("上げる版に app/bin/post_notice.php がありません（--notice は使えません）")
 
     base_commit = git("rev-parse", "--short", arguments.base)
     head_commit = git("rev-parse", "--short", arguments.ref)
@@ -178,7 +205,11 @@ def main():
         "delete_step": ("  □ 差分公開範囲.txt の「サーバーから消すもの」を、~/www/%s/ から消す\n" % arguments.site) if deleted_path_list else "",
         "migrate_step": ("  cd ~/www/%s\n  php app/bin/migrate.php\n  □ エラーが出ず、最後に「テーブルを確認しました」と出ることを確かめる\n"
                          "  □ 出た行（「〜を追加」「〜を作り直した」）を開発担当に送る\n" % arguments.site) if schema_changed else "  今回は要りません。\n",
+        "notice_step": NOTICE_STEP_TEXT.format(site=arguments.site, signature=NOTICE_AI_SIGNATURE) if notice_text is not None else "",
     }
+    if notice_text is not None:
+        with open(os.path.join(output_directory, "お知らせ.txt"), "w", encoding="utf-8", newline="\n") as notice_output_file:
+            notice_output_file.write(notice_text)
     for file_name, template_text in (("差分公開範囲.txt", SCOPE_TEXT), ("反映手順.txt", STEPS_TEXT)):
         with open(os.path.join(output_directory, file_name), "w", encoding="utf-8", newline="\r\n") as text_file:
             text_file.write(template_text.format(**format_values))
