@@ -23,13 +23,11 @@ $keyFile = crypto_generate_key();
 echo "暗号化の鍵: {$keyFile}\n";
 
 // 表の作り直し（外部キーを止めるので、トランザクションの外で先に行う）
-$rebuildLogLine = schema_make_survey_department_nullable(db());
+$rebuildLogLineList = array_values(array_filter([schema_make_survey_department_nullable(db()), schema_widen_security_notice_kinds(db())]));
 $log = tx(function (PDO $pdo) {
     return schema_ensure($pdo);
 });
-if ($rebuildLogLine !== null) {
-    array_unshift($log, $rebuildLogLine);
-}
+$log = array_merge($rebuildLogLineList, $log);
 foreach ($log as $line) {
     echo $line . "\n";
 }

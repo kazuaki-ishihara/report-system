@@ -1,7 +1,10 @@
 <?php
 /** @var array|null $target */
-/** @var int $backupCodeRemaining 使える予備のコードの数 */
+/** @var int $backupCodeRemaining 予備のコードの数（何度でも使える） */
 /** @var string|null $temp */
+/** @var string[]|null $shownBackupCodes 見せる予備のコード（確認・発行の直後だけ） */
+/** @var string|null $shownRecoveryCode */
+/** @var bool $isIssuedBackupCodes 発行した予備のコードか */
 /** @var array $errors */
 /** @var array $departments */
 /** @var array $roleTitles */
@@ -108,7 +111,7 @@ $selfUrl = $target === null ? '/admin/user_edit.php' : '/admin/user_edit.php?id=
     <h2>予備のコードの確認・復旧コード</h2>
     <p class="note"><?= h_phrases('本人に、あなたの名前と役割・理由を知らせます（本人のホームに 30 日出ます。消せません）。記録にも残ります。') ?></p>
     <?php if ($shownBackupCodes !== null): ?>
-      <p>未使用の予備のコード（<strong>この画面を離れると消えます</strong>）</p>
+      <p><?= $isIssuedBackupCodes ? '発行した予備のコード（<strong>この画面を離れると消えます</strong>。本人に渡してください。ログインのときは 6 桁のコードの欄に入れ、何度でも使えます）' : '予備のコード（<strong>この画面を離れると消えます</strong>）' ?></p>
       <ul class="codes"><?php foreach ($shownBackupCodes as $shownCode): ?><li><?= h($shownCode) ?></li><?php endforeach; ?></ul>
     <?php endif; ?>
     <?php if ($shownRecoveryCode !== null): ?>
@@ -123,6 +126,18 @@ $selfUrl = $target === null ? '/admin/user_edit.php' : '/admin/user_edit.php?id=
       <input id="operator_password" name="operator_password" type="password" autocomplete="current-password" required>
       <button type="submit" name="action" value="recovery_issue">復旧コードを発行</button>
       <button type="submit" name="action" value="view_backup_codes">予備のコードを確認</button>
+    </form>
+    <?php endif; ?>
+    <?php if (is_admin_deputy_lead($user) && (int) $target['id'] !== (int) $user['id'] && (int) $target['is_active'] === 1 && $target['totp_enabled_at'] === null && !security_is_frozen($target) && !security_is_protected($target)): ?>
+    <h2 id="codes-issue">予備のコードの発行（補佐（開発担当））</h2>
+    <p class="note"><?= h_phrases('2 段階認証が未設定の人に、予備のコードを発行し、この画面に一度だけ出します。本人に、あなたの名前と役割・理由を知らせます（本人のホームに 30 日出ます）。記録にも残ります。') ?></p>
+    <form method="post" action="<?= h(url($selfUrl)) ?>" class="form" data-confirm="<?= h(msg('この人の予備のコードを発行します。本人に知らせます。よろしいですか？')) ?>">
+      <?= form_hidden() ?>
+      <label for="codes_issue_reason">理由（本人に知らせます）</label>
+      <input id="codes_issue_reason" name="reason" type="text" maxlength="<?= SECURITY_REASON_MAX_LENGTH ?>" required>
+      <label for="codes_issue_password">あなたのパスワード</label>
+      <input id="codes_issue_password" name="operator_password" type="password" autocomplete="current-password" required>
+      <button type="submit" name="action" value="codes_issue">予備のコードを発行</button>
     </form>
     <?php endif; ?>
     <?php if (security_is_protected($target) && is_admin($user)): ?>

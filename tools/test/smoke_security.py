@@ -15,6 +15,7 @@ import json
 import os
 import re
 import sqlite3
+import subprocess
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -25,6 +26,7 @@ def main():
     argument_parser = argparse.ArgumentParser()
     argument_parser.add_argument("--base", default="http://127.0.0.1:8000")
     argument_parser.add_argument("--db", required=True)
+    argument_parser.add_argument("--php", default="php", help="PHP の場所（テストデータの利用者のパスワードをそろえるときに使う）")
     arguments = argument_parser.parse_args()
     test_dir = os.path.dirname(os.path.abspath(__file__))
     users = json.load(open(os.path.join(test_dir, "output_dev_users.json"), encoding="utf-8"))["users"]
@@ -616,6 +618,47 @@ def main():
     check("本人も、心当たりのない復旧の申請を取り消せる", one("SELECT COUNT(*) FROM lead_recovery_requests WHERE status = 'pending'") == 0)
     check("取り消した申請は承認できない", lead_post("ippan_b1", "lead_recovery_approve")[0] in (403, 404) and one("SELECT must_change_password FROM users WHERE id = ?", uid("hosa01")) == 0)
 
+    # ================================================================
+    section("G-14", "予備のコードの発行（補佐（開発担当））")
+    database.execute("UPDATE users SET is_admin_deputy = 1, is_admin_deputy_lead = 1, frozen_at = NULL WHERE id = ?", (uid("hosa01"),))
+    # 確かめに使う利用者を、テストデータのパスワード・2 段階認証が未設定の状態にそろえる
+    known_password_hash = subprocess.run([arguments.php, "-r", "echo password_hash($argv[1], PASSWORD_DEFAULT);", password_of("dairi_a")],
+                                         stdout=subprocess.PIPE, check=True).stdout.decode("ascii")
+    database.execute("UPDATE users SET password_hash = ?, must_change_password = 0, failed_count = 0, locked_until = NULL, is_credential_reset = 0 WHERE id = ?",
+                     (known_password_hash, uid("dairi_a")))
+    database.execute("DELETE FROM login_throttle")
+    database.execute("UPDATE users SET totp_secret_enc = NULL, totp_enabled_at = NULL, totp_last_step = NULL, frozen_at = NULL, is_active = 1 WHERE id = ?", (uid("dairi_a"),))
+    database.execute("DELETE FROM user_backup_codes WHERE user_id = ?", (uid("dairi_a"),))
+    _, _, admin_edit_html = client_of("admin01").get(edit_path("dairi_a"))
+    check("システム管理者には、予備のコードの発行の欄を出さない", 'value="codes_issue"' not in admin_edit_html)
+    status_code, _, _ = security_post("admin01", "codes_issue", "dairi_a")
+    check("システム管理者は、予備のコードの発行ができない（403）", status_code == 403 and one("SELECT totp_enabled_at FROM users WHERE id = ?", uid("dairi_a")) is None, status_code)
+    _, _, lead_edit_html = client_of("hosa01").get(edit_path("dairi_a"))
+    check("補佐（開発担当）には、2 段階認証が未設定の人に予備のコードの発行の欄を出す", 'value="codes_issue"' in lead_edit_html)
+    status_code, _, page_html = security_post("hosa01", "codes_issue", "dairi_a", password="wrong-password")
+    check("パスワードが違えば済ませない", "あなたのパスワードが違います" in page_html and one("SELECT totp_enabled_at FROM users WHERE id = ?", uid("dairi_a")) is None)
+    status_code, _, page_html = security_post("hosa01", "codes_issue", "dairi_a", reason="")
+    check("理由が空なら済ませない", "理由を入れてください" in page_html and one("SELECT totp_enabled_at FROM users WHERE id = ?", uid("dairi_a")) is None)
+    notice_before = notice_count("dairi_a", "codes_issue")
+    status_code, _, _ = security_post("hosa01", "codes_issue", "dairi_a", reason="本人からの依頼")
+    issued_codes = shown("hosa01", "dairi_a")[0]
+    check("予備のコードを 8 個発行し、一度だけ出す",
+          status_code in (302, 303) and len(issued_codes) == 8 and one("SELECT totp_enabled_at IS NOT NULL FROM users WHERE id = ?", uid("dairi_a")) == 1
+          and one("SELECT COUNT(*) FROM user_backup_codes WHERE user_id = ?", uid("dairi_a")) == 8, (status_code, len(issued_codes)))
+    check("もう一度開くと、発行した予備のコードは出ない", shown("hosa01", "dairi_a")[0] == [])
+    check("本人への知らせと記録を残す", notice_count("dairi_a", "codes_issue") == notice_before + 1
+          and one("SELECT COUNT(*) FROM access_logs WHERE target = ?", "user:%d:codes_issue" % uid("dairi_a")) == 1)
+    for attempt_number in (1, 2):
+        backup_client, password_location, password_html = password_step("dairi_a", password_of("dairi_a"))
+        location, code_html = code_step(backup_client, issued_codes[0])
+        check("本人は、発行された予備のコードでログインできる（%d 回目。何度でも使える）" % attempt_number, "/index.php" in location,
+              (password_location, location, re.findall(r'flash-error[^>]*>(.*?)</div>', password_html + code_html, re.S)[:2]))
+    _, _, member_home_html = backup_client.get("/index.php")
+    check("本人のホームに知らせを出す", "予備のコードを発行しました" in member_home_html)
+    status_code, _, _ = security_post("hosa01", "codes_issue", "dairi_a")
+    check("2 段階認証を設定済みの人には使えない（400）", status_code == 400, status_code)
+    status_code, _, _ = security_post("hosa01", "codes_issue", "hosa01")
+    check("自分には使えない（400）", status_code in (400, 403), status_code)
     return summary()
 
 
