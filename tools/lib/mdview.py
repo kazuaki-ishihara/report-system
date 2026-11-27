@@ -5,6 +5,9 @@
     python3 tools/lib/mdview.py docs                              # docs/ を一覧から読む（ローカルのサーバー）
     python3 tools/lib/mdview.py docs --port 8765 --no-open        # サーバーだけ起動して URL を出す
     python3 tools/lib/mdview.py docs/basic_design.md -o out.html  # HTML のファイルを書き出すだけ
+    python3 tools/lib/mdview.py docs/operation_manual.md -o docs/manual/operation_manual.html   # 操作マニュアルの HTML を作り直す（リポジトリに入れている。画像は隣の images/）
+    python3 tools/lib/mdview.py docs/operation_manual.md -o docs/manual/operation_manual.html --check   # 最新かだけを確かめる（自動検証の工程）
+    python3 tools/lib/mdview.py docs/operation_manual.md -o 操作マニュアル.html --embed   # 画像をファイルの中に入れる（1 つのファイルで、どこに写しても画像が出る）
     python3 tools/lib/mdview.py docs --mermaid                    # mermaid の図を描く（CDN から読み込む。ネットが要る）
 
 - ファイルを渡すと、HTML を一時フォルダに書いてブラウザーで開く。
@@ -17,6 +20,7 @@
 Python 3.8 以上の標準ライブラリだけで動く。Linux・Windows・macOS で同じように使える。
 """
 import argparse
+import base64
 import html
 import http.server
 import os
@@ -461,10 +465,65 @@ def render_file(path, link_rewriter=None, mermaid=False, crumb_html="", base_hre
 # 1 つのファイルを開く
 # ====================================================================
 
-def open_file(path, output=None, open_browser=True, mermaid=False):
+IMAGE_MIME_TYPES = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".gif": "image/gif", ".svg": "image/svg+xml", ".webp": "image/webp"}
+
+
+def embed_images(page, base_directory):
+    """<img src="（相対の場所）"> の画像を読み、data: の URL にしてページの中に入れる。見つからない画像の一覧も返す"""
+    missing_list = []
+
+    def replace(match):
+        source = html.unescape(match.group(2))
+        if re.match(r"^[a-zA-Z][a-zA-Z0-9+.-]*:", source) or source.startswith("/"):
+            return match.group(0)   # http:・data: など、外の場所はそのまま
+        image_path = os.path.normpath(os.path.join(base_directory, urllib.parse.unquote(source)))
+        mime_type = IMAGE_MIME_TYPES.get(os.path.splitext(image_path)[1].lower())
+        if mime_type is None or not os.path.isfile(image_path):
+            missing_list.append(source)
+            return match.group(0)
+        with open(image_path, "rb") as image_file:
+            encoded = base64.b64encode(image_file.read()).decode("ascii")
+        return match.group(1) + "data:" + mime_type + ";base64," + encoded + match.group(3)
+
+    return re.sub(r'(<img\b[^>]*?\bsrc=")([^"]*)(")', replace, page), missing_list
+
+
+def relocate_links(page, markdown_directory, output_directory):
+    """書き出した HTML を別のフォルダーに置くとき: 相対の src・href を、書き出した場所から見た相対の場所に直し、
+    端末の場所を書いた <base> を消す（リポジトリに置いても、ほかの端末で開いても、画像とリンクが切れない）"""
+    def replace(match):
+        value = html.unescape(match.group(2))
+        if not value or value.startswith(("#", "/")) or re.match(r"^[a-zA-Z][a-zA-Z0-9+.-]*:", value):
+            return match.group(0)
+        target_part, _sep, fragment = value.partition("#")
+        new_value = os.path.relpath(os.path.join(markdown_directory, urllib.parse.unquote(target_part)), output_directory).replace(os.sep, "/")
+        new_value = urllib.parse.quote(new_value) + ("#" + fragment if fragment else "")
+        return match.group(1) + html.escape(new_value, quote=True) + match.group(3)
+
+    page = re.sub(r'<base href="[^"]*">\n?', "", page)
+    return re.sub(r'(<(?:img|a)\b[^>]*?\b(?:src|href)=")([^"]*)(")', replace, page)
+
+
+def open_file(path, output=None, open_browser=True, mermaid=False, embed=False, check=False):
     path = os.path.abspath(path)
     base_href = pathlib.Path(os.path.dirname(path)).as_uri() + "/"
     page = render_file(path, mermaid=mermaid, base_href=base_href)
+    if embed:
+        page, missing_list = embed_images(page, os.path.dirname(path))
+        for source in missing_list:
+            print("画像が見つかりません: {}".format(source), file=sys.stderr)
+    elif output:
+        page = relocate_links(page, os.path.dirname(path), os.path.dirname(os.path.abspath(output)))
+    if output and check:
+        # 書き出さずに、今のファイルが作り直したものと同じかだけを確かめる（自動検証の工程「操作マニュアルの HTML が最新」）
+        out_path = os.path.abspath(output)
+        current = open(out_path, encoding="utf-8").read() if os.path.isfile(out_path) else None
+        label = "{} が {} から作り直したものと同じ".format(os.path.relpath(out_path), os.path.relpath(path))
+        if current == page:
+            print("OK  [共通] " + label)
+            return 0
+        print("NG  [共通] " + label + "  （python3 tools/lib/mdview.py {} -o {} で作り直す）".format(os.path.relpath(path), os.path.relpath(out_path)))
+        return 1
     if output:
         out_path = os.path.abspath(output)
     else:
@@ -613,11 +672,13 @@ def main(argv=None):
         prog="mdview",
         description="Markdown を HTML にしてブラウザーで見る（ファイル: その場で開く、フォルダ: 一覧から読む）")
     parser.add_argument("path", nargs="?", default=".", help="Markdown のファイルかフォルダ（既定: 今のフォルダ）")
-    parser.add_argument("-o", "--output", help="HTML をこのファイルに書き出すだけ（ブラウザーは開かない）")
+    parser.add_argument("-o", "--output", help="HTML をこのファイルに書き出すだけ（ブラウザーは開かない）。画像・リンクは書き出した場所から見た相対の場所にする")
     parser.add_argument("--serve", action="store_true", help="ファイルでも、そのフォルダをサーバーで開く（リンクをたどれる）")
     parser.add_argument("--port", type=int, default=DEFAULT_PORT, help="サーバーのポート（既定: {}。0 で空いている番号）".format(DEFAULT_PORT))
     parser.add_argument("--no-open", action="store_true", help="ブラウザーを開かない（画面のない端末向け）")
     parser.add_argument("--mermaid", action="store_true", help="mermaid の図を描く（CDN から読み込むため、ネットが要る）")
+    parser.add_argument("--check", action="store_true", help="-o のファイルを書き換えず、作り直したものと同じかだけを確かめる（違えば終了コード 1）")
+    parser.add_argument("--embed", action="store_true", help="画像をファイルの中に入れる（-o と使う。1 つのファイルで、どこに写しても画像が出る）")
     args = parser.parse_args(argv)
 
     path = os.path.abspath(args.path)
@@ -632,7 +693,9 @@ def main(argv=None):
         serve(os.path.dirname(path), args.port, not args.no_open, args.mermaid,
               start_page=urllib.parse.quote(os.path.basename(path)))
     else:
-        open_file(path, args.output, not args.no_open, args.mermaid)
+        if args.check and not args.output:
+            parser.error("--check は -o と使います")
+        return open_file(path, args.output, not args.no_open, args.mermaid, embed=args.embed, check=args.check) or 0
     return 0
 
 
