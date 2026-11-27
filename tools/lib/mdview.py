@@ -363,7 +363,7 @@ CSS = """
 *{box-sizing:border-box}
 html{scroll-padding-top:16px}
 body{margin:0;background:var(--bg);color:var(--fg);line-height:1.7;
-font-family:"Noto Sans CJK JP","Noto Sans JP","IPAexGothic","Hiragino Sans","Yu Gothic UI","Meiryo",system-ui,sans-serif;font-size:16px}
+font-family:"BIZ UDGothic","BIZ UDゴシック","Noto Sans JP","Noto Sans CJK JP","Hiragino Sans",Meiryo,sans-serif;font-size:16px}
 .layout{display:flex;align-items:flex-start;min-height:100vh}
 nav.toc{position:sticky;top:0;flex:0 0 280px;max-height:100vh;overflow-y:auto;padding:20px 16px;
 background:var(--side-bg);border-right:1px solid var(--border);font-size:14px;line-height:1.5}
@@ -390,7 +390,7 @@ ul,ol{padding-left:2em}
 li>ul,li>ol{margin:.25em 0}
 li>p{margin:.4em 0}
 ul.task-list{list-style:none;padding-left:1.2em}
-code{font-family:"Noto Sans Mono CJK JP","DejaVu Sans Mono",ui-monospace,Consolas,monospace;font-size:.88em;
+code{font-family:ui-monospace,Consolas,monospace;font-size:.88em;
 background:var(--code-bg);padding:.15em .4em;border-radius:5px}
 pre{background:var(--code-bg);border:1px solid var(--border);border-radius:6px;padding:14px 16px;overflow:auto;
 line-height:1.45;position:relative}
@@ -408,7 +408,6 @@ img{max-width:100%}
 main img{border:1px solid var(--border);border-radius:4px}
 .listing li{margin:4px 0}
 .listing .dir>a{font-weight:700}
-.footer{margin-top:48px;color:var(--muted);font-size:12px}
 @media (max-width: 900px){.layout{display:block}nav.toc{position:static;max-height:none;border-right:0;
 border-bottom:1px solid var(--border)}main{padding:20px 16px 60px}.anchor{display:none}}
 @media print{nav.toc{display:none}main{max-width:none;padding:0}.anchor{display:none}
@@ -444,7 +443,7 @@ def build_page(title, body_html, headings, crumb_html="", mermaid=False, base_hr
 <html lang="ja"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 {base}<title>{title}</title><style>{css}</style></head>
-<body><div class="layout">{toc}<main>{body}<p class="footer">mdview で表示</p></main></div>
+<body><div class="layout">{toc}<main>{body}</main></div>
 <script>{js}</script>{mermaid}</body></html>
 """.format(base=base, title=html.escape(title), css=CSS, toc=toc, body=body_html, js=TOC_FILTER_JS, mermaid=mermaid_js)
 
