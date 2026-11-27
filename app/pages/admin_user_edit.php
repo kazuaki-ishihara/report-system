@@ -196,6 +196,30 @@ if (is_post()) {
         }
         rk_cancel();
 
+    } elseif ($target !== null && $action === 'codes_issue') {
+        // 予備のコードの発行（2 段階認証が未設定の人。補佐（開発担当）だけ。本人への知らせと記録を残す。2026-11-26）
+        $tid = (int) $target['id'];
+        if (!is_admin_deputy_lead($user)) {
+            error_page(403);
+        }
+        if ($tid === $me || (int) $target['is_active'] !== 1 || $target['totp_enabled_at'] !== null || security_is_protected($target)) {
+            error_page(400);   // 自分・無効な人・2 段階認証を設定済みの人（先に「2 段階認証を初期化」）・補佐（開発担当）は対象外
+        }
+        if (!security_supports_codes_issue()) {
+            error_page(400, msg('この操作は、migrate.php を流したあとで使えます。'));
+        }
+        $reason = security_confirm_operator($user, $errors);
+        if (!$errors) {
+            // 本人への知らせと記録を残してから見せる（残せなければ見せない）
+            $issuedCodeList = tx(function () use ($tid, $user, $reason): array {
+                security_add_notice($tid, 'codes_issue', (int) $user['id'], security_display_name($user), security_actor_role($user), $reason);
+                audit_log('admin', 'user:' . $tid . ':codes_issue');
+                return security_issue_backup_codes($tid);
+            });
+            $_SESSION['show_security_codes'] = ['id' => $tid, 'backup' => $issuedCodeList, 'recovery' => null, 'issued' => true];
+            rk_done('/admin/user_edit.php?id=' . $tid);
+        }
+        rk_cancel();
     } elseif ($target !== null && in_array($action, ['view_backup_codes', 'recovery_issue'], true)) {
         // 予備のコードの確認・復旧コードの発行（システム管理者と補佐（開発担当）だけ。自分の分は対象外。K-075）
         $tid = (int) $target['id'];
@@ -274,9 +298,11 @@ if (isset($_SESSION['show_temp_password']) && $target !== null && (int) $_SESSIO
 unset($_SESSION['show_temp_password']);
 $shownBackupCodes = null;
 $shownRecoveryCode = null;
+$isIssuedBackupCodes = false;
 if (isset($_SESSION['show_security_codes']) && $target !== null && (int) $_SESSION['show_security_codes']['id'] === (int) $target['id']) {
     $shownBackupCodes = $_SESSION['show_security_codes']['backup'] ?: null;
     $shownRecoveryCode = $_SESSION['show_security_codes']['recovery'];
+    $isIssuedBackupCodes = !empty($_SESSION['show_security_codes']['issued']);
 }
 unset($_SESSION['show_security_codes']);
 
@@ -292,6 +318,7 @@ render('admin_user_edit', [
     'teamOptionList' => $teamOptionList,
     'shownBackupCodes'  => $shownBackupCodes,
     'shownRecoveryCode' => $shownRecoveryCode,
+    'isIssuedBackupCodes' => $isIssuedBackupCodes,
     'title'       => $target === null ? 'ユーザーの追加' : 'ユーザーの編集',
     'user'        => $user,
     'target'      => $target,

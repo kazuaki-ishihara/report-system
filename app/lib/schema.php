@@ -93,7 +93,7 @@ function schema_ensure(PDO $pdo): array
         "CREATE TABLE IF NOT EXISTS security_notices (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER NOT NULL REFERENCES users(id),
-            kind TEXT NOT NULL CHECK (kind IN ('codes_view', 'recovery_issue', 'recovery_used', 'reinit', 'mass_reset')),
+            kind TEXT NOT NULL CHECK (kind IN ('codes_view', 'recovery_issue', 'recovery_used', 'reinit', 'mass_reset', 'codes_issue')),
             actor_id INTEGER NOT NULL REFERENCES users(id),
             actor_name TEXT NOT NULL,
             actor_role TEXT NOT NULL,
@@ -733,6 +733,55 @@ function schema_ensure(PDO $pdo): array
     }
 
     return $log;
+}
+
+/**
+ * 知らせ（security_notices）の種類に codes_issue（補佐（開発担当）が予備のコードを発行した。2026-11-26）を足す。
+ * SQLite は CHECK を変えられないので、表を作り直す（adhoc_requests と同じ手順。外部キーを止めて、トランザクションの外の migrate.php で呼ぶ）。
+ * 作り直す必要がなければ何もしない。作り直したら記録の行を返す。
+ */
+function schema_widen_security_notice_kinds(PDO $pdo): ?string
+{
+    $tableSql = (string) $pdo->query("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'security_notices'")->fetchColumn();
+    if ($tableSql === '' || strpos($tableSql, "'codes_issue'") !== false) {
+        return null;   // 表がまだない（schema_ensure() が新しい形で作る）か、作り直し済み
+    }
+    $columnNameList = array_map(function (array $columnInfo): string { return (string) $columnInfo['name']; }, $pdo->query('PRAGMA table_info(security_notices)')->fetchAll());
+    $pdo->exec('PRAGMA foreign_keys = OFF');
+    try {
+        $pdo->exec('BEGIN IMMEDIATE');
+        try {
+            $pdo->exec("CREATE TABLE security_notices_rebuild (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL REFERENCES users(id),
+                kind TEXT NOT NULL CHECK (kind IN ('codes_view', 'recovery_issue', 'recovery_used', 'reinit', 'mass_reset', 'codes_issue')),
+                actor_id INTEGER NOT NULL REFERENCES users(id),
+                actor_name TEXT NOT NULL,
+                actor_role TEXT NOT NULL,
+                reason TEXT NOT NULL,
+                reported_at TEXT,
+                created_at TEXT NOT NULL
+            )");
+            $columnListSql = implode(', ', $columnNameList);
+            $pdo->exec("INSERT INTO security_notices_rebuild ({$columnListSql}) SELECT {$columnListSql} FROM security_notices");
+            $rowCountBefore = (int) $pdo->query('SELECT COUNT(*) FROM security_notices')->fetchColumn();
+            $pdo->exec('DROP TABLE security_notices');
+            $pdo->exec('ALTER TABLE security_notices_rebuild RENAME TO security_notices');
+            $pdo->exec('CREATE INDEX IF NOT EXISTS ix_security_notices_user ON security_notices (user_id, created_at)');
+            $rowCountAfter = (int) $pdo->query('SELECT COUNT(*) FROM security_notices')->fetchColumn();
+            $foreignKeyProblemList = $pdo->query('PRAGMA foreign_key_check')->fetchAll();
+            if ($rowCountAfter !== $rowCountBefore || $foreignKeyProblemList) {
+                throw new RuntimeException('知らせの表の作り直しで、件数か外部キーが合いません（元に戻しました）');
+            }
+            $pdo->exec('COMMIT');
+        } catch (Throwable $rebuildError) {
+            $pdo->exec('ROLLBACK');
+            throw $rebuildError;
+        }
+    } finally {
+        $pdo->exec('PRAGMA foreign_keys = ON');
+    }
+    return 'security_notices の種類に codes_issue を足した（予備のコードの発行の知らせ。' . $rowCountAfter . ' 件を写した）';
 }
 
 /**

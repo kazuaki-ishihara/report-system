@@ -316,6 +316,7 @@ STEP_TABLE = [
     {"key": "deputy", "name": "システム管理者補佐（代行できること・見られないもの）", "script": "smoke_deputy.py", "screen": "G-14"},
     {"key": "specialist", "name": "専門職（技師・担当課長・担当部長。見られる人・役割）", "script": "smoke_specialist.py", "screen": "G-14"},
     {"key": "security", "name": "予備のコードの確認・復旧コード・凍結・総入れ替え", "script": "smoke_security.py", "screen": "G-14", "secrets": True},
+    {"key": "codes_issue", "name": "予備のコードの発行（補佐（開発担当）のほかは使えない）", "script": "smoke_codes_issue.py", "screen": "G-14"},
     {"key": "session_site", "name": "別のサイトのログインの流用（セッションの置き場所・サイトの印）", "script": "smoke_session_site.py", "screen": "G-01"},
     {"key": "key_rotation", "name": "暗号化の鍵の入れ替え（rotate_key.php）", "script": "smoke_key_rotation.py", "screen": "共通"},
     {"key": "theme", "name": "自分の色（土台・強調・背景、読めない組み合わせを断る）", "script": "smoke_theme.py", "screen": "G-16"},
@@ -503,7 +504,7 @@ def main():
                         command.append("--show")
                     if a.browser_port:
                         command += ["--browser-port", str(a.browser_port)]
-                elif step["key"] in ("edges", "cli", "rest", "limits", "session_site", "key_rotation"):
+                elif step["key"] in ("edges", "cli", "rest", "limits", "session_site", "key_rotation", "security"):
                     # 同時の新規作成で、同じ DB のサーバーをもう 1 本立てるので PHP を渡す
                     command = [py, "-I", os.path.join(HERE, step["script"]), "--base", base, "--db", db, "--php", php]
                 else:
