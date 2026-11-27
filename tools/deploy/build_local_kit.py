@@ -17,6 +17,7 @@
         app/  public/  tools/test/dev_seed.php  tools/test/export_faq_chat_log.php
         操作マニュアル.html  ブラウザーで画像付きで読む操作マニュアル（docs/operation_manual.md から作る）
         操作マニュアル.md  manual/images/   操作マニュアルの文と画像
+        課長・課長代理・主任向けマニュアル.html・.md  課長・課長代理・主任の操作（システム運用マニュアルは入れない）
     report-system-local.zip
 
 入れないもの: DB・暗号の鍵・記録・バックアップ・この端末の config.local.php（設定はひな形から作る）。
@@ -43,7 +44,9 @@ INCLUDED_PREFIXES = ("app/", "public/")
 # 操作マニュアルの画像（docs/manual/images/ → 一式の manual/images/。操作マニュアル.md から同じ場所で見える）
 MANUAL_IMAGE_PREFIX = "docs/manual/images/"
 INCLUDED_FILES = {"tools/test/dev_seed.php": "tools/test/dev_seed.php", "tools/test/export_faq_chat_log.php": "tools/test/export_faq_chat_log.php",
-                  "docs/operation_manual.md": "操作マニュアル.md"}
+                  "docs/operation_manual.md": "操作マニュアル.md", "docs/manager_manual.md": "課長・課長代理・主任向けマニュアル.md"}
+# 画像付きで読める HTML を作るマニュアル（システム運用マニュアル docs/admin_manual.md は、一般の利用者に配らないので入れない）
+MANUAL_HTML_NAMES = ("操作マニュアル", "課長・課長代理・主任向けマニュアル")
 # 一式に入れてはいけないもの（入っていたら作るのをやめる）
 FORBIDDEN_SUFFIXES = (".sqlite", ".sqlite3", ".key", ".log", ".bak", ".pyc")
 FORBIDDEN_DIRECTORIES = ("app/data/", "app/keys/", "app/logs/", "app/backups/")
@@ -251,6 +254,7 @@ README = """月次報告システム ローカル検証環境
   - 管理者（admin01）: ユーザーの追加、管理のトップ、よくある質問の記録
   操作の説明は「操作マニュアル.html」（ダブルクリックすると、ブラウザーで画面の画像付きで読めます）と、各画面の「？ この画面の使い方」にあります。
   同じ文は「操作マニュアル.md」（メモ帳などで開けます。画像は manual/images/ にあります）にもあります。
+  課長・課長代理・主任の操作（報告の確認・提出状況・出力・臨時の調査・課の管理など）は「課長・課長代理・主任向けマニュアル.html」にあります。
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -312,16 +316,17 @@ def wanted_path(relative_path):
 
 
 def add_manual_html(content_by_path):
-    """操作マニュアル.md から、ブラウザーで画像付きで読める 操作マニュアル.html を作って一式に足す"""
-    manual_text = content_by_path.get("操作マニュアル.md")
-    if manual_text is None:
-        return
+    """マニュアル（操作マニュアル.md など）から、ブラウザーで画像付きで読める .html を作って一式に足す"""
     sys.path.insert(0, os.path.join(ROOT, "tools", "lib"))
     import mdview
-    renderer = mdview.Renderer()
-    body_html = renderer.render(manual_text.decode("utf-8"))
-    title_text = next((heading_text for level, _, heading_text in renderer.headings if level == 1), "操作マニュアル")
-    content_by_path["操作マニュアル.html"] = mdview.build_page(title_text, body_html, renderer.headings).encode("utf-8")
+    for manual_name in MANUAL_HTML_NAMES:
+        manual_text = content_by_path.get(manual_name + ".md")
+        if manual_text is None:
+            continue
+        renderer = mdview.Renderer()
+        body_html = renderer.render(manual_text.decode("utf-8"))
+        title_text = next((heading_text for level, _, heading_text in renderer.headings if level == 1), manual_name)
+        content_by_path[manual_name + ".html"] = mdview.build_page(title_text, body_html, renderer.headings).encode("utf-8")
 
 
 def collect_files(use_worktree, ref):

@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>月次報告システム システム運用マニュアル（システム管理者・補佐向け）</title><style>
+:root{--bg:#ffffff;--fg:#1f2328;--muted:#59636e;--border:#d1d9e0;--code-bg:#f6f8fa;--link:#0969da;
+--th-bg:#f6f8fa;--row-alt:#fafbfc;--side-bg:#f6f8fa;--mark:#0969da}
+@media (prefers-color-scheme: dark){:root{--bg:#0d1117;--fg:#e6edf3;--muted:#9198a1;--border:#3d444d;
+--code-bg:#151b23;--link:#4493f8;--th-bg:#151b23;--row-alt:#10151c;--side-bg:#010409;--mark:#4493f8}}
+*{box-sizing:border-box}
+html{scroll-padding-top:16px}
+body{margin:0;background:var(--bg);color:var(--fg);line-height:1.7;
+font-family:"Noto Sans CJK JP","Noto Sans JP","IPAexGothic","Hiragino Sans","Yu Gothic UI","Meiryo",system-ui,sans-serif;font-size:16px}
+.layout{display:flex;align-items:flex-start;min-height:100vh}
+nav.toc{position:sticky;top:0;flex:0 0 280px;max-height:100vh;overflow-y:auto;padding:20px 16px;
+background:var(--side-bg);border-right:1px solid var(--border);font-size:14px;line-height:1.5}
+nav.toc .doc-title{font-weight:700;margin:0 0 4px}
+nav.toc .crumb{font-size:12px;color:var(--muted);margin:0 0 12px;word-break:break-all}
+nav.toc .crumb a{color:var(--muted)}
+nav.toc ul{list-style:none;margin:0;padding:0}
+nav.toc li{margin:2px 0}
+nav.toc li.l3{padding-left:14px;font-size:13px}
+nav.toc a{color:var(--fg);text-decoration:none;display:block;padding:2px 6px;border-radius:4px}
+nav.toc a:hover{background:var(--border)}
+nav.toc input{width:100%;padding:6px 8px;margin:0 0 10px;border:1px solid var(--border);border-radius:6px;
+background:var(--bg);color:var(--fg);font:inherit}
+main{flex:1 1 auto;min-width:0;max-width:980px;padding:32px 40px 80px}
+h1,h2,h3,h4,h5,h6{line-height:1.35;margin:1.6em 0 .6em;position:relative}
+h1{font-size:2em;border-bottom:1px solid var(--border);padding-bottom:.3em;margin-top:0}
+h2{font-size:1.5em;border-bottom:1px solid var(--border);padding-bottom:.3em}
+h3{font-size:1.25em}
+.anchor{position:absolute;left:-1em;color:var(--muted);text-decoration:none;opacity:0;font-weight:400}
+h1:hover .anchor,h2:hover .anchor,h3:hover .anchor,h4:hover .anchor{opacity:1}
+a{color:var(--link)}
+p,ul,ol,blockquote,pre,.table-wrap{margin:0 0 1em}
+ul,ol{padding-left:2em}
+li>ul,li>ol{margin:.25em 0}
+li>p{margin:.4em 0}
+ul.task-list{list-style:none;padding-left:1.2em}
+code{font-family:"Noto Sans Mono CJK JP","DejaVu Sans Mono",ui-monospace,Consolas,monospace;font-size:.88em;
+background:var(--code-bg);padding:.15em .4em;border-radius:5px}
+pre{background:var(--code-bg);border:1px solid var(--border);border-radius:6px;padding:14px 16px;overflow:auto;
+line-height:1.45;position:relative}
+pre code{background:none;padding:0;font-size:.86em;white-space:pre}
+pre .lang{position:absolute;top:4px;right:8px;font-size:11px;color:var(--muted)}
+pre.mermaid{background:var(--bg);text-align:center}
+blockquote{border-left:4px solid var(--border);color:var(--muted);padding:0 1em;margin-left:0}
+hr{border:0;border-top:1px solid var(--border);margin:2em 0}
+.table-wrap{overflow-x:auto}
+table{border-collapse:collapse;font-size:.95em}
+th,td{border:1px solid var(--border);padding:6px 12px;vertical-align:top}
+th{background:var(--th-bg);text-align:left}
+tbody tr:nth-child(2n){background:var(--row-alt)}
+img{max-width:100%}
+main img{border:1px solid var(--border);border-radius:4px}
+.listing li{margin:4px 0}
+.listing .dir>a{font-weight:700}
+.footer{margin-top:48px;color:var(--muted);font-size:12px}
+@media (max-width: 900px){.layout{display:block}nav.toc{position:static;max-height:none;border-right:0;
+border-bottom:1px solid var(--border)}main{padding:20px 16px 60px}.anchor{display:none}}
+@media print{nav.toc{display:none}main{max-width:none;padding:0}.anchor{display:none}
+pre,table,h2,h3{break-inside:avoid}a{color:inherit}}
+</style></head>
+<body><div class="layout"><nav class="toc"><p class="doc-title">月次報告システム システム運用マニュアル（システム管理者・補佐向け）</p><input id="toc-filter" type="search" placeholder="目次を絞り込む"><ul><li class="l2"><a href="#9-システム管理者補佐の仕事">9. システム管理者・補佐の仕事</a></li><li class="l3"><a href="#91-管理のトップ">9.1 管理のトップ</a></li><li class="l3"><a href="#92-項目マスタ">9.2 項目マスタ</a></li><li class="l3"><a href="#93-案件の管理">9.3 案件の管理</a></li><li class="l3"><a href="#94-組織ユーザー">9.4 組織・ユーザー</a></li><li class="l3"><a href="#95-記録削除データ">9.5 記録・削除データ</a></li><li class="l3"><a href="#96-更新のお知らせ">9.6 更新のお知らせ</a></li><li class="l3"><a href="#97-要望依頼への返信">9.7 要望・依頼への返信</a></li><li class="l3"><a href="#98-よくある質問の管理">9.8 よくある質問の管理</a></li><li class="l3"><a href="#99-全課共通の臨時の調査">9.9 全課共通の臨時の調査</a></li><li class="l3"><a href="#910-予備のコードの確認復旧コードアカウントの凍結">9.10 予備のコードの確認・復旧コード・アカウントの凍結</a></li><li class="l3"><a href="#911-サーバーのコマンドで行うことシステム管理者">9.11 サーバーのコマンドで行うこと（システム管理者）</a></li></ul></nav><main><h1 id="月次報告システム-システム運用マニュアルシステム管理者補佐向け"><a class="anchor" href="#月次報告システム-システム運用マニュアルシステム管理者補佐向け" aria-hidden="true">#</a>月次報告システム システム運用マニュアル（システム管理者・補佐向け）</h1>
+<p>最終更新: 2026-11-27</p>
+<p>システム管理者・補佐（補佐（開発担当）を含む）が行う、システムの運用の操作をまとめたものです。
+<strong>この冊は、システム管理者・補佐だけで扱ってください。</strong> 一般の利用者には配りません（よくある質問の記録や、心の不調に関わる質問の扱いなど、運用側だけが知っておくことを含みます）。</p>
+<p>操作マニュアルは 3 冊に分かれています。節の番号（「4.6」「9.4」など）は 3 冊で共通です。番号の節がこの冊に無いときは、ほかの冊を見てください。</p>
+<div class="table-wrap"><table><thead><tr><th>冊</th><th>読む人</th><th>章</th></tr></thead><tbody><tr><td>操作マニュアル（<code>operation_manual.md</code>）</td><td>全員</td><td>0〜4、6.3、7.1、7.3、10〜14</td></tr><tr><td>課長・課長代理・主任向けマニュアル（<code>manager_manual.md</code>）</td><td>課長・課長代理・主任</td><td>5、6（6.3 のほか）、7.2、8</td></tr><tr><td>システム運用マニュアル（<code>admin_manual.md</code>）</td><td>システム管理者・補佐</td><td>9</td></tr></tbody></table></div>
+<p>HTML（画像付き）は、それぞれ <code>manual/</code> の同じ名前の <code>.html</code> です。</p>
+<hr>
+<h2 id="9-システム管理者補佐の仕事"><a class="anchor" href="#9-システム管理者補佐の仕事" aria-hidden="true">#</a>9. システム管理者・補佐の仕事</h2>
+<p>補佐は管理の仕事を代行できますが、個々の情報（報告の中身・コメント、人ごとの提出状況、閲覧・出力の記録、削除データの中身）は見られません（よくある質問の記録の、聞いた人は見られます。心の不調・退職に関わる質問は見られません）。補佐の操作は「補佐として」記録され、管理者が管理のトップで確かめます。</p>
+<p>補佐のうち 1 名（このシステムの設計・製造・保守の担当者）には、管理者が「補佐（開発担当）」の印を付けます。補佐（開発担当）は管理者と同じことができます（個々の情報も見られます）。ただし、心の不調・退職に関わる質問は見られません（管理者だけ）。</p>
+<p><img src="images/m09_01_admin_home.png" alt="管理者のホーム"></p>
+<p>所属の課がない管理者のホームには、報告の欄の代わりに管理の画面への入口が並びます。</p>
+<h3 id="91-管理のトップ"><a class="anchor" href="#91-管理のトップ" aria-hidden="true">#</a>9.1 管理のトップ</h3>
+<p><img src="images/m09_02_admin_top.png" alt="管理のトップ。1 管理の画面の切り替え、2 管理の仕事ごとのカード"></p>
+<p>管理の仕事ごとの入口と、今の状態が並びます。目立つ札は、対応が要るものです。</p>
+<ul>
+<li>上の並び（図の 1）で、管理の画面を切り替えられます。どの管理の画面にも出ます。</li>
+<li>カード（図の 2）を押すと、その仕事の画面に移ります。カードには件数などの状態が出ます。</li>
+<li>バックアップの状態（最後のバックアップの日時。7 日より古いと知らせが出る）</li>
+<li>メンテナンスの切り替え（メンテナンス中は、管理者・補佐のほかはログインできず、ログインしている人も追い出されます）</li>
+<li>課長がいない課があるときの知らせ（その課は確認を完了にできない）</li>
+</ul>
+<h3 id="92-項目マスタ"><a class="anchor" href="#92-項目マスタ" aria-hidden="true">#</a>9.2 項目マスタ</h3>
+<p>共通の項目と課の項目を追加・編集・並べ替えます。変更は、これから作る報告に反映されます。操作は 8.2 と同じです。</p>
+<h3 id="93-案件の管理"><a class="anchor" href="#93-案件の管理" aria-hidden="true">#</a>9.3 案件の管理</h3>
+<p><img src="images/m09_07_projects.png" alt="案件の管理。1 案件を追加、2 CSV に出力"></p>
+<p>案件コードと社内向けの呼び名を管理します。客先名は入れないでください。</p>
+<ul>
+<li>案件を足すときは、呼び名などを入れて「＋ 案件を追加（コードは自動）」（図の 1）を押します。終わった案件は「終了」を押します。</li>
+<li>案件台帳との突き合わせには「案件の一覧を CSV に出力」（図の 2）を使います。</li>
+</ul>
+<h3 id="94-組織ユーザー"><a class="anchor" href="#94-組織ユーザー" aria-hidden="true">#</a>9.4 組織・ユーザー</h3>
+<p><img src="images/m09_03_org_departments.png" alt="組織・ユーザーの課のタブ。1 ユーザーのタブ、2 課を追加"></p>
+<p>「組織・ユーザー」は、課・ユーザー・注意の言葉・一括（CSV）のタブに分かれています。課を足すときは「＋ 課を追加」（図の 2）、ユーザーの仕事は「ユーザー」のタブ（図の 1）です。課の一覧の「課員」の「n 人」を押すと、その課に所属している人と兼務の人の名前が開きます。課の「編集」の「課員」の節でも、所属の人全員（ライン・役割つき）を見られます。</p>
+<p><img src="images/m09_04_org_users.png" alt="ユーザーのタブ。1 ユーザーを追加"></p>
+<p>ユーザーを足すときは「＋ ユーザーを追加」（図の 1）を押します。一覧の行の「編集」を押すと、そのユーザーの編集の画面が開きます。</p>
+<p><img src="images/m09_05_user_edit.png" alt="ユーザーの編集の画面の下。1 仮のパスワードを発行、2 2 段階認証を初期化、3 予備のコードを初期化、4 ロックを解除"></p>
+<p>ユーザーの編集の画面の下の「操作」に、パスワードや 2 段階認証のボタン（図の 1〜4）が並びます。押して確認が出たら、内容を読んで「OK」を押します。</p>
+<div class="table-wrap"><table><thead><tr><th>仕事</th><th>内容</th></tr></thead><tbody><tr><td>課</td><td>課の追加・名前・並び・有効／無効、課長を決める</td></tr><tr><td>ユーザー</td><td>追加、表示名・役職・所属の課・有効の変更</td></tr><tr><td>仮のパスワード</td><td>発行する（図の 1）。一度だけ表示されるので、本人に伝える。はじめての人には、先にスマートフォンに認証アプリを入れ、はじめてのログインはスマートフォンで行うよう伝える</td></tr><tr><td>2 段階認証の初期化</td><td>本人が認証アプリも予備のコードも使えなくなったとき（図の 2）</td></tr><tr><td>予備のコードの初期化</td><td>本人が予備のコードをメールやチャットに貼った、なくした、などのとき（図の 3）。今のコードがすべて使えなくなる（認証アプリはそのまま使える）。本人のホームに作り直しの知らせが出るので、アカウント設定の「予備のコード」で作り直すよう伝える。補佐も行える（管理者・補佐の利用者は、管理者と補佐（開発担当）だけ）</td></tr><tr><td>ロックの解除</td><td>ログインの失敗でロックされた人（図の 4）</td></tr><tr><td>部長以上</td><td>ユーザーの編集の「部長以上」に印を付けると、全課共通の臨時の調査の結果（集計だけ）をすべて見られる（9.9）。管理の権限は付かない</td></tr><tr><td>人財管理者</td><td>ユーザーの編集の「人財管理者」に印を付けると、全課共通の臨時の調査を作り、結果（集計だけ）を見られる（9.9）。ほかの管理の権限は付かない</td></tr><tr><td>専門職</td><td>ユーザーの編集の「専門職」で、技師・担当課長・担当部長を選ぶ（ラインを管理しない技術職）。課長・確認者・項目管理者にはなれず（今の役割は外れます）、ほかの人の報告は見られない。報告を見るのは課長だけ（担当部長の報告は、課長も見られない）</td></tr><tr><td>注意の言葉</td><td>客先名らしい言葉の一覧</td></tr><tr><td>組織の一括の入れ替え</td><td>毎年の組織改訂を CSV で入れる。事前に予告がある改訂は、反映する日を予約できる</td></tr></tbody></table></div>
+<p><img src="images/m09_06_org_bulk.png" alt="一括（CSV）のタブ"></p>
+<p>一括の入れ替えの CSV は UTF-8 で作ってください（12.3）。先に「今の組織を CSV に出力」で今の組織を出し、それを直して取り込むと間違いが少なくなります。取り込むと、変わる内容が先に表示されるので、確かめてから反映します。CSV から行を消した人は変わりません（課から外れません）。載っていない人がいるときは、その人数と一覧が出ます。課を移す・無効にするときは、行を残して「所属の課」や「有効」を直してください。ほかの課の課長・確認者を兼ねる人（課のない部長が課長の課を含む）は、「兼務」の列に「課の名前:課長」か「課の名前:確認者:担当のライン」（担当のラインは省けます）を「; 」でつないで書きます（例「B課:課長; C課:確認者:山田ライン」）。兼務を外すときは消します。</p>
+<h3 id="95-記録削除データ"><a class="anchor" href="#95-記録削除データ" aria-hidden="true">#</a>9.5 記録・削除データ</h3>
+<p><img src="images/m09_08_logs.png" alt="記録の画面"></p>
+<ul>
+<li>閲覧・出力・管理の操作・ログインの記録を探せます。「ログインの失敗」で、不正なアクセスの疑いを確かめられます。記録に報告の中身は入っていません。</li>
+<li><strong>無い ID でのログイン</strong>: 存在しない ID でログインしようとした記録があると、システム管理者・補佐のホームに知らせが出ます。種類「無い ID でのログイン」で、入れた ID と IP アドレスを見て、打ち間違いか、なりすまし・総当たりのおそれがないか確かめ、「確かめた」を押してください。</li>
+<li><strong>ID・パスワードを求める質問</strong>: よくある質問のチャットで、ほかの人の ID・パスワードを求める質問があると、システム管理者・補佐のホームに知らせが出ます。「よくある質問の記録」の「知らせる質問」の欄で聞いた人を確かめ、「対応した」を押してください。パスワードは教えないでください。</li>
+<li><strong>システム・データを壊すと書いた文</strong>: よくある質問のチャットで「DBを消してやる」「システムをぶっ壊す」のように、システムやデータを壊す・消す・持ち出すつもりの文があると、チャットは答えずに断り、システム管理者・補佐のホームに知らせが出ます。「よくある質問の記録」の「知らせる質問」の欄で聞いた人を確かめ、必要なら課長と相談して対応し、「対応した」を押してください。「DBを消したい」のような、ふつうの言い方は知らせません（消す機能が無いことを答えます）。</li>
+</ul>
+<p><img src="images/m09_09_trash.png" alt="削除データの画面"></p>
+<ul>
+<li>削除した報告・コメント・臨時の調査は、削除から一定の日数の間は戻せます。</li>
+</ul>
+<h3 id="96-更新のお知らせ"><a class="anchor" href="#96-更新のお知らせ" aria-hidden="true">#</a>9.6 更新のお知らせ</h3>
+<p><img src="images/m09_10_notices.png" alt="更新のお知らせの画面"></p>
+<p>システムの改善や変更を、出す期間の間、全員のホームに知らせます。要望を出した人の名前や要望の文は、そのまま書かないでください。</p>
+<h3 id="97-要望依頼への返信"><a class="anchor" href="#97-要望依頼への返信" aria-hidden="true">#</a>9.7 要望・依頼への返信</h3>
+<p><img src="images/m09_11_requests.png" alt="要望・依頼の一覧"></p>
+<ol>
+<li>メニューの「要望・依頼」で一覧を開く。件名を押すと詳細が開きます。</li>
+</ol>
+<p><img src="images/m09_12_request_view.png" alt="要望・依頼の詳細。1 返信の文、2 返信だけ送る"></p>
+<ol start="2">
+<li>詳細を開き、返信の文（図の 1）を書いて、状態のボタンで状態を変えて返信する（返信が空なら定型の返信になる）。状態を変えずに返信だけするときは「返信だけ送る（状態は変えない）」（図の 2）を押します。</li>
+</ol>
+<p>種類が「質問」で閉じた要望・依頼は、「よくある質問に載せる」でよくある質問にできます。質問と答えは書き直して載せ、出した人の文や名前は出しません。</p>
+<h3 id="98-よくある質問の管理"><a class="anchor" href="#98-よくある質問の管理" aria-hidden="true">#</a>9.8 よくある質問の管理</h3>
+<p><img src="images/m09_13_faq_manage.png" alt="よくある質問の管理（画面の下）"></p>
+<p>よくある質問の画面で、分野・質問（200 文字まで）・答え（2,000 文字まで）を載せる・直す・消す・並べ替えることができます。500 件まで載せられます。「↑」「↓」は同じ分野の中で並べ替えます。
+<strong>載せる文の注意</strong>: よくある質問はだれでも読めます（「システムの管理」の分野は管理者・補佐だけ）。コマンド・ファイルの場所・鍵やパスワードの置き場所など、システムの内部の情報は書かないでください。</p>
+<p><strong>標準のよくある質問</strong>: この操作マニュアルの全章とシステムの概要から想定される質問（192 件）を、システムに用意してあります。「すべての質問」の下の「標準のよくある質問を取り込む」を押すと、まだ載っていない質問だけを分野つきで足します（同じ質問の文があるものは足しません）。新しい版で標準の質問が増えたとき・答えが新しくなったときも、もう一度押せば、増えた分を足し、答えを新しくします（ここで直した答えは変えません）。取り込んだあとは、自由に直す・消すことができます。
+探すときは、質問と答えの文の中の言葉で探します（質問に当たるほうを先に出します）。利用者が使いそうな言い方（「スマホ」「締切」など）を質問か答えに入れておくと、見つかりやすくなります。</p>
+<p><img src="images/m09_14_faq_logs.png" alt="よくある質問の記録"></p>
+<p><strong>よくある質問の記録</strong>: メニューの「よくある質問の記録」で、チャットで聞かれた質問と返した答え・反応を見られます。</p>
+<ul>
+<li>「答えられなかった質問」（見つからなかった・「解決しない」・質問として送ったもの）を多い順に出します。「よくある質問に載せる」を押すと、その文が入った状態で載せる欄が開きます。</li>
+<li>「「解決しない」が多い答え」は、答えの文を直す候補です。</li>
+<li>「関係のない質問とした文」にシステムの質問が出ていたら、開発担当に伝えてください（言葉の表に足します）。</li>
+<li>「不適切な表現」に、乱暴な言葉の文と聞いた人が出ます。聞いた人の名前は、システム管理者と補佐が見られます。対応のためだけに使ってください。管理のトップのカードにも、7 日の件数が出ます。</li>
+<li>「心の不調・退職に関わる質問」に、心の不調に関わる言葉が入った文と、退職に関わる質問、聞いた人が出ます（命に関わる言葉を先に）。ホームと管理のトップにも、未対応の件数が目立つ札で出ます。この欄と知らせは、システム管理者だけに出ます（補佐には出ません）。内容を確かめ、必要なら本人の上司などと連携して対応し、「対応した」を押してください。言葉だけで見分けているので、軽い言い方も入ります。健康に関わる情報なので、対応に必要な人の間だけで扱ってください。</li>
+<li>記録は 1 年で消えます。記録の画面を見たことは、操作の記録に残ります。</li>
+<li><strong>CSV で出す・まとめて直す</strong>: 「記録を CSV で出す」で、期間の中の記録を 1 回の質問ごとに出せます（聞いた人の名前と、知らせる質問は入りません）。「メンテナンス用の CSV を出す」で、載っている質問・まだ載っていない標準の質問・答えられなかった質問（多い順）を 1 つのファイルに出せます。Excel などで直し（載っている質問は分野・質問・答えを直すか「消す」に 1、番号の無い行は答えを書いた行だけ足されます。番号と直した日時は変えないでください）、「CSV UTF-8」で保存して取り込むと、足す・直す・消すの内容が出ます。確かめて「反映する」を押すと、まとめて変わります。CSV から消した行の質問は、そのまま残ります。CSV を出したあとに画面で直された質問は、上書きしません（もう一度 CSV を出して直してください）。</li>
+</ul>
+<p>よくある質問で見つからずに送られた質問は、「要望・依頼」に種類「質問」で届きます（7.3）。答えたら、閉じた詳細の「よくある質問に載せる」で載せると、次から探して見つかるようになります。</p>
+<hr>
+<h3 id="99-全課共通の臨時の調査"><a class="anchor" href="#99-全課共通の臨時の調査" aria-hidden="true">#</a>9.9 全課共通の臨時の調査</h3>
+<p>すべての課に同じ質問で聞く調査です。結果を見るのは依頼元と部長以上です。作るのは人財管理者と、システム管理者・補佐（代わりに行います）です。</p>
+<ol>
+<li>メニューの「臨時の調査」→「＋ 新しく作る」で、「課」に「全課共通（すべての課の全員）」を選ぶ。対象はすべての課の全員、結果は集計だけになります。答え方は選択式とチェックだけです。</li>
+<li>質問を足して「公開する」。</li>
+<li>編集の画面の「結果を見られる人」で、依頼元の担当者などに印を付けて保存する（公開の後でも変えられます）。</li>
+</ol>
+<p>結果を見られるのは、人財管理者、システム管理者・補佐、「部長以上」の印の人（9.4。すべての全課共通の調査）、「結果を見られる人」に選んだ人です。見られる人のメニューには「調査の結果」が出ます。結果の画面では、全課の集計・課ごとの回答の状況・課ごとの内訳を見て、印刷（PDF）・Excel・CSV に出力できます。個人の回答と、答えていない人の名前は、だれにも出ません。</p>
+<p><strong>部長以上のアカウントを作る</strong></p>
+<ol>
+<li>「組織・ユーザー」の「ユーザー」のタブで「＋ ユーザーを追加」。ログイン ID・表示名を入れ、役職は「部長」、所属の課は「（なし）」（課に所属する人なら、その課）にし、「部長以上」に印を付けて「追加して仮のパスワードを発行」。</li>
+<li>表示された仮のパスワードを本人に伝える（一度だけ表示されます）。本人ははじめてのログインで、パスワードを変え、2 段階認証を設定します。</li>
+<li>すでにアカウントがある人は、ユーザーの編集で「部長以上」に印を付けて「保存」するだけです。</li>
+</ol>
+<p>役職の「部長」は表示のためのもので、結果を見られるかどうかは「部長以上」の印で決まります。</p>
+<h3 id="910-予備のコードの確認復旧コードアカウントの凍結"><a class="anchor" href="#910-予備のコードの確認復旧コードアカウントの凍結" aria-hidden="true">#</a>9.10 予備のコードの確認・復旧コード・アカウントの凍結</h3>
+<p>システム管理者と補佐（開発担当）だけが使えます。<strong>操作すると、相手のホームに、あなたの名前と役割・理由が 30 日出ます（消せません）。</strong> 操作の前に、電話などで本人と確かめてください。</p>
+<div class="table-wrap"><table><thead><tr><th>困りごと</th><th>すること</th></tr></thead><tbody><tr><td>予備のコードをなくした・分からない（認証アプリは使える）</td><td>本人に、アカウント設定の「予備のコード」で作り直してもらう</td></tr><tr><td>認証アプリも予備のコードも使えない</td><td>ユーザーの編集の「復旧コードを発行」。30 分以内・1 回限り。本人はログインの「コード」の欄に入れ、2 段階認証の設定からやり直す</td></tr><tr><td>本人の予備のコードを確かめたい</td><td>ユーザーの編集の「予備のコードを確認」。確認したコードは、本人に作り直してもらう</td></tr></tbody></table></div>
+<p>どちらも、理由とあなたのパスワードを入れます。作り直す前の古い予備のコードは確認できません。</p>
+<p><strong>「心当たりがない」と知らせがあったとき</strong></p>
+<ol>
+<li>本人が知らせの「心当たりがない（知らせて凍結する）」を押すと、本人のアカウントが一時凍結し、システム管理者と補佐（開発担当）のホームに赤で出ます。</li>
+<li>電話などで本人に確かめ、メニューの「アカウントの凍結」で、理由とあなたのパスワードを入れて「再初期化して凍結を解く」を押します。もとの操作をした人は行えません。</li>
+<li>出てきた仮のパスワードを本人に伝えます。本人は 2 段階認証の初期設定からやり直し、新しいパスワードを決めます。凍結前のパスワードは使えません（似たものも避けてもらってください）。同じパスワードをほかのサービスで使っていれば、そちらも変えてもらいます。</li>
+</ol>
+<p><strong>補佐（開発担当）がログインできなくなったとき</strong></p>
+<p>管理者だけでは、開発担当（前に開発担当だった人を含む）のパスワードや 2 段階認証を初期化できません。「アカウントの凍結」で管理者が復旧を申請し、別の補佐が 24 時間以内に承認します（直前 7 日に、仮のパスワードの発行などを受けた補佐・新しく補佐になった人は承認できません）。仮のパスワードの前半は管理者、後半は補佐にだけ出るので、それぞれが本人に直接伝えてください。</p>
+<p><strong>全員の総入れ替え</strong></p>
+<p>同じ人の 2 回目の凍結か、30 日に 2 人以上の凍結があると、「アカウントの凍結」に欄が出ます。先に、本人の端末を調べ、操作した人の記録を確かめてください。実施するときは、<strong>システム管理者と補佐（開発担当）が連絡を取り合い、1 人が申請し、もう 1 人が 24 時間以内に承認します。</strong> 1 人では実施できません。開発担当がいない・凍結中のときは、別の補佐が代わりになります。そのため、システム管理者 1 名以上と、開発担当のほかに補佐 1 名以上を、必ず置いてください（補佐を交代するときは、先に次の人を補佐にします）。全員がログアウトし、次のログインでパスワードの変更と 2 段階認証の設定し直しを求められます。</p>
+<h3 id="911-サーバーのコマンドで行うことシステム管理者"><a class="anchor" href="#911-サーバーのコマンドで行うことシステム管理者" aria-hidden="true">#</a>9.11 サーバーのコマンドで行うこと（システム管理者）</h3>
+<p>画面にはなく、サーバーに SSH でつないで、サイトのフォルダー（例: <code>~/www/report-system_onion</code>）で実行します。書いてあるとおりにならないときは、そこで止めて開発担当に連絡してください。開発担当には件数とメッセージだけを送り、名前や報告の文、鍵は送らないでください。</p>
+<div class="table-wrap"><table><thead><tr><th>すること</th><th>コマンド</th><th>いつ</th></tr></thead><tbody><tr><td>バックアップを作る</td><td><code>php app/bin/backup.php</code></td><td>毎日（定期実行に登録できるとき）と、更新の前</td></tr><tr><td>DB の形を新しくする</td><td><code>php app/bin/migrate.php</code></td><td>更新のとき（開発担当の手順書に書いてあるときだけ）</td></tr><tr><td>移行の前後を突き合わせる</td><td><code>php migration_check.php snapshot</code> と <code>compare</code></td><td>実データが入った DB を移行するとき（手順書に従う）</td></tr><tr><td>暗号化の鍵を入れ替える</td><td><code>php app/bin/rotate_key.php</code></td><td>鍵が漏れたおそれがあるとき</td></tr></tbody></table></div>
+<p>更新や鍵の入れ替えのあとは、全員がログインし直しになることがあります。先に、入力中のものを保存してログアウトしてもらうよう案内してください。</p>
+<p><strong>暗号化の鍵を入れ替える手順</strong></p>
+<ol>
+<li>管理のトップの「メンテナンス」を始めます（始めていないと、入れ替えは断られます）。終わりの時刻は余裕を持たせます。</li>
+<li><code>php app/bin/rotate_key.php --dry-run</code> で、全件を今の鍵で読めるかを確かめます（何も変わりません）。「復号できない値」が出たら、先に進まず開発担当に連絡します。</li>
+<li><code>php app/bin/rotate_key.php</code> を実行します。先に控え（<code>app/backups/before_key_rotation_…</code>）を作り、「入れ替えました」と件数が出れば終わりです。途中で失敗したときは、DB は元のままです。</li>
+<li>ログインし直し、報告を 2〜3 件開いて読めることを確かめ、メンテナンスを終えます。</li>
+<li>新しい鍵（<code>app/keys/field_v2.key</code> など）の控えを、DB と別の安全な場所に取ります。</li>
+<li>古い鍵と、入れ替える前のバックアップは、www の外の安全な場所に、別々に移します（前のバックアップを読むのに要ります。いつまで残すかは会社の決まりに従います）。</li>
+</ol>
+<p><strong>鍵の入れ替えで守れるのは、これからのデータだけです。</strong> 抜かれた DB と古い鍵の組は、読めるままです。2 段階認証の設定も変わらないので、抜かれたおそれがあるときは、全員の総入れ替え（9.10）も行います。総入れ替えの欄は、凍結の条件がそろったときだけ出ます。出ていないときは、開発担当に連絡してください（サーバーから抜かれたおそれだけで総入れ替えを始める操作は、まだありません）。</p><p class="footer">mdview で表示</p></main></div>
+<script>
+(function(){var box=document.getElementById('toc-filter');if(!box)return;
+box.addEventListener('input',function(){var q=box.value.toLowerCase();
+document.querySelectorAll('nav.toc li').forEach(function(li){
+li.style.display=li.textContent.toLowerCase().indexOf(q)>=0?'':'none';});});})();
+</script></body></html>

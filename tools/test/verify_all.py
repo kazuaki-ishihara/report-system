@@ -489,8 +489,9 @@ def main():
         # コンピテンシー評価基準（app/templates/competency_criteria.xlsx）から作った表（app/lib/goal_criteria.php）が最新
         r.run("コンピテンシー評価基準の表が最新", [sys.executable, "-I", os.path.join(ROOT, "tools", "lib", "goal_criteria_gen.py"), "--check"], default_screen="G-27")
         r.run("操作マニュアルの画像がそろっている", [sys.executable, "-I", os.path.join(ROOT, "tools", "lib", "manual_capture.py"), "--check"], default_screen="共通")
-        # 操作マニュアルの HTML（docs/manual/operation_manual.html。画像は隣の images/）が、docs/operation_manual.md から作り直したものと同じ
-        r.run("操作マニュアルの HTML が最新", [sys.executable, "-I", os.path.join(ROOT, "tools", "lib", "mdview.py"), os.path.join(ROOT, "docs", "operation_manual.md"), "-o", os.path.join(ROOT, "docs", "manual", "operation_manual.html"), "--check"], default_screen="共通")
+        # 操作マニュアル 3 冊（全員・課長と課長代理と主任・システム運用）の HTML（docs/manual/<名前>.html。画像は隣の images/）が、docs/<名前>.md から作り直したものと同じ
+        for manual_name in ("operation_manual", "manager_manual", "admin_manual"):
+            r.run("操作マニュアルの HTML が最新（%s）" % manual_name, [sys.executable, "-I", os.path.join(ROOT, "tools", "lib", "mdview.py"), os.path.join(ROOT, "docs", manual_name + ".md"), "-o", os.path.join(ROOT, "docs", "manual", manual_name + ".html"), "--check"], default_screen="共通")
         # よくある質問のチャットの判定（システムに寄る・グレーゾーン・明確にアウトの入力。tools/test/faq_input_cases.tsv）。サーバー・DB は使わない
         r.run("よくある質問の自動入力検証", [php, os.path.join("tools", "test", "faq_input_check.php")], default_screen="G-25")
         # 部品（前置き・たとえ・中心の言葉・語尾）のすべての組み合わせ（tools/test/faq_combo_cases.txt）。言い方を変えても判定が崩れないか

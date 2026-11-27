@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>月次報告システム 課長・課長代理・主任向けマニュアル</title><style>
+:root{--bg:#ffffff;--fg:#1f2328;--muted:#59636e;--border:#d1d9e0;--code-bg:#f6f8fa;--link:#0969da;
+--th-bg:#f6f8fa;--row-alt:#fafbfc;--side-bg:#f6f8fa;--mark:#0969da}
+@media (prefers-color-scheme: dark){:root{--bg:#0d1117;--fg:#e6edf3;--muted:#9198a1;--border:#3d444d;
+--code-bg:#151b23;--link:#4493f8;--th-bg:#151b23;--row-alt:#10151c;--side-bg:#010409;--mark:#4493f8}}
+*{box-sizing:border-box}
+html{scroll-padding-top:16px}
+body{margin:0;background:var(--bg);color:var(--fg);line-height:1.7;
+font-family:"Noto Sans CJK JP","Noto Sans JP","IPAexGothic","Hiragino Sans","Yu Gothic UI","Meiryo",system-ui,sans-serif;font-size:16px}
+.layout{display:flex;align-items:flex-start;min-height:100vh}
+nav.toc{position:sticky;top:0;flex:0 0 280px;max-height:100vh;overflow-y:auto;padding:20px 16px;
+background:var(--side-bg);border-right:1px solid var(--border);font-size:14px;line-height:1.5}
+nav.toc .doc-title{font-weight:700;margin:0 0 4px}
+nav.toc .crumb{font-size:12px;color:var(--muted);margin:0 0 12px;word-break:break-all}
+nav.toc .crumb a{color:var(--muted)}
+nav.toc ul{list-style:none;margin:0;padding:0}
+nav.toc li{margin:2px 0}
+nav.toc li.l3{padding-left:14px;font-size:13px}
+nav.toc a{color:var(--fg);text-decoration:none;display:block;padding:2px 6px;border-radius:4px}
+nav.toc a:hover{background:var(--border)}
+nav.toc input{width:100%;padding:6px 8px;margin:0 0 10px;border:1px solid var(--border);border-radius:6px;
+background:var(--bg);color:var(--fg);font:inherit}
+main{flex:1 1 auto;min-width:0;max-width:980px;padding:32px 40px 80px}
+h1,h2,h3,h4,h5,h6{line-height:1.35;margin:1.6em 0 .6em;position:relative}
+h1{font-size:2em;border-bottom:1px solid var(--border);padding-bottom:.3em;margin-top:0}
+h2{font-size:1.5em;border-bottom:1px solid var(--border);padding-bottom:.3em}
+h3{font-size:1.25em}
+.anchor{position:absolute;left:-1em;color:var(--muted);text-decoration:none;opacity:0;font-weight:400}
+h1:hover .anchor,h2:hover .anchor,h3:hover .anchor,h4:hover .anchor{opacity:1}
+a{color:var(--link)}
+p,ul,ol,blockquote,pre,.table-wrap{margin:0 0 1em}
+ul,ol{padding-left:2em}
+li>ul,li>ol{margin:.25em 0}
+li>p{margin:.4em 0}
+ul.task-list{list-style:none;padding-left:1.2em}
+code{font-family:"Noto Sans Mono CJK JP","DejaVu Sans Mono",ui-monospace,Consolas,monospace;font-size:.88em;
+background:var(--code-bg);padding:.15em .4em;border-radius:5px}
+pre{background:var(--code-bg);border:1px solid var(--border);border-radius:6px;padding:14px 16px;overflow:auto;
+line-height:1.45;position:relative}
+pre code{background:none;padding:0;font-size:.86em;white-space:pre}
+pre .lang{position:absolute;top:4px;right:8px;font-size:11px;color:var(--muted)}
+pre.mermaid{background:var(--bg);text-align:center}
+blockquote{border-left:4px solid var(--border);color:var(--muted);padding:0 1em;margin-left:0}
+hr{border:0;border-top:1px solid var(--border);margin:2em 0}
+.table-wrap{overflow-x:auto}
+table{border-collapse:collapse;font-size:.95em}
+th,td{border:1px solid var(--border);padding:6px 12px;vertical-align:top}
+th{background:var(--th-bg);text-align:left}
+tbody tr:nth-child(2n){background:var(--row-alt)}
+img{max-width:100%}
+main img{border:1px solid var(--border);border-radius:4px}
+.listing li{margin:4px 0}
+.listing .dir>a{font-weight:700}
+.footer{margin-top:48px;color:var(--muted);font-size:12px}
+@media (max-width: 900px){.layout{display:block}nav.toc{position:static;max-height:none;border-right:0;
+border-bottom:1px solid var(--border)}main{padding:20px 16px 60px}.anchor{display:none}}
+@media print{nav.toc{display:none}main{max-width:none;padding:0}.anchor{display:none}
+pre,table,h2,h3{break-inside:avoid}a{color:inherit}}
+</style></head>
+<body><div class="layout"><nav class="toc"><p class="doc-title">月次報告システム 課長・課長代理・主任向けマニュアル</p><input id="toc-filter" type="search" placeholder="目次を絞り込む"><ul><li class="l2"><a href="#5-報告を確認する課長課長代理主任">5. 報告を確認する（課長・課長代理・主任）</a></li><li class="l3"><a href="#51-未チェックの報告を順に見る">5.1 未チェックの報告を順に見る</a></li><li class="l3"><a href="#52-報告の詳細の画面">5.2 報告の詳細の画面</a></li><li class="l3"><a href="#53-コメントする">5.3 コメントする</a></li><li class="l3"><a href="#54-チェックする確認を完了にする">5.4 チェックする・確認を完了にする</a></li><li class="l3"><a href="#55-コメントの定型文">5.5 コメントの定型文</a></li><li class="l2"><a href="#6-提出状況横並び検索出力臨時の調査">6. 提出状況・横並び・検索・出力・臨時の調査</a></li><li class="l3"><a href="#61-提出状況課長課長代理主任">6.1 提出状況（課長・課長代理・主任）</a></li><li class="l3"><a href="#62-横並び課長課長代理主任">6.2 横並び（課長・課長代理・主任）</a></li><li class="l3"><a href="#64-出力課長pc-のみ">6.4 出力（課長・PC のみ）</a></li><li class="l3"><a href="#65-臨時の調査課長">6.5 臨時の調査（課長）</a></li><li class="l2"><a href="#7-要望依頼">7. 要望・依頼</a></li><li class="l3"><a href="#72-要望依頼課長課長代理主任">7.2 要望・依頼（課長・課長代理・主任）</a></li><li class="l2"><a href="#8-課長の仕事">8. 課長の仕事</a></li><li class="l3"><a href="#81-課の管理">8.1 課の管理</a></li><li class="l3"><a href="#82-課の項目と選択肢">8.2 課の項目と選択肢</a></li><li class="l3"><a href="#83-メッセージ管理担当の課の課長">8.3 メッセージ（管理担当の課の課長）</a></li></ul></nav><main><h1 id="月次報告システム-課長課長代理主任向けマニュアル"><a class="anchor" href="#月次報告システム-課長課長代理主任向けマニュアル" aria-hidden="true">#</a>月次報告システム 課長・課長代理・主任向けマニュアル</h1>
+<p>最終更新: 2026-11-27</p>
+<p>課長・課長代理・主任（報告を確認する人）の操作をまとめたものです。全員に共通の操作（ログイン・報告を作る・アカウント設定・精算・目標管理など）は「操作マニュアル」を見てください。</p>
+<p>操作マニュアルは 3 冊に分かれています。節の番号（「4.6」「9.4」など）は 3 冊で共通です。番号の節がこの冊に無いときは、ほかの冊を見てください。</p>
+<div class="table-wrap"><table><thead><tr><th>冊</th><th>読む人</th><th>章</th></tr></thead><tbody><tr><td>操作マニュアル（<code>operation_manual.md</code>）</td><td>全員</td><td>0〜4、6.3、7.1、7.3、10〜14</td></tr><tr><td>課長・課長代理・主任向けマニュアル（<code>manager_manual.md</code>）</td><td>課長・課長代理・主任</td><td>5、6（6.3 のほか）、7.2、8</td></tr><tr><td>システム運用マニュアル（<code>admin_manual.md</code>）</td><td>システム管理者・補佐</td><td>9</td></tr></tbody></table></div>
+<p>HTML（画像付き）は、それぞれ <code>manual/</code> の同じ名前の <code>.html</code> です。</p>
+<hr>
+<h2 id="5-報告を確認する課長課長代理主任"><a class="anchor" href="#5-報告を確認する課長課長代理主任" aria-hidden="true">#</a>5. 報告を確認する（課長・課長代理・主任）</h2>
+<h3 id="51-未チェックの報告を順に見る"><a class="anchor" href="#51-未チェックの報告を順に見る" aria-hidden="true">#</a>5.1 未チェックの報告を順に見る</h3>
+<p><img src="images/m05_01_home_reviewer.png" alt="確認者のホーム。1 未チェックを順に見る、2 提出状況"></p>
+<ol>
+<li>ホームの確認の欄にある「未チェックを順に見る」（図の 1）を押す。</li>
+<li>最初の未チェックの報告が開きます。読み終えてチェックすると、次の報告へ進めます。</li>
+</ol>
+<p>課の全員の状態を見たいときは「提出状況」（図の 2。6.1）を押します。</p>
+<h3 id="52-報告の詳細の画面"><a class="anchor" href="#52-報告の詳細の画面" aria-hidden="true">#</a>5.2 報告の詳細の画面</h3>
+<p><img src="images/m05_03_view_top.png" alt="報告の詳細の画面の上。1 だれの何月の報告か、2 チェックの欄"></p>
+<ul>
+<li>上に、だれの何月の報告かと状態（図の 1）が出ます。</li>
+<li>その下の「チェック」の欄（図の 2）に、確認者ごとに「未チェック」「チェック済」「更新あり（再確認待ち）」が出ます。</li>
+<li>前回チェックしたあとに変わった値には「更新あり」の札が付きます。</li>
+<li>前月の報告と違う項目には「前月から変更」の札と前月の値が出ます。前月になかった案件には「前月にない案件」と出ます。</li>
+<li>客先名らしい言葉がある欄には「注意: 客先名の可能性」と出ます。</li>
+<li>提出後の変更は、下の「変更履歴」を開くと見られます。</li>
+<li>「限定」の項目は、本人と課長だけが見られます。確認者には「（限定のため表示しません）」と出ます。</li>
+</ul>
+<h3 id="53-コメントする"><a class="anchor" href="#53-コメントする" aria-hidden="true">#</a>5.3 コメントする</h3>
+<p><img src="images/m05_04_comment_form.png" alt="コメントの欄。1 ＋ コメント、2 種類、3 定型文を選ぶ、4 コメントする"></p>
+<ol>
+<li>聞きたい項目の下の「＋ コメント」（図の 1。報告全体へは下の欄）を押す。</li>
+<li>種類（追加情報の依頼・認識の確認・連絡）を選ぶ（図の 2）。</li>
+<li>本文を書く。よく使う文は「定型文を選ぶ」（図の 3）から選ぶと、本文に入ります（5.5）。</li>
+<li>「コメントする」（図の 4）を押す。</li>
+</ol>
+<p><img src="images/m05_05_resolve.png" alt="返信・解決。1 返信・解決、2 解決にする"></p>
+<ul>
+<li>本人が返信すると「回答あり」になります。読んで済んだら「返信・解決」（図の 1）を開いて「解決にする」（図の 2）を押します。もう一度聞くときは、同じ欄に書いて「返信する」を押します。</li>
+<li>解決にできるのは、確認者は自分が出したコメントだけ、課長はすべてです。</li>
+<li>自分が書いたコメント・返信は、本文の下の「直す」で直せます。直すと「（日時 に直しました）」と出ます。</li>
+</ul>
+<h3 id="54-チェックする確認を完了にする"><a class="anchor" href="#54-チェックする確認を完了にする" aria-hidden="true">#</a>5.4 チェックする・確認を完了にする</h3>
+<p><img src="images/m05_06_check_button.png" alt="チェック済みにするのボタン。1 チェック済みにする"></p>
+<ul>
+<li>確認者・課長は、画面の下の「チェック済みにする」（図の 1）を押します。</li>
+</ul>
+<p><img src="images/m05_07_checked.png" alt="チェックしたあと。1 チェックの欄"></p>
+<ul>
+<li>押すと「チェック済みにしました」と出て、チェックの欄（図の 1）の自分の行が「チェック済」になります。</li>
+</ul>
+<p><img src="images/m05_08_confirm_button.png" alt="課長の画面。1 チェック済みにする、2 確認を完了にする"></p>
+<ul>
+<li>課長は「確認を完了にする」（図の 2）を押すと、報告が確認完了になります。完了は戻せます。</li>
+<li>自分の報告は、自分で確認完了にできません。</li>
+</ul>
+<p>チェックしない設定の確認者（8.1）は、報告を見てコメントはできますが、チェックの人数には数えません。</p>
+<h3 id="55-コメントの定型文"><a class="anchor" href="#55-コメントの定型文" aria-hidden="true">#</a>5.5 コメントの定型文</h3>
+<p><img src="images/m05_02_templates.png" alt="コメントの定型文の画面。1 定型文、2 追加"></p>
+<p>メニューの「コメントの定型文」で、よく使うコメントを登録できます。課長は課の定型文、確認者は自分だけの定型文を、それぞれ 30 件まで登録できます。</p>
+<ol>
+<li>「定型文（300 文字まで）」の欄（図の 1）に文を書く。</li>
+<li>「追加」（図の 2）を押す。</li>
+</ol>
+<hr>
+<h2 id="6-提出状況横並び検索出力臨時の調査"><a class="anchor" href="#6-提出状況横並び検索出力臨時の調査" aria-hidden="true">#</a>6. 提出状況・横並び・検索・出力・臨時の調査</h2>
+<h3 id="61-提出状況課長課長代理主任"><a class="anchor" href="#61-提出状況課長課長代理主任" aria-hidden="true">#</a>6.1 提出状況（課長・課長代理・主任）</h3>
+<p><img src="images/m06_01_status.png" alt="提出状況の画面。1 対象月、2 未チェックを順に見る、3 横並び・まとめ、4 未提出の人に提出を促す"></p>
+<p>課の人ごとに、提出の状態とチェックの進み具合が出ます。</p>
+<ul>
+<li>見る月は、図の 1 で選んで「表示」を押すと変わります（課・絞り込みも同じ行で選べます）。</li>
+<li>「未チェックを順に見る」（図の 2）で、チェックしていない報告を順に開けます。</li>
+<li>「横並び・まとめ」（図の 3）で、課の報告を横に並べて見られます（6.2）。</li>
+<li>「前月から変更なし」の報告は、まとめてチェックできます。</li>
+<li>まだ出していない人がいれば「未提出の人に提出を促す」（図の 4）を押せます。促された人がこのシステムを開くと、画面の上に「（あなたの名前） さんから、提出するよう知らせが届いています」と出ます（メールは送りません）。同じ人には 1 日 1 回まで。促した日は、その人の行に「促した（日付）」と出ます。</li>
+<li>人の名前を押すと、その人の報告を開きます。</li>
+<li>管理者が確認者でない課を見るときは、提出の状態とチェックの数だけが出ます（中身へのリンクは出ません）。</li>
+</ul>
+<h3 id="62-横並び課長課長代理主任"><a class="anchor" href="#62-横並び課長課長代理主任" aria-hidden="true">#</a>6.2 横並び（課長・課長代理・主任）</h3>
+<p><img src="images/m06_02_compare.png" alt="横並び・まとめの画面。1 前月との差分、2 開く"></p>
+<p>提出状況の画面から開きます。課の報告を、案件ごとに 1 行で横に並べて見られます。</p>
+<ul>
+<li>「前月との差分」（図の 1）にチェックを付けて「表示」を押すと、変わった値に印が付きます。</li>
+<li>自由記述は「開く」（図の 2）を押したときだけ出ます。開いたことは記録されます。</li>
+<li>「限定」の項目の列は、課長にだけ出ます。</li>
+<li>表が画面の幅に入りきらないときは、表の下のスクロールバーで横に動かします（<code>Shift</code> を押しながらマウスのホイールを回しても横に動きます）。</li>
+</ul>
+<p>検索（6.3）は、全員が使うので「操作マニュアル」にあります。</p>
+<h3 id="64-出力課長pc-のみ"><a class="anchor" href="#64-出力課長pc-のみ" aria-hidden="true">#</a>6.4 出力（課長・PC のみ）</h3>
+<p><img src="images/m06_05_export.png" alt="出力の画面。1 対象、2 対象月、3 内容、4 形式、5 出力する"></p>
+<p>課の外への資料の元になるものを出力します。</p>
+<ol>
+<li>メニューの「出力」を開き、対象（図の 1。月次報告か臨時の調査）を選ぶ。</li>
+<li>課と、対象月の範囲（図の 2。開始〜終了。最大 12 か月）を選ぶ。</li>
+<li>内容（図の 3。横並び・まとめ・両方）を選ぶ。</li>
+<li>形式（図の 4）を選ぶ。必要なら「自由記述を含める」「「限定」の項目を含める」にチェックを付ける。</li>
+<li>「出力する」（図の 5）を押す。</li>
+</ol>
+<div class="table-wrap"><table><thead><tr><th>形式</th><th>使い方</th></tr></thead><tbody><tr><td>印刷用画面</td><td>ブラウザーの印刷で PDF に保存する（12.2）</td></tr><tr><td>Excel 形式（.xlsx）</td><td>LibreOffice Calc や Excel で開く（12.4）。ファイルは「ダウンロード」フォルダーに入る（0.5）</td></tr><tr><td>CSV</td><td>UTF-8（BOM 付き）。開き方は 12.3。ファイルは「ダウンロード」フォルダーに入る</td></tr></tbody></table></div>
+<p><img src="images/m06_06_print_view.png" alt="印刷用画面"></p>
+<p>印刷用画面を選ぶと、上の図の画面が出ます。「印刷する（PDF として保存）」を押すか、<code>Ctrl</code> + <code>P</code> を押して PDF に保存します（12.2）。</p>
+<ul>
+<li>どの形式にも「社外秘」と出力者・日時が入ります。出力は記録に残ります。</li>
+<li>「限定」の項目は、「「限定」の項目を含める」を選んだときだけ出ます。</li>
+<li>スマートフォンからは出力できません。</li>
+</ul>
+<h3 id="65-臨時の調査課長"><a class="anchor" href="#65-臨時の調査課長" aria-hidden="true">#</a>6.5 臨時の調査（課長）</h3>
+<p><img src="images/m06_07_survey_manage.png" alt="臨時の調査の一覧。1 新しく作る、2 結果、3 設定"></p>
+<p>月次報告とは別の、その時だけの質問を作って課の人に答えてもらいます。</p>
+<ol>
+<li>メニューの「臨時の調査」で「＋ 新しく作る」（図の 1）を押す。作った調査を直すときは「設定」（図の 3）を押します。</li>
+</ol>
+<p><img src="images/m06_08_survey_new.png" alt="臨時の調査を作る画面"></p>
+<ol start="2">
+<li>題名・依頼元・期限・対象の人・目的・結果の扱いと、質問を決める。月次報告の項目を質問に使うと、最新の値が入った状態で答えてもらえます。</li>
+<li>「回答する人の画面で見る」で、答える人にどう見えるかを確かめる（見本。入力しても保存されません）。</li>
+<li>公開する。公開すると質問は変えられません。</li>
+</ol>
+<p><img src="images/m06_09_survey_result.png" alt="臨時の調査の結果"></p>
+<ol start="5">
+<li>一覧の「結果」（図の 2）で、集計と未回答の人を見る。個人の回答を開くと記録に残ります。</li>
+</ol>
+<p>結果の扱いを「集計のみ」にした調査は、出力も集計だけになります。</p>
+<hr>
+<h2 id="7-要望依頼"><a class="anchor" href="#7-要望依頼" aria-hidden="true">#</a>7. 要望・依頼</h2>
+<p>コメントの一覧（7.1）とよくある質問（7.3）は、全員が使うので「操作マニュアル」にあります。</p>
+<h3 id="72-要望依頼課長課長代理主任"><a class="anchor" href="#72-要望依頼課長課長代理主任" aria-hidden="true">#</a>7.2 要望・依頼（課長・課長代理・主任）</h3>
+<p><img src="images/m07_02_request_link.png" alt="画面の下のリンク。1 この画面について要望・依頼を出す"></p>
+<p>システムへの改善要望・対応依頼・不具合・質問を、システム管理者へ出せます。</p>
+<ul>
+<li>画面のことなら、その画面の下の「この画面について要望・依頼を出す」（図の 1）から出すと、どの画面かが自動で入ります。</li>
+<li>部下は直接出せません。課長・確認者を通して出してください。</li>
+</ul>
+<p><img src="images/m07_03_request_new.png" alt="要望・依頼を出す欄。1 種類、2 件名、3 内容、4 出す"></p>
+<ol>
+<li>種類（図の 1。改善要望・対応依頼・不具合・質問）を選ぶ。</li>
+<li>件名（図の 2。60 文字まで）を入れる。</li>
+<li>内容（図の 3。2,000 文字まで）に、困っていること・こうなってほしいこと・起きたこと（いつ・どの画面で・何をしたら）を書く。客先名・個人名は書かないでください。</li>
+<li>関係する画面と急ぎを選んで、「出す」（図の 4）を押す。</li>
+</ol>
+<ul>
+<li>返信が来るとホームに出ます。受付前なら取り下げられます。</li>
+</ul>
+<hr>
+<h2 id="8-課長の仕事"><a class="anchor" href="#8-課長の仕事" aria-hidden="true">#</a>8. 課長の仕事</h2>
+<h3 id="81-課の管理"><a class="anchor" href="#81-課の管理" aria-hidden="true">#</a>8.1 課の管理</h3>
+<p><img src="images/m08_01_department.png" alt="課の管理の画面。1 節のタブ"></p>
+<p>メニューの「課の管理」で、自分の課の次のことを決めます。画面は節（基本・確認者と課員・ライン）のタブ（図の 1）に分かれているので、押して切り替えます。</p>
+<div class="table-wrap"><table><thead><tr><th>決めること</th><th>内容</th></tr></thead><tbody><tr><td>締め日</td><td>毎月の報告の締め日</td></tr><tr><td>管理の仕方</td><td>課全体で見るか、課長代理ごとのラインで見るか</td></tr><tr><td>確認者</td><td>課長代理・主任と、担当のライン。ほかの課の人（課のない部長などを含む）も、表の下の「兼務の確認者を足す」で兼務の確認者にできます（足したあと、表で担当のライン・チェックするを決めて保存。外すときは表で「確認者」の印を外して保存）</td></tr><tr><td>チェックする／しない</td><td>確認者ごとに。しない人もコメントはできる</td></tr><tr><td>項目管理者</td><td>課の項目を管理できる人</td></tr><tr><td>ライン</td><td>ラインの作成と、課員のライン</td></tr></tbody></table></div>
+<p>課の追加や課長を決めるのは、システム管理者です（9.4）。</p>
+<h3 id="82-課の項目と選択肢"><a class="anchor" href="#82-課の項目と選択肢" aria-hidden="true">#</a>8.2 課の項目と選択肢</h3>
+<p><img src="images/m08_02_fields.png" alt="項目マスタの画面。1 様式、2 項目を足す、3 プレビュー、4 この課の選択肢"></p>
+<p>メニューの「項目マスタ」で、課の項目を追加・編集・並べ替えます。</p>
+<ul>
+<li>見る様式（図の 1）を選んで「表示」を押します。</li>
+<li>項目を足すときは「＋ 項目を足す」（図の 2）を押します。並べ替えは各行の「↑」「↓」、直すときは「編集」です。</li>
+<li>「プレビュー」（図の 3）で入力画面の見え方を確かめられます（保存されません）。</li>
+<li>共通の選択式の項目の選択肢は、「この課の選択肢」（図の 4）で、この課でだけ表示名を変える・出さない・足すことができます（IT 系以外の課のため）。ほかの課には影響しません。</li>
+<li>変更は、これから作る報告に反映されます。すでにある報告は、作ったときの項目のままです。</li>
+</ul>
+<p><img src="images/m08_03_field_add.png" alt="項目の追加の画面。1 表示名、2 報告全体か案件ブロックか、3 入力部品"></p>
+<p>項目を足すときは、表示名（図の 1）、どこに出すか（図の 2。報告全体か、案件ごとに繰り返すか）、入力部品（図の 3。1 行テキスト・プルダウン・ラジオボタンなど）を決め、その下の設定（必須・機密区分・説明文など）を選んで「保存」を押します。入力部品を変えると、それに合う設定だけが出ます。</p>
+<p><img src="images/m08_04_preview.png" alt="様式のプレビュー"></p>
+<h3 id="83-メッセージ管理担当の課の課長"><a class="anchor" href="#83-メッセージ管理担当の課の課長" aria-hidden="true">#</a>8.3 メッセージ（管理担当の課の課長）</h3>
+<p><img src="images/m08_05_messages.png" alt="メッセージの画面。1 絞り込む、2 保存"></p>
+<p>メニューの「メッセージ」で、画面に出す文言（「この画面の使い方」の文を含む）を変えられます。変えた文言は全員の画面に出ます。<code>{ }</code> の中の言葉は、そのまま残してください。</p>
+<ol>
+<li>変えたい文言を、上の欄で探して「絞り込む」（図の 1）を押す（<code>Ctrl</code> + <code>F</code> で画面の中を探してもかまいません）。</li>
+<li>文を直して、その行の「保存」（図の 2）を押す。</li>
+</ol><p class="footer">mdview で表示</p></main></div>
+<script>
+(function(){var box=document.getElementById('toc-filter');if(!box)return;
+box.addEventListener('input',function(){var q=box.value.toLowerCase();
+document.querySelectorAll('nav.toc li').forEach(function(li){
+li.style.display=li.textContent.toLowerCase().indexOf(q)>=0?'':'none';});});})();
+</script></body></html>
